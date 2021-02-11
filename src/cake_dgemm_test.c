@@ -7,11 +7,16 @@
 void pack_B(double* B, double* B_p, int K, int N, int k_c, int n_c, int n_r);
 void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, int p);
 void pack_C(double** C_p, int M, int N, int m_c, int n_c, int p);
+void unpack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p);
 void rand_init(double* mat, int r, int c);
 void cake_dgemm_checker(double* A, double* B, double* C, int N, int M, int K);
-void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int m_c, int n_c, int k_c, int p);
+void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p);
 
-// 13.460614*48.823579 vs 30.119652*43.708179
+int get_block_dim(int m_r, int n_r, int p, double alpha_n);
+int get_cache_size(char* level);
+int lcm(int n1, int n2);
+
+
 
 int main( int argc, char** argv ) {
 
@@ -20,14 +25,13 @@ int main( int argc, char** argv ) {
         exit(1);
     }
 
-	int M, K, N, m_c, k_c, p, alpha_n, n_c;
+	int M, K, N, p;
 
-	// M = 1920;
-	// K = 1920;
-	// N = 1920;
-	// m_c = 192;
-	// k_c = 192;
-
+	M = 7680;
+	K = 7680;
+	N = 7680;
+	// m_c = 96;
+	// k_c = 96;
 
 	// M = 26880;
 	// K = 26880;
@@ -48,11 +52,11 @@ int main( int argc, char** argv ) {
 	// m_c = 96;
 	// k_c = 96;
 
-	M = 23040;
-	K = 23040;
-	N = 23040;
-	m_c = 96;
-	k_c = 96;
+	// M = 23040;
+	// K = 23040;
+	// N = 23040;
+	// m_c = 96;
+	// k_c = 96;
 
 	// M = 21840;
 	// K = 21840;
@@ -60,23 +64,27 @@ int main( int argc, char** argv ) {
 	// m_c = 168;
 	// k_c = 168;
 
-	p = atoi(argv[1]);
-	alpha_n = 1;
-	n_c = alpha_n * p * m_c;
+	// M = 960;
+	// K = 960;
+	// N = 960;
+
+
+    p = atoi(argv[1]);
 	omp_set_num_threads(p);
+
 
 	double* A = (double*) malloc(M * K * sizeof( double ));
 	double* B = (double*) malloc(K * N * sizeof( double ));
-	double* C ;//= (double*) calloc(M * N , sizeof( double ));
+	double* C = (double*) calloc(M * N , sizeof( double ));
 
 	// initialize A and B
     srand(time(NULL));
 	rand_init(A, M, K);
 	rand_init(B, K, N);
 
-	cake_dgemm(A, B, C, M, N, K, m_c, n_c, k_c, p);
+	cake_dgemm(A, B, C, M, N, K, p);
 	// bli_dprintm( "C: ", M, N, C, N, 1, "%4.4f", "" );
-	// cake_dgemm_checker(A, B, C, N, M, K);
+	cake_dgemm_checker(A, B, C, N, M, K);
 
 	free(A);
 	free(B);
@@ -159,29 +167,54 @@ void pack_C(double** C_p, int M, int N, int m_c, int n_c, int p) {
 }
 
 
+void unpack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p) {
+
+	int ind1 = 0;
+	for(int n3 = 0; n3 < (N/n_c); n3++) {
+		for(int n2 = 0; n2 < (n_c/n_r); n2++) {
+			for(int n1 = 0; n1 < n_r; n1++) {
+				for(int m1 = 0; m1 < (M/(p*m_c)); m1++) {
+					for(int m = 0; m < p; m++) {
+						for(int i = 0; i < (m_c/m_r); i++) {
+							for(int j = 0; j< m_r; j++) {
+								C[ind1] = C_p[n3*(M/m_c)  + m1*p + m][n2*m_c*n_r + n1*m_r + i*m_r*n_r + j];
+								ind1++;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
 
 
-void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int m_c, int n_c, int k_c, int p) {
+
+void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 	// contiguous row-storage (i.e. cs_c = 1) or contiguous column-storage (i.e. rs_c = 1). 
 	// This preference comes from how the microkernel is most efficiently able to load/store 
 	// elements of C11 from/to memory. Most microkernels use vector instructions to access 
-	// contiguous columns (or column segments) of C11	
+	// contiguous columns (or column segments) of C11
+	int m_c, k_c, n_c, m_r, n_r;	
+	double alpha, beta, alpha_n;
 	struct timeval start, end;
 	double diff_t;
-	// dim_t m, n, k;
 	inc_t rsa, csa;
 	inc_t rsb, csb;
 	inc_t rsc, csc;
-	double  alpha, beta;
 
     // query block size for the microkernel
     cntx_t* cntx = bli_gks_query_cntx();
-    int m_r = (int) bli_cntx_get_blksz_def_dt(BLIS_DOUBLE, BLIS_MR, cntx);
-    int n_r = (int) bli_cntx_get_blksz_def_dt(BLIS_DOUBLE, BLIS_NR, cntx);
+    m_r = (int) bli_cntx_get_blksz_def_dt(BLIS_DOUBLE, BLIS_MR, cntx);
+    n_r = (int) bli_cntx_get_blksz_def_dt(BLIS_DOUBLE, BLIS_NR, cntx);
     printf("m_r = %d, n_r = %d\n\n", m_r, n_r);
 
-    // m_r = 6;
-    // n_r = 8;
+    alpha_n = 1;
+    m_c = get_block_dim( m_r, n_r, p, alpha_n);
+    k_c = m_c;
+    n_c = (int) (alpha_n * p * m_c);
+
+    printf("mc = %d, kc = %d, nc = %d\n",k_c,m_c,n_c );
 
     // pack A
 	double** A_p = (double**) malloc(p * (K/k_c) * (M/(p*m_c)) * sizeof( double* ));
@@ -202,9 +235,9 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int m_c, i
 		printf("posix memalign error\n");
 		exit(1);
 	}
+	pack_B(B, B_p, K, N, k_c, n_c, n_r);
 
 	// double* B_p = (double*) malloc( K * N * sizeof(double));
-	pack_B(B, B_p, K, N, k_c, n_c, n_r);
 
 	// pack C
 	double** C_p = (double**) malloc(p * (M/(p*m_c)) * (N/n_c) * sizeof( double* ));
@@ -262,11 +295,11 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int m_c, i
 	+end.tv_usec) - start.tv_usec) / (1000000.0);
 	printf("GEMM time: %f \n", diff_t); 
 
-	FILE * fp;
-	fp = fopen ("cake_time.txt", "a");
-	fprintf(fp, "%s,%s\n","num_cores", "runtime");
-	fprintf(fp, "%d,%f\n",p,diff_t);
-	fclose(fp);
+	// FILE * fp;
+	// fp = fopen ("cake_time.txt", "a");
+	// fprintf(fp, "%s,%s\n","num_cores", "runtime");
+	// fprintf(fp, "%d,%f\n",p,diff_t);
+	// fclose(fp);
 
 	// ind1 = 0;
 	// for(int n = 0; n < (N/n_c); n++) {
@@ -281,24 +314,7 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int m_c, i
 	// 	}
 	// }
 
-	// unpack C
-	// int ind1 = 0;
-	// for(int n3 = 0; n3 < (N/n_c); n3++) {
-	// 	for(int n2 = 0; n2 < (n_c/n_r); n2++) {
-	// 		for(int n1 = 0; n1 < n_r; n1++) {
-	// 			for(int m1 = 0; m1 < (M/(p*m_c)); m1++) {
-	// 				for(int m = 0; m < p; m++) {
-	// 					for(int i = 0; i < (m_c/m_r); i++) {
-	// 						for(int j = 0; j< m_r; j++) {
-	// 							C[ind1] = C_p[n3*(M/m_c)  + m1*p + m][n2*m_c*n_r + n1*m_r + i*m_r*n_r + j];
-	// 							ind1++;
-	// 						}
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// }
+	unpack_C(C, C_p, M, N, m_c, n_c, n_r, m_r, p); 
 
 	for(int i = 0; i < (p * (K/k_c) * (M/(p*m_c))); i++) {
 		free(A_p[i]);
@@ -365,6 +381,77 @@ void cake_dgemm_checker(double* A, double* B, double* C, int N, int M, int K) {
 }
 
 
+
+// find cache size at levels L1d,L1i,L2,and L3 using lscpu
+int get_cache_size(char* level) {
+
+	int len, size = 0;
+	FILE *fp;
+	char ret[16];
+
+	char command[128];
+	sprintf(command, "lscpu --caches=NAME,ONE-SIZE \
+					| grep %s \
+					| grep -Eo '[0-9]*M|[0-9]*K|0-9*G' \
+					| tr -d '\n'", level);
+
+	fp = popen(command, "r");
+
+	if (fp == NULL) {
+		printf("Failed to run command\n" );
+		exit(1);
+	}
+
+	if(fgets(ret, sizeof(ret), fp) == NULL) {
+		printf("lscpu error\n");
+	}
+
+	pclose(fp);
+
+	len = strlen(ret) - 1;
+
+	// set cache size variables
+	if(ret[len] == 'K') {
+		ret[len] = '\0';
+		size = atoi(ret) * (1 << 10);
+	} else if(ret[len] == 'M') {
+		ret[len] = '\0';
+		size = atoi(ret) * (1 << 20);
+	} else if(ret[len] == 'G') {
+		ret[len] = '\0';
+		size = atoi(ret) * (1 << 30);
+	}
+
+	return size;
+}
+
+
+int get_block_dim(int m_r, int n_r, int p, double alpha_n) {
+
+	int mc_L2 =0, mc_L3 =0;
+	// find L3 and L2 cache sizes
+	int max_threads = omp_get_max_threads();
+	int L2_size = get_cache_size("L2");
+	int L3_size = get_cache_size("L3");
+	// solves for the optimal block size m_c and k_c based on the L3 size
+	// L3_size >= (alpha_n*p*(1+p)) * x^2     (solve for x = m_c = k_c) 
+	// We only use half of the each cache to prevent our working blocks from being evicted
+	mc_L3 = (int) sqrt((((double) L3_size) / (sizeof(double) * 2))  
+							/ (alpha_n*max_threads*(max_threads+1)));
+	mc_L3 -= (mc_L3 % lcm(m_r, n_r));
+
+	// solves for optimal mc,kc based on L2 size
+	// L2_size >= x^2     (solve for x = m_c = k_c) 
+	mc_L2 = (int) sqrt(((double) L2_size) / (sizeof(double) * 2));
+	mc_L2 -= (mc_L2 % lcm(m_r, n_r));
+
+	// return min of possible L2 and L3 cache block sizes
+	return (mc_L3 < mc_L2 ? mc_L3 : mc_L2);
+}
+
+
+
+
 // randomized double precision matrices in range [-1,1]
 void rand_init(double* mat, int r, int c) {
 	// int MAX = 65536;
@@ -376,3 +463,14 @@ void rand_init(double* mat, int r, int c) {
 	}	
 }
 
+// least common multiple
+int lcm(int n1, int n2) {
+	int max = (n1 > n2) ? n1 : n2;
+	while (1) {
+		if (max % n1 == 0 && max % n2 == 0) {
+			break;
+		}
+		++max;
+	}
+	return max;
+}
