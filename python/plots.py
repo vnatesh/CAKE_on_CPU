@@ -236,15 +236,15 @@ def plot_local_mem_size(M,K,N,s,R,tile_sz):
 	plt.close('all')
 
 
+# number of dram accesses for dgemm in bytes
+def cake_cpu_DRAM_accesses(m,n,k,mc,kc,alpha,p):
+	return (((float(m*n*k)/(alpha*p*mc) + float(m*n*k)/(p*mc) + m*n)) / float(10**9))*8	
 
-
-
-
-def cake_cpu_DRAM_accesses(m,n,k,mc,kc,nc,p):
-	return (((float(m*n*k)/nc + float(m*n*k)/(p*mc) + m*n)) / float(10**9))*8	
-
+# Goto algorithm doesn't shape the MMM block to adjust 
+# for different number of cores p. Instead it shapes block to maximize cache usage
+# while levaing extra space in the cache for evictions
 def mkl_cpu_DRAM_accesses(m,n,k,mc,kc,nc):
-	return (((float(m*k*n)/nc) + (n*k) + (float(m*n*k)/kc)) / float(10**9))*8	
+	return (((float(m*k*n)/(nc)) + (n*k) + (float(m*n*k)/kc)) / float(10**9))*8	
 
 
 def plot_cake_vs_mkl_cpu_theoretical(M,N,K,mc,kc,nc,p):
@@ -255,17 +255,6 @@ def plot_cake_vs_mkl_cpu_theoretical(M,N,K,mc,kc,nc,p):
 	NUM_CPUs = [1,2,3,4,5,6,7,8,9,10]
 	cake_mem_acc = [cake_cpu_DRAM_accesses(M,N,K,mc,kc,nc,i) for i in NUM_CPUs]
 	mkl_mem_acc = [mkl_cpu_DRAM_accesses(M,N,K,mc,kc,nc*i) for i in NUM_CPUs]
-	plt.plot(list(NUM_CPUs), list(cake_mem_acc), label = labels[0],  marker = markers[0], color = colors[0])
-	plt.plot(list(NUM_CPUs), list(mkl_mem_acc), label = labels[1],  marker = markers[1], color = colors[1])
-	#
-	plt.title('DRAM Accesses in CAKE_dgemm vs MKL (Theoretical)')
-	plt.xlabel("Number of PEs", fontsize = 12)
-	plt.ylabel("Gigabytes Transferred", fontsize = 12)
-	plt.legend(loc = "middle right", prop={'size': 12})
-	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
-	plt.show()
-	plt.clf()
-	plt.close('all')
 	#
 	plt.plot(list(NUM_CPUs), [mkl_mem_acc[i]/cake_mem_acc[i] for i in range(len(NUM_CPUs))], marker = markers[0], color = colors[0])
 	plt.title('CAKE_dgemm vs MKL (Theoretical)')
@@ -277,42 +266,56 @@ def plot_cake_vs_mkl_cpu_theoretical(M,N,K,mc,kc,nc,p):
 	plt.clf()
 	plt.close('all')
 
-def plot_cake_vs_mkl_cpu_actual(M,N,K):
+
+
+def plot_cake_vs_mkl_cpu(M,N,K,mc,kc,alpha):
 	plt.rcParams.update({'font.size': 12})
 	markers = ['o','v','s','d','^']
-	colors = ['b','g','aqua','k','m']
-	labels = ['CAKE', 'Intel i9']
+	colors = ['b','g','aqua','k','m','r']
+	labels = ['CAKE Observed', 'MKL Observed','CAKE Theoretical', 'MKL Theoretical']
 	NUM_CPUs = [2,3,4,5,6,7,8,9,10]
 	cpu_mem_acc = [0]*len(NUM_CPUs)
 	gflops_cpu = [0]*len(NUM_CPUs)
+	#
 	#
 	for i in range(len(NUM_CPUs)):
 		df1 = pandas.read_csv('reports/report_mkl_%d.csv' % NUM_CPUs[i],skiprows=17,skipfooter=17)
 		df2 = pandas.read_csv('reports/report_mkl_%d.csv' % NUM_CPUs[i],skipfooter=20)
 		avg_dram_bw = df1['Average']._values[0]
 		cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / float(NUM_CPUs[i])
-		gflops_cpu[i] = (float(M*N*K) / cpu_time) # / (float(NUM_CPUs[i])
+		gflops_cpu[i] = (float(M*N*K) / cpu_time) # / (float(NUM_CPUs[i]))
 		cpu_mem_acc[i] = float(avg_dram_bw * cpu_time)  # number of GB transferred b/w processors and DRAM
 	#
+	#
 	NUM_CPUs_cake = [2,3,4,5,6,8,10]
+	# NUM_CPUs_cake = [2,4,5,8,10]
 	cake_mem_acc = [0]*len(NUM_CPUs_cake)
 	gflops_cake = [0]*len(NUM_CPUs_cake)
+	#
 	#
 	for i in range(len(NUM_CPUs_cake)):
 		df1 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % NUM_CPUs_cake[i],skiprows=17,skipfooter=17)
 		df2 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % NUM_CPUs_cake[i],skipfooter=20)
 		avg_dram_bw = df1['Average']._values[0]
 		cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / float(NUM_CPUs_cake[i])
-		gflops_cake[i] = (float(M*N*K) / cpu_time) # / (float(NUM_CPUs_cake[i])
+		gflops_cake[i] = (float(M*N*K) / cpu_time) # / (float(NUM_CPUs_cake[i]))
 		cake_mem_acc[i] = float(avg_dram_bw * cpu_time) 
 	#
-	plt.plot(list(NUM_CPUs_cake), list(cake_mem_acc), label = labels[0],  marker = markers[0], color = colors[0])
+	#
+	plt.plot(list(NUM_CPUs_cake), list(cake_mem_acc), label = labels[0],  marker = markers[0], color = colors[5])
 	plt.plot(list(NUM_CPUs), list(cpu_mem_acc), label = labels[1],  marker = markers[1], color = colors[1])
 	#
-	plt.title('DRAM Accesses in CAKE_dgemm vs MKL (Actual)')
+	NUM_CPUs_t = [1,2,3,4,5,6,7,8,9,10]
+	# cake_mem_acc = [cake_cpu_DRAM_accesses(M,N,K,mc,kc,960,i) for i in NUM_CPUs_t]
+	cake_mem_acc = [cake_cpu_DRAM_accesses(M,N,K,mc,kc,alpha,i) for i in NUM_CPUs_t]
+	mkl_mem_acc = [mkl_cpu_DRAM_accesses(M,N,K,mc,kc,768) for i in NUM_CPUs_t]
+	plt.plot(list(NUM_CPUs_t), list(cake_mem_acc), label = labels[2], color = colors[0], linewidth = 2)
+	plt.plot(list(NUM_CPUs_t), list(mkl_mem_acc), label = labels[3], color = colors[1], linewidth = 2)
+	#
+	plt.title('DRAM Accesses in CAKE_dgemm vs MKL')
 	plt.xlabel("Number of PEs", fontsize = 12)
 	plt.ylabel("Gigabytes Transferred", fontsize = 12)
-	plt.legend(loc = "upper right", prop={'size': 12})
+	plt.legend(loc = "upper right", prop={'size': 10})
 	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
 	plt.show()
 	plt.clf()
@@ -330,25 +333,26 @@ def plot_cake_vs_mkl_cpu_actual(M,N,K):
 	plt.clf()
 	plt.close('all')
 	#
-	plt.plot(list(NUM_CPUs_cake), [mkl_mem_acc[NUM_CPUs.index(i)]/cake_mem_acc[NUM_CPUs_cake.index(i)] for i in NUM_CPUs_cake], marker = markers[0], color = colors[0])
-	plt.title('CAKE_dgemm vs MKL (Actual)')
-	plt.xlabel("Number of PEs", fontsize = 12)
-	plt.ylabel("MKL:Cake Ratio of DRAM Accesses", fontsize = 12)
-	plt.legend(loc = "middle right", prop={'size': 12})
-	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
-	plt.show()
-	plt.clf()
-	plt.close('all')
-
-
-
-
+	# plt.plot(list(NUM_CPUs_cake), 
+	# 	[cpu_mem_acc[NUM_CPUs.index(i)]/cake_mem_acc[NUM_CPUs_cake.index(i)] for i in NUM_CPUs_cake], 
+	# 	label = labels[2], marker = markers[2], color = colors[2])
+	# NUM_CPUs = [1,2,3,4,5,6,7,8,9,10]
+	# # cake_mem_acc = [cake_cpu_DRAM_accesses(M,N,K,mc,kc,(1*i*mc),i) for i in NUM_CPUs]
+	# cake_mem_acc = [cake_cpu_DRAM_accesses(M,N,K,mc,kc,(alpha*i*mc),i) for i in NUM_CPUs]
+	# mkl_mem_acc = [mkl_cpu_DRAM_accesses(M,N,K,mc,kc,960) for i in NUM_CPUs]
+	# plt.plot(list(NUM_CPUs), [mkl_mem_acc[i]/cake_mem_acc[i] for i in range(len(NUM_CPUs))], 
+	# 	label = labels[3], marker = markers[3], color = colors[3])
+	# plt.title('CAKE_dgemm vs MKL')
+	# plt.xlabel("Number of PEs", fontsize = 12)
+	# plt.ylabel("MKL:Cake Ratio of DRAM Accesses", fontsize = 12)
+	# plt.legend(loc = "middle right", prop={'size': 12})
+	# # plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
+	# plt.show()
+	# plt.clf()
+	# plt.close('all')
 
 
 
 if __name__ == '__main__':
-	plot_cake_vs_mkl_cpu_actual(23040,23040,23040)
-
-
-
-
+	plot_cake_vs_mkl_cpu(23040,23040,23040)
+	plot_cake_vs_mkl_cpu(23040,23040,23040,96,96,1):
