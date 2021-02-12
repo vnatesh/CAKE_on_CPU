@@ -12,7 +12,7 @@ void rand_init(double* mat, int r, int c);
 void cake_dgemm_checker(double* A, double* B, double* C, int N, int M, int K);
 void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p);
 
-int get_block_dim(int m_r, int n_r, int p, double alpha_n);
+int get_block_dim(int m_r, int n_r, double alpha_n);
 int get_cache_size(char* level);
 int lcm(int n1, int n2);
 
@@ -27,51 +27,25 @@ int main( int argc, char** argv ) {
 
 	int M, K, N, p;
 
-	M = 7680;
-	K = 7680;
-	N = 7680;
-	// m_c = 96;
-	// k_c = 96;
+	// M = 96;
+	// K = 183;
+	// N = 96;
+	M = 5760;
+	K = 1234;
+	N = 5760;
 
-	// M = 26880;
-	// K = 26880;
-	// N = 26880;
-	// m_c = 336;
-	// k_c = 336;
-
-	// M = 23520;
-	// K = 23520;
-	// N = 23520;
-	// m_c = 336;
-	// k_c = 336;
-
-
-	// M = 30720;
-	// K = 30720;
-	// N = 30720;
 	// m_c = 96;
 	// k_c = 96;
 
 	// M = 23040;
 	// K = 23040;
 	// N = 23040;
-	// m_c = 96;
-	// k_c = 96;
-
-	// M = 21840;
-	// K = 21840;
-	// N = 21840;
-	// m_c = 168;
-	// k_c = 168;
 
 	// M = 960;
 	// K = 960;
 	// N = 960;
 
-
     p = atoi(argv[1]);
-	omp_set_num_threads(p);
-
 
 	double* A = (double*) malloc(M * K * sizeof( double ));
 	double* B = (double*) malloc(K * N * sizeof( double ));
@@ -93,100 +67,6 @@ int main( int argc, char** argv ) {
 	return 0;
 }
 
-
-void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, int p) {
-
-	int ind1 = 0;
-	int ind2 = 0;
-	int ret;
-	for(int m1 = 0; m1 < M; m1 += p*m_c) {
-		for(int k1 = 0; k1 < K; k1 += k_c) {
-			for(int m2 = 0; m2 < p*m_c; m2 += m_c) {
-
-				ret = posix_memalign((void**) &A_p[ind1], 64, k_c * m_c * sizeof(double));
-				if(ret) {
-					printf("posix memalign error\n");
-					exit(1);
-				}
-
-				// A_p[ind1] = (double*) malloc(k_c * m_c * sizeof(double));
-				ind2 = 0;
-				
-				for(int m3 = 0; m3 < m_c; m3 += m_r) {
-					for(int i = 0; i < k_c; i++) {
-						for(int j = 0; j < m_r; j++) {
-							A_p[ind1][ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
-							ind2++;
-						}
-					}
-				}
-				ind1++;
-			}
-		}
-	}
-}
-
-
-// pack B
-void pack_B(double* B, double* B_p, int K, int N, int k_c, int n_c, int n_r) {
-
-	int ind1 = 0;
-	for(int n1 = 0; n1 < N; n1 += n_c) {
-		for(int k1 = 0; k1 < K; k1 += k_c) {
-			for(int n2 = 0; n2 < n_c; n2 += n_r) {
-				for(int i = 0; i < k_c; i++) {
-					for(int j = 0; j < n_r; j++) {
-						B_p[ind1] = B[n1 + k1*N + n2 + i*N + j];
-						ind1++;
-					}
-				}
-			}
-		}
-	}
-}
-
-
-void pack_C(double** C_p, int M, int N, int m_c, int n_c, int p) {
-
-	int ind1 = 0;
-	int ret ;
-	for(int n = 0; n < (N/n_c); n++) {
-		for(int m = 0; m < (M/(p*m_c)); m++) {
-			for(int p1 = 0; p1 < p; p1++) {
-
-				ret = posix_memalign((void**) &C_p[ind1], 64, m_c * n_c * sizeof(double));
-				if(ret) {
-					printf("posix memalign error\n");
-					exit(1);
-				}
-
-				ind1++; 
-			}
-		}
-	}
-}
-
-
-void unpack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p) {
-
-	int ind1 = 0;
-	for(int n3 = 0; n3 < (N/n_c); n3++) {
-		for(int n2 = 0; n2 < (n_c/n_r); n2++) {
-			for(int n1 = 0; n1 < n_r; n1++) {
-				for(int m1 = 0; m1 < (M/(p*m_c)); m1++) {
-					for(int m = 0; m < p; m++) {
-						for(int i = 0; i < (m_c/m_r); i++) {
-							for(int j = 0; j< m_r; j++) {
-								C[ind1] = C_p[n3*(M/m_c)  + m1*p + m][n2*m_c*n_r + n1*m_r + i*m_r*n_r + j];
-								ind1++;
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-}
 
 
 
@@ -210,27 +90,33 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
     printf("m_r = %d, n_r = %d\n\n", m_r, n_r);
 
     alpha_n = 1;
-    m_c = get_block_dim( m_r, n_r, p, alpha_n);
+    m_c = get_block_dim(m_r, n_r, alpha_n);
     k_c = m_c;
+    // m_c = 24;
+    // k_c = 6;
     n_c = (int) (alpha_n * p * m_c);
+	omp_set_num_threads(p);
 
-    printf("mc = %d, kc = %d, nc = %d\n",k_c,m_c,n_c );
+    printf("mc = %d, kc = %d, nc = %d\n",m_c,k_c,n_c );
 
     // pack A
-	double** A_p = (double**) malloc(p * (K/k_c) * (M/(p*m_c)) * sizeof( double* ));
+	int k_pad = k_c - (K % k_c); 
+	double** A_p = (double**) malloc(p * ((K+k_pad)/k_c) * (M/(p*m_c)) * sizeof( double* ));
 	pack_A(A, A_p, M, K, m_c, k_c, m_r, p);
 
-	// for(int i = 0; i < (p * (K/k_c) * (M/(p*m_c))); i++) {
+	// for(int i = 0; i < (p * ((K+k_pad)/k_c) * (M/(p*m_c))); i++) {
 	// 	for(int j = 0; j < m_c*k_c; j++) {
-	// 		printf("%d ", (int) A_p[i][j]);
+	// 		printf("%f ", A_p[i][j]);
 	// 	}
 	// 	printf("\n\n");
 	// }
 
+	// exit(1);
+
 	// pack B
 	double* B_p;
 	int ret;
-	ret = posix_memalign((void**) &B_p, 64, K * N * sizeof(double));
+	ret = posix_memalign((void**) &B_p, 64, (K+k_pad) * N * sizeof(double));
 	if(ret) {
 		printf("posix memalign error\n");
 		exit(1);
@@ -254,6 +140,8 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 	//rsc = 1; csc = m;
 	//rsa = 1; csa = m;
 	//rsb = 1; csb = k;
+
+    K += k_pad;
 
 	gettimeofday (&start, NULL);
 	int n_reg, m_reg, m, k1;
@@ -331,6 +219,126 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 
 
 
+void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, int p) {
+
+	int ind1 = 0;
+	int ind2 = 0;
+	int ret;
+	int k_pad = k_c - (K % k_c); 
+
+	for(int m1 = 0; m1 < M; m1 += p*m_c) {
+		for(int k1 = 0; k1 < (K + k_pad); k1 += k_c) {
+			for(int m2 = 0; m2 < p*m_c; m2 += m_c) {
+
+				ret = posix_memalign((void**) &A_p[ind1], 64, k_c * m_c * sizeof(double));
+				if(ret) {
+					printf("posix memalign error\n");
+					exit(1);
+				}
+
+				// A_p[ind1] = (double*) malloc(k_c * m_c * sizeof(double));
+				ind2 = 0;
+				
+				for(int m3 = 0; m3 < m_c; m3 += m_r) {
+					for(int i = 0; i < k_c; i++) {
+						if((i + k1) >=  K) {
+
+							for(int j = 0; j < m_r; j++) {
+								A_p[ind1][ind2] = 0;
+								ind2++;
+							}
+
+						} else {
+
+							for(int j = 0; j < m_r; j++) {
+								A_p[ind1][ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
+								ind2++;
+							}
+						}
+					}
+				}
+				ind1++;
+			}
+		}
+	}
+}
+
+
+void pack_B(double* B, double* B_p, int K, int N, int k_c, int n_c, int n_r) {
+
+	int ind1 = 0;
+	int k_pad = k_c - (K % k_c); 
+
+	for(int n1 = 0; n1 < N; n1 += n_c) {
+		for(int k1 = 0; k1 < (K + k_pad); k1 += k_c) {
+			for(int n2 = 0; n2 < n_c; n2 += n_r) {
+				for(int i = 0; i < k_c; i++) {
+
+					if((i + k1) >=  K) {
+
+						for(int j = 0; j < n_r; j++) {
+							B_p[ind1] = 0;
+							ind1++;
+						}
+
+					} else {
+
+						for(int j = 0; j < n_r; j++) {
+							B_p[ind1] = B[n1 + k1*N + n2 + i*N + j];
+							ind1++;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+
+void pack_C(double** C_p, int M, int N, int m_c, int n_c, int p) {
+
+	int ind1 = 0;
+	int ret ;
+	for(int n = 0; n < (N/n_c); n++) {
+		for(int m = 0; m < (M/(p*m_c)); m++) {
+			for(int p1 = 0; p1 < p; p1++) {
+
+				ret = posix_memalign((void**) &C_p[ind1], 64, m_c * n_c * sizeof(double));
+				if(ret) {
+					printf("posix memalign error\n");
+					exit(1);
+				}
+
+				ind1++; 
+			}
+		}
+	}
+}
+
+
+void unpack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p) {
+
+	int ind1 = 0;
+	for(int n3 = 0; n3 < (N/n_c); n3++) {
+		for(int n2 = 0; n2 < (n_c/n_r); n2++) {
+			for(int n1 = 0; n1 < n_r; n1++) {
+				for(int m1 = 0; m1 < (M/(p*m_c)); m1++) {
+					for(int m = 0; m < p; m++) {
+						for(int i = 0; i < (m_c/m_r); i++) {
+							for(int j = 0; j< m_r; j++) {
+								C[ind1] = C_p[n3*(M/m_c)  + m1*p + m][n2*m_c*n_r + n1*m_r + i*m_r*n_r + j];
+								ind1++;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+
+
 void cake_dgemm_checker(double* A, double* B, double* C, int N, int M, int K) {
 
 	double* C_check = calloc(M * N , sizeof( double ));
@@ -388,13 +396,12 @@ int get_cache_size(char* level) {
 	int len, size = 0;
 	FILE *fp;
 	char ret[16];
-
 	char command[128];
+
 	sprintf(command, "lscpu --caches=NAME,ONE-SIZE \
 					| grep %s \
 					| grep -Eo '[0-9]*M|[0-9]*K|0-9*G' \
 					| tr -d '\n'", level);
-
 	fp = popen(command, "r");
 
 	if (fp == NULL) {
@@ -426,11 +433,11 @@ int get_cache_size(char* level) {
 }
 
 
-int get_block_dim(int m_r, int n_r, int p, double alpha_n) {
+int get_block_dim(int m_r, int n_r, double alpha_n) {
 
-	int mc_L2 =0, mc_L3 =0;
+	int mc_L2 = 0, mc_L3 = 0;
 	// find L3 and L2 cache sizes
-	int max_threads = omp_get_max_threads();
+	int max_threads = omp_get_max_threads() / 2; // 2-way hyperthreaded
 	int L2_size = get_cache_size("L2");
 	int L3_size = get_cache_size("L3");
 	// solves for the optimal block size m_c and k_c based on the L3 size
@@ -445,10 +452,10 @@ int get_block_dim(int m_r, int n_r, int p, double alpha_n) {
 	mc_L2 = (int) sqrt(((double) L2_size) / (sizeof(double) * 2));
 	mc_L2 -= (mc_L2 % lcm(m_r, n_r));
 
+	printf("%d %d %d\n", L2_size,L3_size,max_threads);
 	// return min of possible L2 and L3 cache block sizes
 	return (mc_L3 < mc_L2 ? mc_L3 : mc_L2);
 }
-
 
 
 
@@ -462,6 +469,7 @@ void rand_init(double* mat, int r, int c) {
 		mat[i] =  (double) rand() / RAND_MAX*2.0 - 1.0;
 	}	
 }
+
 
 // least common multiple
 int lcm(int n1, int n2) {
