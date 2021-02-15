@@ -34,9 +34,9 @@ int main( int argc, char** argv ) {
 	// M = 1111;
 	// K = 1111;
 	// N = 2880;
-	M = 2777;
-	K = 2777;
-	N = 2777;
+	M = 23041;
+	K = 23041;
+	N = 23041;
 
 
 	// M = 96;
@@ -66,7 +66,7 @@ int main( int argc, char** argv ) {
 
 	cake_dgemm(A, B, C, M, N, K, p);
 	// bli_dprintm( "C: ", M, N, C, N, 1, "%4.4f", "" );
-	cake_dgemm_checker(A, B, C, N, M, K);
+	// cake_dgemm_checker(A, B, C, N, M, K);
 
 	free(A);
 	free(B);
@@ -111,6 +111,12 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 	int m_pad = (M % m_c) ? 1 : 0; 
 	int n_pad = (N % n_c) ? 1 : 0; 
 
+
+
+	gettimeofday (&start, NULL);
+
+
+
     // pack A
 	// double** A_p = (double**) malloc(p * ((K+k_pad)/k_c) * ((M+m_pad)/(p*m_c)) * sizeof( double* ));
 	double** A_p = (double**) malloc( (K/k_c + k_pad)  * (M/m_c + m_pad) * sizeof( double* ));
@@ -118,28 +124,29 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 	pack_A(A, A_p, M, K, m_c, k_c, m_r, p);
 	// print_packed_A(A_p, M, K, m_c, k_c, p);
 
-	// exit(1);
-
 	// pack B
 	int x = (int) (alpha_n * m_c);
-	int q = (N/x)*x + m_c; 
-	printf("x = %d\n", x );
-	printf("q = %d \n", q);
-
-	// exit(1);
+	int N_b = (N/n_c)*n_c + ((N % n_c) ? n_c : 0); 
 	double* B_p;
 	int ret;
-	ret = posix_memalign((void**) &B_p, 64, K * q * sizeof(double));
+	ret = posix_memalign((void**) &B_p, 64, K * N_b * sizeof(double));
 	if(ret) {
 		printf("posix memalign error\n");
 		exit(1);
 	}
 	pack_B(B, B_p, K, N, k_c, n_c, n_r, alpha_n, m_c);
 
-
 	// pack C
 	double** C_p = (double**) malloc((M/m_c + m_pad) * (N/n_c + n_pad) * sizeof( double* ));
 	pack_C(C_p, M, N, m_c, n_c, p, alpha_n);
+
+
+	gettimeofday (&end, NULL);
+	diff_t = (((end.tv_sec - start.tv_sec)*1000000L
+	+end.tv_usec) - start.tv_usec) / (1000000.0);
+	printf("packing time: %f \n", diff_t); 
+
+
 
 	// Set the scalars to use.
 	alpha = 1.0;
@@ -170,15 +177,6 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 					for(n_reg = 0; n_reg < (n_c / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {
 												
-							// bli_dgemm(BLIS_NO_TRANSPOSE, BLIS_NO_TRANSPOSE,
-					  //  		m_r, n_r, k_c, &alpha, 
-					  //  		&A_p[m1*p*(K/k_c) + k1*p + m ][m_reg*m_r*k_c], 
-					  //  		rsa, csa, 
-					  //  		&B_p[n1*K*n_c + k1*k_c*n_c + n_reg*k_c*n_r], 
-					  //  		rsb, csb, &beta, 
-					  //  		&C_p[m + m1*p + n1*(M/m_c)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
-					  //  		rsc, csc);
-
 							bli_dgemm_haswell_asm_6x8(k_c, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p + m ][m_reg*m_r*k_c], 
 					   		&B_p[n1*K*n_c + k1*k_c*n_c + n_reg*k_c*n_r], &beta, 
@@ -209,7 +207,6 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 
 			p_l = (int) ceil(((double) (M % (p*m_c))) / m_c);
 			m1 = (M / (p*m_c));
-			// p_l = 2, m1 = 1
 
 			#pragma omp parallel for private(n_reg,m_reg,m,k1)
 			for(m = 0; m < p_l; m++) {
@@ -247,20 +244,12 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 	}
 
 
-
-
-
-
-
-
-
 	// compute last column of CBS result blocks of size m_c x n_c1
 	n1 = (N / n_c);
 	p_ln = (int) ceil(((double) (N % n_c)) / (x));
 	n_c1 = x * p_ln;
-	printf("here %d \n", n_c1);
+
 	if(n_c1) {	
-		printf("gotttt\n");
 		for(m1 = 0; m1 < (M / (p*m_c)); m1++) {
 			// pragma omp here (i_c loop)
 			#pragma omp parallel for private(n_reg,m_reg,m,k1)
@@ -271,15 +260,6 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 					for(n_reg = 0; n_reg < (n_c1 / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {
 												
-							// bli_dgemm(BLIS_NO_TRANSPOSE, BLIS_NO_TRANSPOSE,
-					  //  		m_r, n_r, k_c, &alpha, 
-					  //  		&A_p[m1*p*(K/k_c) + k1*p + m ][m_reg*m_r*k_c], 
-					  //  		rsa, csa, 
-					  //  		&B_p[n1*K*n_c + k1*k_c*n_c + n_reg*k_c*n_r], 
-					  //  		rsb, csb, &beta, 
-					  //  		&C_p[m + m1*p + n1*(M/m_c)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
-					  //  		rsc, csc);
-
 							bli_dgemm_haswell_asm_6x8(k_c, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p + m ][m_reg*m_r*k_c], 
 					   		&B_p[n1*K*n_c + k1*k_c*n_c1 + n_reg*k_c*n_r], &beta, 
@@ -305,14 +285,11 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 			}
 		}
 
-
 		// compute the final CBS result block of shape p_l*m_c x n_c1
 		if((M % (p*m_c))) {
 
 			p_l = (int) ceil(((double) (M % (p*m_c))) / m_c);
 			m1 = (M / (p*m_c));
-
-			// p_l = 2, m1 = 1
 
 			#pragma omp parallel for private(n_reg,m_reg,m,k1)
 			for(m = 0; m < p_l; m++) {
@@ -344,26 +321,9 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 					   		rsc, csc, NULL, NULL);
 						}
 					}
-
-
 				}
 			}
 		}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	}
 	
 	gettimeofday (&end, NULL);
@@ -371,18 +331,22 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 	+end.tv_usec) - start.tv_usec) / (1000000.0);
 	printf("GEMM time: %f \n", diff_t); 
 
-
-	printf("packed C\n\n\n");
 	// print_packed_C(C_p, M, N, m_c, n_c);
-	printf("\n\n\n\n");
-	// exit(1);
+	// unpack_C(C, C_p, M, N, m_c, n_c, n_r, m_r, p);
 
-	// unpack_C(C, C_p, M, N, m_c, n_c, n_r, m_r, p); 
+
+
+	gettimeofday (&start, NULL);
+ 
 	unpack_C_rsc(C, C_p, M, N, m_c, n_c, n_r, m_r, p, alpha_n); 
-	// for(int i = 0; i < M*N; i++) {
-	// 	printf("%f ", C[i]);
-	// }
-	// printf("\n\n\n\n\n");
+
+
+	gettimeofday (&end, NULL);
+	diff_t = (((end.tv_sec - start.tv_sec)*1000000L
+	+end.tv_usec) - start.tv_usec) / (1000000.0);
+	printf("unpacking time: %f \n", diff_t); 
+
+
 
 
 	for(int i = 0; i < (K/k_c + k_pad)  * (M/m_c + m_pad); i++) {
@@ -760,15 +724,10 @@ void unpack_C_rsc(double* C, double** C_p, int M, int N, int m_c, int n_c, int n
 			}
 		}
 	}
-	
-	printf("unpack cnt = %d\n", ind1);
-
 }
 
 
 void unpack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p) {
-	printf("etohglnkoibjn\n");
-
 
 	int m_pad = (M % m_c) ? 1 : 0; 
 	int m1, p_l;
