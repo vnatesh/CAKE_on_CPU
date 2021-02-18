@@ -20,18 +20,18 @@ void unpack_C_rsc(double* C, double** C_p, int M, int N, int m_c, int n_c, int n
 
 void print_array(double* arr, int len);
 
-void create_ob_A(double* A, double* A_p, int M, int K, int m1, int k1, 
+void set_ob_A(double* A, double* A_p, int M, int K, int m1, int k1, 
 				int m2, int m_c, int k_c, int m_r, bool pad);
-void create_ob_C(double* C, double* C_p, int M, int N, int m1, int n1, int m2,
+void set_ob_C(double* C, double* C_p, int M, int N, int m1, int n1, int m2,
 				int m_c, int n_c, int m_r, int n_r, bool pad);
-
-
-
-
 
 static bool DEBUG = 0;
 
 int main( int argc, char** argv ) {
+
+
+	struct timeval start, end;
+	double diff_t;
 
     if(argc < 2) {
         printf("Enter number of threads\n");
@@ -43,9 +43,9 @@ int main( int argc, char** argv ) {
 	// M = 1111;
 	// K = 1111;
 	// N = 2880;
-	M = 973;
-	K = 911;
-	N = 973;
+	M = 2111;
+	K = 2111;
+	N = 2111;
 
 
 	// M = 96;
@@ -64,15 +64,27 @@ int main( int argc, char** argv ) {
 
     p = atoi(argv[1]);
 	printf("M = %d, K = %d, N = %d\n", M,K,N);
+
+
+
 	double* A = (double*) malloc(M * K * sizeof( double ));
 	double* B = (double*) malloc(K * N * sizeof( double ));
 	double* C = (double*) calloc(M * N , sizeof( double ));
+
+
+
+	gettimeofday (&start, NULL);
 
 	// initialize A and B
     srand(time(NULL));
 	rand_init(A, M, K);
 	rand_init(B, K, N);
 	// rand_init(C, M, N);
+	gettimeofday (&end, NULL);
+	diff_t = (((end.tv_sec - start.tv_sec)*1000000L
+	+end.tv_usec) - start.tv_usec) / (1000000.0);
+	printf("init time: %f \n", diff_t); 
+
 
     // cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
     //         m, n, k, alpha, A, k, B, n, beta, C, n);
@@ -103,6 +115,9 @@ void cake_dgemm(double* A, double* B, double beta_user, double* C, int M, int N,
 	inc_t rsa, csa;
 	inc_t rsb, csb;
 	inc_t rsc, csc;
+	double** A_p; 
+	double** C_p;
+	double* B_p;
 
     // query block size for the microkernel
     cntx_t* cntx = bli_gks_query_cntx();
@@ -111,9 +126,10 @@ void cake_dgemm(double* A, double* B, double beta_user, double* C, int M, int N,
     printf("m_r = %d, n_r = %d\n\n", m_r, n_r);
 
     alpha_n = 1;
+
+
     m_c = get_block_dim(m_r, n_r, alpha_n);
     k_c = m_c;
-
     // m_c = 24;
     // k_c = 6;
     n_c = (int) (alpha_n * p * m_c);
@@ -122,13 +138,9 @@ void cake_dgemm(double* A, double* B, double beta_user, double* C, int M, int N,
     printf("mc = %d, kc = %d, nc = %d\n",m_c,k_c,n_c );
 
 	int k_pad = (K % k_c) ? 1 : 0; 
-	int m_pad = (M % m_c) ? 1 : 0; 
 	int n_pad = (N % n_c) ? 1 : 0; 
 
-
-
 	gettimeofday (&start, NULL);
-    // pack A
 
 	int mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
 	int mr_per_core = (int) ceil( ((double) mr_rem) / p );
@@ -138,34 +150,37 @@ void cake_dgemm(double* A, double* B, double beta_user, double* C, int M, int N,
 	else
 		p_l = 0;
 
-	double** A_p = (double**) malloc( (K/k_c + k_pad) * (((M / (p*m_c))*p) + p_l) * sizeof( double* ));
-	pack_A(A, A_p, M, K, m_c, k_c, m_r, p);
-	// print_packed_A(A_p, M, K, m_c, k_c, m_r, p);
-	// exit(1);
-
-
-	// pack B
-	int x = (int) (alpha_n * m_c);
-
 	int nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
 	int n_c1 = nr_rem * n_r;
 	int N_b = (N - (N%n_c)) + n_c1;
 
-	double* B_p;
-	int ret;
-	ret = posix_memalign((void**) &B_p, 64, K * N_b * sizeof(double));
-	if(ret) {
-		printf("posix memalign error\n");
-		exit(1);
+	#pragma omp parallel sections
+	{
+	    #pragma omp section
+	    {
+	    // pack A
+			A_p = (double**) malloc( (K/k_c + k_pad) * (((M / (p*m_c))*p) + p_l) * sizeof( double* ));
+			pack_A(A, A_p, M, K, m_c, k_c, m_r, p);
+			// exit(1);
+	    }
+	    #pragma omp section
+	    {
+			// pack B
+			if(posix_memalign((void**) &B_p, 64, K * N_b * sizeof(double))) {
+				printf("posix memalign error\n");
+				exit(1);
+			}
+			pack_B(B, B_p, K, N, k_c, n_c, n_r, alpha_n, m_c);
+
+	    }
+
+	    #pragma omp section
+	    {
+			C_p = (double**) malloc((((M / (p*m_c))*p) + p_l) * (N/n_c + n_pad) * sizeof( double* ));
+			if(beta_user > 0)  pack_C(C, C_p, M, N, m_c, n_c, m_r, n_r, p, alpha_n);
+	    }
+
 	}
-	pack_B(B, B_p, K, N, k_c, n_c, n_r, alpha_n, m_c);
-
-
-
-
-	// pack C
-	double** C_p = (double**) malloc((((M / (p*m_c))*p) + p_l) * (N/n_c + n_pad) * sizeof( double* ));
-	if(beta_user > 0)  pack_C(C, C_p, M, N, m_c, n_c, m_r, n_r, p, alpha_n);
 
 		// create_C();
 
@@ -190,7 +205,7 @@ void cake_dgemm(double* A, double* B, double beta_user, double* C, int M, int N,
 	//rsb = 1; csb = k;
 
 	gettimeofday (&start, NULL);
-	int n_reg, m_reg, m, k1, m1, n1, p_ln;
+	int n_reg, m_reg, m, k1, m1, n1;
 
 	int m_c1 = mr_per_core * m_r;
 	int m_c1_last_core = (mr_per_core - (p_l*mr_per_core - mr_rem)) * m_r;
@@ -323,7 +338,6 @@ void cake_dgemm(double* A, double* B, double beta_user, double* C, int M, int N,
 				for(k1 = 0; k1 < (K / k_c); k1++) {
 					for(n_reg = 0; n_reg < (n_c1 / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_cx / m_r); m_reg++) {
-							// printf("gtrudfbgiu. %d \n", (K/k_c + k_pad)  * (M/m_c + m_pad)  );
 												
 							bli_dgemm_haswell_asm_6x8(k_c, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p_l + m ][m_reg*m_r*k_c], 
@@ -368,11 +382,11 @@ void cake_dgemm(double* A, double* B, double beta_user, double* C, int M, int N,
 	+end.tv_usec) - start.tv_usec) / (1000000.0);
 	printf("unpacking time: %f \n", diff_t); 
 
-	for(int i = 0; i < (K/k_c + k_pad)  * (M/m_c + m_pad); i++) {
+	for(int i = 0; i < (K/k_c + k_pad) * (((M / (p*m_c))*p) + p_l); i++) {
 		free(A_p[i]);
 	}
 
-	for(int i = 0; i < (M/m_c + m_pad) * (N/n_c + n_pad); i++) {
+	for(int i = 0; i < (((M / (p*m_c))*p) + p_l) * (N/n_c + n_pad); i++) {
 		free(C_p[i]);
 	}
 
@@ -383,132 +397,82 @@ void cake_dgemm(double* A, double* B, double beta_user, double* C, int M, int N,
 
 
 
-void create_ob_A(double* A, double* A_p, int M, int K, int m1, int k1, int m2, int m_c, int k_c, int m_r, bool pad) {
-
-	int	ind2 = 0;
-	
-	if(pad) {
-		for(int m3 = 0; m3 < m_c; m3 += m_r) {
-			for(int i = 0; i < k_c; i++) {
-				for(int j = 0; j < m_r; j++) {
-
-					if((m1 + m2 + m3 + j) >=  M) {
-						A_p[ind2] = 0.0;
-					} else {
-						A_p[ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
-					}
-
-					ind2++;
-				}
-			}
-		}		
-	} 
-
-	else {
-		for(int m3 = 0; m3 < m_c; m3 += m_r) {
-			for(int i = 0; i < k_c; i++) {
-				for(int j = 0; j < m_r; j++) {
-					A_p[ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
-					ind2++;
-				}
-			}
-		}
-	}
-}
-
-
 
 void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, int p) {
 
 	int ind1 = 0;
-	int ind2 = 0;
-	int m1, k1, m2, ret;
+	int m1, k1, m2, p_l;
 	int k_c1 = (K % k_c);
 	int mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
 	int mr_per_core = (int) ceil( ((double) mr_rem) / p );
 	int m_c1 = mr_per_core * m_r;
-
-
-	int p_l;
 
 	if(mr_per_core) 
 		p_l = (int) ceil( ((double) mr_rem) / mr_per_core);
 	else
 		p_l = 0;
 
-
 	int m_c1_last_core = (mr_per_core - (p_l*mr_per_core - mr_rem)) * m_r;
 
-
-	// main portion of A that evenly fits into CBS blocks with p m_cxk_c OBs
+	// main portion of A that evenly fits into CBS blocks each with p m_cxk_c OBs
 	for(m1 = 0; m1 < (M - (M % (p*m_c))); m1 += p*m_c) {
 		for(k1 = 0; k1 < (K - (K%k_c)); k1 += k_c) {
 			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
-
-				ret = posix_memalign((void**) &A_p[ind1], 64, k_c * m_c * sizeof(double));
 				
-				if(ret) {
+				if(posix_memalign((void**) &A_p[ind1], 64, k_c * m_c * sizeof(double))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
 
-				create_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c, k_c, m_r, 0);
+				set_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c, k_c, m_r, 0);
 
 				if(DEBUG) print_array(A_p[ind1], k_c * m_c);
 				ind1++;
 			}
 		}
-
+		// right-most column of CBS blocks each with p m_c x k_c1 OBs
 		if(k_c1) {
 			k1 = K - (K%k_c);
 			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
 
-				ret = posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c * sizeof(double));			
-				if(ret) {
+				if(posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c * sizeof(double))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
 
-				create_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c, k_c1, m_r, 0);
+				set_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c, k_c1, m_r, 0);
 				if(DEBUG) print_array(A_p[ind1], k_c1 * m_c);
 				ind1++;
 			}
 		}
 	}
 
-	// Process the final row of CBS blocks (each with p_l OBs) and perform M-dim padding
+	// Process bottom-most rows of CBS blocks and perform M-dim padding
 	if(M % (p*m_c)) {	
 
 		m1 = (M - (M % (p*m_c)));
 
-		// printf("m1 = %d, mr_per_core = %d, m_c1 = %d, p_l = %d, m_c1_last_core = %d  \n",
-		//  m1, mr_per_core, m_c1,p_l,m_c1_last_core);
-
 		for(k1 = 0; k1 < (K - (K%k_c)); k1 += k_c) {
 			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
-
-				ret = posix_memalign((void**) &A_p[ind1], 64, k_c * m_c1 * sizeof(double));
 				
-				if(ret) {
+				if(posix_memalign((void**) &A_p[ind1], 64, k_c * m_c1 * sizeof(double))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
 
-				create_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1, k_c, m_r, 0);
+				set_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1, k_c, m_r, 0);
 				if(DEBUG) print_array(A_p[ind1], k_c * m_c1);
 				ind1++;
 			}
 
+			// final row of CBS blocks each with m_c1_last_core x k_c
 			m2 = (p_l-1) * m_c1;
-			ind2 = 0;
-			ret = posix_memalign((void**) &A_p[ind1], 64, k_c * m_c1_last_core * sizeof(double));
-			
-			if(ret) {
+			if(posix_memalign((void**) &A_p[ind1], 64, k_c * m_c1_last_core * sizeof(double))) {
 				printf("posix memalign error\n");
 				exit(1);
 			}
 
-			create_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1_last_core, k_c, m_r, 1);
+			set_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1_last_core, k_c, m_r, 1);
 			if(DEBUG) print_array(A_p[ind1], k_c * m_c1_last_core);
 			ind1++;
 		}
@@ -519,29 +483,26 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 
 			k1 = K - (K%k_c);
 			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
-				ind2 = 0;
-				ret = posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c1 * sizeof(double));			
-				if(ret) {
+
+				if(posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c1 * sizeof(double))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
 
-				create_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1, k_c1, m_r, 0);
+				set_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1, k_c1, m_r, 0);
 				if(DEBUG) print_array(A_p[ind1], k_c1 * m_c1);
 				ind1++;
 			}
 
-			// final OB of shape m_c1_last_core x k_c1 
+			// last OB of A has shape m_c1_last_core x k_c1 
 			m2 = (p_l-1) * m_c1;
-			ind2 = 0;
-			ret = posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c1_last_core * sizeof(double));
 			
-			if(ret) {
+			if(posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c1_last_core * sizeof(double))) {
 				printf("posix memalign error\n");
 				exit(1);
 			}
 
-			create_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1_last_core, k_c1, m_r, 1);
+			set_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1_last_core, k_c1, m_r, 1);
 			if(DEBUG) print_array(A_p[ind1], k_c1 * m_c1_last_core);
 			ind1++;
 		}
@@ -552,7 +513,6 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 
 void pack_B(double* B, double* B_p, int K, int N, int k_c, int n_c, int n_r, int alpha_n, int m_c) {
 
-	int x = (int) (alpha_n * m_c);
 	int k1, k_c1, n1, n_c1, nr_rem;
 	int ind1 = 0;
 
@@ -582,7 +542,6 @@ void pack_B(double* B, double* B_p, int K, int N, int k_c, int n_c, int n_r, int
 			}
 		}
 	}
-
 
 	// Process the final column of CBS blocks (sized k_c x n_c1) and perform N-dim padding 
 	n1 = (N - (N%n_c));
@@ -631,11 +590,43 @@ void pack_B(double* B, double* B_p, int K, int N, int k_c, int n_c, int n_r, int
 }
 
 
+// initialize an operation block of matrix A
+void set_ob_A(double* A, double* A_p, int M, int K, int m1, int k1, int m2, int m_c, int k_c, int m_r, bool pad) {
+
+	int	ind2 = 0;
+	
+	if(pad) {
+		for(int m3 = 0; m3 < m_c; m3 += m_r) {
+			for(int i = 0; i < k_c; i++) {
+				for(int j = 0; j < m_r; j++) {
+
+					if((m1 + m2 + m3 + j) >=  M) {
+						A_p[ind2] = 0.0;
+					} else {
+						A_p[ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
+					}
+
+					ind2++;
+				}
+			}
+		}		
+	} 
+
+	else {
+		for(int m3 = 0; m3 < m_c; m3 += m_r) {
+			for(int i = 0; i < k_c; i++) {
+				for(int j = 0; j < m_r; j++) {
+					A_p[ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
+					ind2++;
+				}
+			}
+		}
+	}
+}
 
 
 
-
-void create_ob_C(double* C, double* C_p, int M, int N, int m1, int n1, int m2,
+void set_ob_C(double* C, double* C_p, int M, int N, int m1, int n1, int m2,
 				int m_c, int n_c, int m_r, int n_r, bool pad) {
 
 	int	ind2 = 0;
@@ -673,17 +664,13 @@ void create_ob_C(double* C, double* C_p, int M, int N, int m1, int n1, int m2,
 }
 
 
-
 void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, int n_r, int p, int alpha_n) {
 
-	int ind1 = 0;
-	int ind2, n1, m1, m2, ret;
+	int n1, m1, m2, p_l;
 
 	int mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
 	int mr_per_core = (int) ceil( ((double) mr_rem) / p );
 	int m_c1 = mr_per_core * m_r;
-
-	int p_l;
 
 	if(mr_per_core) 
 		p_l = (int) ceil( ((double) mr_rem) / mr_per_core);
@@ -696,53 +683,54 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 	int nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
 	int n_c1 = nr_rem * n_r;
 
+	int ind1 = 0;
+
+	// main portion of C that evenly fits into CBS blocks each with p m_cxn_c OBs
 	for(n1 = 0; n1 < (N - (N%n_c)); n1 += n_c) {
 		for(m1 = 0; m1 < (M - (M % (p*m_c))); m1 += p*m_c) {
 			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
 
-				ret = posix_memalign((void**) &C_p[ind1], 64, m_c * n_c * sizeof(double));
-				if(ret) {
+				if(posix_memalign((void**) &C_p[ind1], 64, m_c * n_c * sizeof(double))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
 
-				create_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c, n_c, m_r, n_r, 0);
+				set_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c, n_c, m_r, n_r, 0);
 				if(DEBUG) print_array(C_p[ind1], m_c * n_c);
 				ind1++;
 			}
 		}
 
+		// bottom row of CBS blocks with p_l-1 OBs of m_c1 x n_c and 1 OBs of shape m_c1_last_core x n_c
 		if(M % (p*m_c)) {	
 
 			m1 = (M - (M % (p*m_c)));
 
 			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
 
-				ret = posix_memalign((void**) &C_p[ind1], 64, m_c1 * n_c * sizeof(double));				
-				if(ret) {
+				if(posix_memalign((void**) &C_p[ind1], 64, m_c1 * n_c * sizeof(double))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
 
-				create_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c1, n_c, m_r, n_r, 0);
+				set_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c1, n_c, m_r, n_r, 0);
 				if(DEBUG) print_array(C_p[ind1], m_c1 * n_c);
 				ind1++;
 			}
 
 			m2 = (p_l-1) * m_c1;
-			ret = posix_memalign((void**) &C_p[ind1], 64, m_c1_last_core * n_c * sizeof(double));
-			if(ret) {
+			if(posix_memalign((void**) &C_p[ind1], 64, m_c1_last_core * n_c * sizeof(double))) {
 				printf("posix memalign error\n");
 				exit(1);
 			}
 
-			create_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c1_last_core, n_c, m_r, n_r, 1);
+			set_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c1_last_core, n_c, m_r, n_r, 1);
 			if(DEBUG) print_array(C_p[ind1], m_c1 * n_c);
 			ind1++;
 		}
 	}
 
-
+	// right-most column of CBS blocks with p OBs of shape m_c x n_c1
 	n1 = (N - (N%n_c));
 
 	if(n_c1) {	
@@ -750,13 +738,12 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 		for(m1 = 0; m1 < (M - (M % (p*m_c))); m1 += p*m_c) {
 			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
 
-				ret = posix_memalign((void**) &C_p[ind1], 64, m_c * n_c1 * sizeof(double));
-				if(ret) {
+				if(posix_memalign((void**) &C_p[ind1], 64, m_c * n_c1 * sizeof(double))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
 
-				create_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c, n_c1, m_r, n_r, 1);
+				set_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c, n_c1, m_r, n_r, 1);
 				if(DEBUG) print_array(C_p[ind1], m_c * n_c1);
 				ind1++;
 			}
@@ -766,27 +753,27 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 
 			m1 = (M - (M % (p*m_c)));
 
+			// last row of CBS blocks with p_l-1 m_c1 x n_c1 OBs and 1 m_c1_last_core x n_c1 OB
 			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
 
-				ret = posix_memalign((void**) &C_p[ind1], 64, m_c1 * n_c1 * sizeof(double));
-				if(ret) {
+				if(posix_memalign((void**) &C_p[ind1], 64, m_c1 * n_c1 * sizeof(double))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
 
-				create_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c1, n_c1, m_r, n_r, 1);
+				set_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c1, n_c1, m_r, n_r, 1);
 				if(DEBUG) print_array(C_p[ind1], m_c1 * n_c1);
 				ind1++;
 			}
 
+			// last OB in C (lower right corner) with shape m_c1_last_core * n_c1
 			m2 = (p_l-1) * m_c1;
-			ret = posix_memalign((void**) &C_p[ind1], 64, m_c1_last_core * n_c1 * sizeof(double));
-			if(ret) {
+			if(posix_memalign((void**) &C_p[ind1], 64, m_c1_last_core * n_c1 * sizeof(double))) {
 				printf("posix memalign error\n");
 				exit(1);
 			}
 
-			create_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c1_last_core, n_c1, m_r, n_r, 1);
+			set_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c1_last_core, n_c1, m_r, n_r, 1);
 			if(DEBUG) print_array(C_p[ind1], m_c1_last_core * n_c1);
 			ind1++;
 		}
@@ -797,18 +784,12 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 
 void unpack_C_rsc(double* C, double** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p, int alpha_n) {
 
-	int m_pad = (M % m_c) ? 1 : 0; 
-	int x = (int) (alpha_n * m_c);
-
-	int m, m1, p_lm, p_ln, n1;
+	int m, m1, n1, p_l;
 	int ind1 = 0;
-
 
 	int mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
 	int mr_per_core = (int) ceil( ((double) mr_rem) / p );
 	int m_c1 = mr_per_core * m_r;
-
-	int p_l;
 
 	if(mr_per_core) 
 		p_l = (int) ceil( ((double) mr_rem) / mr_per_core);
@@ -941,7 +922,6 @@ void unpack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int n_r, 
 				m1 = M / (p*m_c);
 				p_l = (int) ceil(((double) (M % (p*m_c))) / m_c);
 
-
 				for(int m = 0; m < p_l; m++) {
 					for(int i = 0; i < (m_c/m_r); i++) {
 						for(int j = 0; j< m_r; j++) {
@@ -988,7 +968,7 @@ void cake_dgemm_checker(double* A, double* B, double* C, int N, int M, int K) {
 	            CORRECT = 0;
 	        }
 
-        printf("%f\t%f\n", C_check[ind1], C[ind1]);
+        // printf("%f\t%f\n", C_check[ind1], C[ind1]);
 
         ind1++; 
       }
@@ -1064,19 +1044,20 @@ int get_block_dim(int m_r, int n_r, double alpha_n) {
 	int max_threads = omp_get_max_threads() / 2; // 2-way hyperthreaded
 	int L2_size = get_cache_size("L2");
 	int L3_size = get_cache_size("L3");
+	
 	// solves for the optimal block size m_c and k_c based on the L3 size
-	// L3_size >= (alpha_n*p*(1+p)) * x^2     (solve for x = m_c = k_c) 
-	// We only use half of the each cache to prevent our working blocks from being evicted
-	mc_L3 = (int) sqrt((((double) L3_size) / (sizeof(double) * 2))  
-							/ (alpha_n*max_threads*(max_threads+1)));
+	// L3_size >= p*mc*kc + 2*(kc*alpha*p*mc + p*mc*alpha*p*mc)     (solve for x = m_c = k_c) 
+	// We only use ~ half of the each cache to prevent our working blocks from being evicted
+	mc_L3 = (int) sqrt((((double) L3_size) / (sizeof(double)))  
+							/ (max_threads * (1 + 2*alpha_n + 2*alpha_n*max_threads)));
 	mc_L3 -= (mc_L3 % lcm(m_r, n_r));
 
 	// solves for optimal mc,kc based on L2 size
-	// L2_size >= x^2     (solve for x = m_c = k_c) 
-	mc_L2 = (int) sqrt(((double) L2_size) / (sizeof(double) * 2));
+	// L2_size >= 2*(mc*kc + kc*nr) + mc*nr     (solve for x = m_c = k_c) 
+	int b = 3*n_r;
+	mc_L2 = (int)  (-b + sqrt(b*b + 4*2*(((double) L2_size) / (sizeof(double))))) / (2*2)  ;
 	mc_L2 -= (mc_L2 % lcm(m_r, n_r));
 
-	printf("%d %d %d\n", L2_size,L3_size,max_threads);
 	// return min of possible L2 and L3 cache block sizes
 	return (mc_L3 < mc_L2 ? mc_L3 : mc_L2);
 }
