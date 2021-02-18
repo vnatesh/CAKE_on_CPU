@@ -6,13 +6,18 @@
 #include <time.h> 
 #include "mkl.h"
 
-int main(int argc, char* argv[])
-{
 
+
+void rand_init(double* mat, int r, int c);
+
+
+int main(int argc, char* argv[])  {
+    struct timeval start, end;
+    double diff_t;
     // printf("max threads %d\n\n", mkl_get_max_threads());
     if(argc < 2) {
-	printf("Enter number of threads\n");
-	exit(1);
+        printf("Enter number of threads\n");
+        exit(1);
     }
 
     mkl_set_num_threads(atoi(argv[1]));
@@ -21,15 +26,18 @@ int main(int argc, char* argv[])
     int m, n, k, i, j;
     double alpha, beta;
 
-//    m = 8192, k = 8192, n = 8192;
-     // m = 30720, k = 30720, n = 30720;  
-//    m = 23040, k = 23040, n = 23040;      
- m = 23040, k = 23040, n = 23040;
-  alpha = 1.0; beta = 0.0;
+    m = 23095, k = 23095, n = 23095;
+    // m = 30720, k = 30720, n = 30720;  
+    //  m = 25921, k = 25921, n = 25921;      
+    // m = 23040, k = 23040, n = 23040;
+    alpha = 1.0; beta = 0.0;
 
     A = (double *)mkl_malloc( m*k*sizeof( double ), 64 );
     B = (double *)mkl_malloc( k*n*sizeof( double ), 64 );
     C = (double *)mkl_malloc( m*n*sizeof( double ), 64 );
+
+    printf("M = %d, K = %d, N = %d\n", m, k, n);
+
     if (A == NULL || B == NULL || C == NULL) {
       printf( "\n ERROR: Can't allocate memory for matrices. Aborting... \n\n");
       mkl_free(A);
@@ -38,22 +46,32 @@ int main(int argc, char* argv[])
       return 1;
     }
 
-    for (i = 0; i < (m*k); i++) {
-        // A[i] = (double)(i+1);
-        A[i] = (double)(i);
-    }
+    gettimeofday (&start, NULL);
 
-    for (i = 0; i < (k*n); i++) {
-        // B[i] = (double)(-i-1);
-        B[i] = (double)(i);
-    }
+    rand_init(A, m, k);
+    rand_init(B, k, n);
 
-    for (i = 0; i < (m*n); i++) {
-        C[i] = 0.0;
-    }
 
-    struct timeval start, end;
-    double diff_t;
+    // for (i = 0; i < (m*k); i++) {
+    //     // A[i] = (double)(i+1);
+    //     A[i] = (double)(i);
+    // }
+
+    // for (i = 0; i < (k*n); i++) {
+    //     // B[i] = (double)(-i-1);
+    //     B[i] = (double)(i);
+    // }
+
+    // for (i = 0; i < (m*n); i++) {
+    //     C[i] = 0.0;
+    // }
+
+    gettimeofday (&end, NULL);
+    diff_t = (((end.tv_sec - start.tv_sec)*1000000L
+    +end.tv_usec) - start.tv_usec) / (1000000.0);
+    printf("init time: %f \n", diff_t); 
+
+
 
     gettimeofday (&start, NULL);
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
@@ -64,11 +82,6 @@ int main(int argc, char* argv[])
     printf("GEMM time: %f \n", diff_t); 
 
 
-    FILE * fp;
-    fp = fopen ("mkl_time.txt", "a");
-    fprintf(fp, "%s,%s\n","num_cores", "runtime");
-    fprintf(fp, "%d,%f\n",atoi(argv[1]),diff_t);
-    fclose(fp);
 
     printf ("\n Computations completed.\n\n");
 
@@ -163,3 +176,16 @@ int main(int argc, char* argv[])
     printf (" Example completed. \n\n");
     return 0;
 }
+
+
+
+void rand_init(double* mat, int r, int c) {
+    // int MAX = 65536;
+    for(int i = 0; i < r*c; i++) {
+        // mat[i] = (double) i;
+        // mat[i] = 1.0;
+        // mat[i] =  (double) (i%MAX);
+        mat[i] =  (double) rand() / RAND_MAX*2.0 - 1.0;
+    }   
+}
+
