@@ -6,21 +6,30 @@
  
 void pack_B(double* B, double* B_p, int K, int N, int k_c, int n_c, int n_r, int alpha_n, int m_c);
 void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, int p);
-void pack_C(double** C_p, int M, int N, int m_c, int n_c, int p, int alpha_n);
+void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, int n_r, int p, int alpha_n);
 void unpack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p);
 void rand_init(double* mat, int r, int c);
 void cake_dgemm_checker(double* A, double* B, double* C, int N, int M, int K);
-void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p);
+void cake_dgemm(double* A, double* B, double beta_user, double* C, int M, int N, int K, int p);
 
 int get_block_dim(int m_r, int n_r, double alpha_n);
 int get_cache_size(char* level);
 int lcm(int n1, int n2);
 
-void print_packed_A(double** A_p, int M, int K, int m_c, int k_c, int p);
-void print_packed_C(double** C_p, int M, int N, int m_c, int n_c);
-
 void unpack_C_rsc(double* C, double** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p, int alpha_n);
 
+void print_array(double* arr, int len);
+
+void create_ob_A(double* A, double* A_p, int M, int K, int m1, int k1, 
+				int m2, int m_c, int k_c, int m_r, bool pad);
+void create_ob_C(double* C, double* C_p, int M, int N, int m1, int n1, int m2,
+				int m_c, int n_c, int m_r, int n_r, bool pad);
+
+
+
+
+
+static bool DEBUG = 0;
 
 int main( int argc, char** argv ) {
 
@@ -34,9 +43,9 @@ int main( int argc, char** argv ) {
 	// M = 1111;
 	// K = 1111;
 	// N = 2880;
-	M = 23041;
-	K = 23041;
-	N = 23041;
+	M = 973;
+	K = 911;
+	N = 973;
 
 
 	// M = 96;
@@ -63,10 +72,15 @@ int main( int argc, char** argv ) {
     srand(time(NULL));
 	rand_init(A, M, K);
 	rand_init(B, K, N);
+	// rand_init(C, M, N);
 
-	cake_dgemm(A, B, C, M, N, K, p);
+    // cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+    //         m, n, k, alpha, A, k, B, n, beta, C, n);
+
+	double beta = 1.0;
+	cake_dgemm(A, B, beta, C, M, N, K, p);
 	// bli_dprintm( "C: ", M, N, C, N, 1, "%4.4f", "" );
-	// cake_dgemm_checker(A, B, C, N, M, K);
+	cake_dgemm_checker(A, B, C, N, M, K);
 
 	free(A);
 	free(B);
@@ -77,7 +91,7 @@ int main( int argc, char** argv ) {
 
 
 
-void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
+void cake_dgemm(double* A, double* B, double beta_user, double* C, int M, int N, int K, int p) {
 	// contiguous row-storage (i.e. cs_c = 1) or contiguous column-storage (i.e. rs_c = 1). 
 	// This preference comes from how the microkernel is most efficiently able to load/store 
 	// elements of C11 from/to memory. Most microkernels use vector instructions to access 
@@ -114,19 +128,29 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 
 
 	gettimeofday (&start, NULL);
-
-
-
     // pack A
-	// double** A_p = (double**) malloc(p * ((K+k_pad)/k_c) * ((M+m_pad)/(p*m_c)) * sizeof( double* ));
-	double** A_p = (double**) malloc( (K/k_c + k_pad)  * (M/m_c + m_pad) * sizeof( double* ));
 
+	int mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
+	int mr_per_core = (int) ceil( ((double) mr_rem) / p );
+	int p_l;
+	if(mr_per_core) 
+		p_l = (int) ceil( ((double) mr_rem) / mr_per_core);
+	else
+		p_l = 0;
+
+	double** A_p = (double**) malloc( (K/k_c + k_pad) * (((M / (p*m_c))*p) + p_l) * sizeof( double* ));
 	pack_A(A, A_p, M, K, m_c, k_c, m_r, p);
-	// print_packed_A(A_p, M, K, m_c, k_c, p);
+	// print_packed_A(A_p, M, K, m_c, k_c, m_r, p);
+	// exit(1);
+
 
 	// pack B
 	int x = (int) (alpha_n * m_c);
-	int N_b = (N/n_c)*n_c + ((N % n_c) ? n_c : 0); 
+
+	int nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
+	int n_c1 = nr_rem * n_r;
+	int N_b = (N - (N%n_c)) + n_c1;
+
 	double* B_p;
 	int ret;
 	ret = posix_memalign((void**) &B_p, 64, K * N_b * sizeof(double));
@@ -136,10 +160,14 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 	}
 	pack_B(B, B_p, K, N, k_c, n_c, n_r, alpha_n, m_c);
 
-	// pack C
-	double** C_p = (double**) malloc((M/m_c + m_pad) * (N/n_c + n_pad) * sizeof( double* ));
-	pack_C(C_p, M, N, m_c, n_c, p, alpha_n);
 
+
+
+	// pack C
+	double** C_p = (double**) malloc((((M / (p*m_c))*p) + p_l) * (N/n_c + n_pad) * sizeof( double* ));
+	if(beta_user > 0)  pack_C(C, C_p, M, N, m_c, n_c, m_r, n_r, p, alpha_n);
+
+		// create_C();
 
 	gettimeofday (&end, NULL);
 	diff_t = (((end.tv_sec - start.tv_sec)*1000000L
@@ -162,8 +190,13 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 	//rsb = 1; csb = k;
 
 	gettimeofday (&start, NULL);
-	int n_reg, m_reg, m, k1, m1, p_l, n1, n_c1, p_ln;
+	int n_reg, m_reg, m, k1, m1, n1, p_ln;
 
+	int m_c1 = mr_per_core * m_r;
+	int m_c1_last_core = (mr_per_core - (p_l*mr_per_core - mr_rem)) * m_r;
+
+	int k1_n = K / k_c;
+	int k_c1 = K % k_c;
 
 	// compute largest portion of C that can be evenly partitioned into CBS blocks
 	for(n1 = 0; n1 < (N / n_c); n1++) {
@@ -173,20 +206,17 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 			for(m = 0; m < p; m++) {
 				for(k1 = 0; k1 < (K / k_c); k1++) {
 					// pragma omp also here possible (j_r loop)
-					// #pragma omp parallel num_threads(p)
 					for(n_reg = 0; n_reg < (n_c / n_r); n_reg++) {
-						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {
-												
+						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {												
 							bli_dgemm_haswell_asm_6x8(k_c, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p + m ][m_reg*m_r*k_c], 
 					   		&B_p[n1*K*n_c + k1*k_c*n_c + n_reg*k_c*n_r], &beta, 
-					   		&C_p[m + m1*p + n1*(M/m_c + m_pad)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
+					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
 					   		rsc, csc, NULL, NULL);
 						}
 					}
 				}
 
-				int k_c1 = K % k_c;
 				if(k_c1) {
 					int k1_n = K / k_c;
 					for(n_reg = 0; n_reg < (n_c / n_r); n_reg++) {
@@ -194,7 +224,7 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 							bli_dgemm_haswell_asm_6x8( k_c1, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1_n*p + m ][m_reg*m_r*k_c1], 
 					   		&B_p[n1*K*n_c + k1_n*k_c*n_c + n_reg*k_c1*n_r], &beta, 
-					   		&C_p[m + m1*p + n1*(M/m_c + m_pad)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
+					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
 					   		rsc, csc, NULL, NULL);
 						}
 					}
@@ -205,36 +235,34 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 		// compute the final row of CBS result blocks each of shape p_l*m_c x n_c
 		if((M % (p*m_c))) {
 
-			p_l = (int) ceil(((double) (M % (p*m_c))) / m_c);
 			m1 = (M / (p*m_c));
 
 			#pragma omp parallel for private(n_reg,m_reg,m,k1)
 			for(m = 0; m < p_l; m++) {
+
+				int m_cx = (m == (p_l - 1) ? m_c1_last_core : m_c1);
+
 				for(k1 = 0; k1 < (K / k_c); k1++) {
 					for(n_reg = 0; n_reg < (n_c / n_r); n_reg++) {
-						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {
-							// printf("gtrudfbgiu. %d \n", (K/k_c + k_pad)  * (M/m_c + m_pad)  );
+						for(m_reg = 0; m_reg < (m_cx / m_r); m_reg++) {
 												
 							bli_dgemm_haswell_asm_6x8(k_c, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p_l + m ][m_reg*m_r*k_c], 
 					   		&B_p[n1*K*n_c + k1*k_c*n_c + n_reg*k_c*n_r], &beta, 
-					   		&C_p[m + m1*p + n1*(M/m_c + m_pad)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
+					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
 					   		rsc, csc, NULL, NULL);
 						}
 					}
 				}
 
-				int k1_n = K / k_c;
-				int k_c1 = K % k_c;
-
 				if(k_c1) {
 				
 					for(n_reg = 0; n_reg < (n_c / n_r); n_reg++) {
-						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {
+						for(m_reg = 0; m_reg < (m_cx / m_r); m_reg++) {
 							bli_dgemm_haswell_asm_6x8( k_c1, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1_n*p_l + m ][m_reg*m_r*k_c1], 
 					   		&B_p[n1*K*n_c + k1_n*k_c*n_c + n_reg*k_c1*n_r], &beta, 
-					   		&C_p[m + m1*p + n1*(M/m_c + m_pad)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
+					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
 					   		rsc, csc, NULL, NULL);
 						}
 					}
@@ -246,8 +274,6 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 
 	// compute last column of CBS result blocks of size m_c x n_c1
 	n1 = (N / n_c);
-	p_ln = (int) ceil(((double) (N % n_c)) / (x));
-	n_c1 = x * p_ln;
 
 	if(n_c1) {	
 		for(m1 = 0; m1 < (M / (p*m_c)); m1++) {
@@ -263,21 +289,19 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 							bli_dgemm_haswell_asm_6x8(k_c, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p + m ][m_reg*m_r*k_c], 
 					   		&B_p[n1*K*n_c + k1*k_c*n_c1 + n_reg*k_c*n_r], &beta, 
-					   		&C_p[m + m1*p + n1*(M/m_c + m_pad)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
+					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
 					   		rsc, csc, NULL, NULL);
 						}
 					}
 				}
 
-				int k_c1 = K % k_c;
 				if(k_c1) {
-					int k1_n = K / k_c;
 					for(n_reg = 0; n_reg < (n_c1 / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {
 							bli_dgemm_haswell_asm_6x8( k_c1, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1_n*p + m ][m_reg*m_r*k_c1], 
 					   		&B_p[n1*K*n_c + k1_n*k_c*n_c1 + n_reg*k_c1*n_r], &beta, 
-					   		&C_p[m + m1*p + n1*(M/m_c + m_pad)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
+					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
 					   		rsc, csc, NULL, NULL);
 						}
 					}
@@ -288,36 +312,36 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 		// compute the final CBS result block of shape p_l*m_c x n_c1
 		if((M % (p*m_c))) {
 
-			p_l = (int) ceil(((double) (M % (p*m_c))) / m_c);
 			m1 = (M / (p*m_c));
+
 
 			#pragma omp parallel for private(n_reg,m_reg,m,k1)
 			for(m = 0; m < p_l; m++) {
+
+				int m_cx = (m == (p_l - 1) ? m_c1_last_core : m_c1);
+
 				for(k1 = 0; k1 < (K / k_c); k1++) {
 					for(n_reg = 0; n_reg < (n_c1 / n_r); n_reg++) {
-						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {
+						for(m_reg = 0; m_reg < (m_cx / m_r); m_reg++) {
 							// printf("gtrudfbgiu. %d \n", (K/k_c + k_pad)  * (M/m_c + m_pad)  );
 												
 							bli_dgemm_haswell_asm_6x8(k_c, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p_l + m ][m_reg*m_r*k_c], 
 					   		&B_p[n1*K*n_c + k1*k_c*n_c1 + n_reg*k_c*n_r], &beta, 
-					   		&C_p[m + m1*p + n1*(M/m_c + m_pad)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
+					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
 					   		rsc, csc, NULL, NULL);
 						}
 					}
 				}
-
-				int k1_n = K / k_c;
-				int k_c1 = K % k_c;
 				
 				if(k_c1) {
 				
 					for(n_reg = 0; n_reg < (n_c1 / n_r); n_reg++) {
-						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {
+						for(m_reg = 0; m_reg < (m_cx / m_r); m_reg++) {
 							bli_dgemm_haswell_asm_6x8( k_c1, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1_n*p_l + m ][m_reg*m_r*k_c1], 
 					   		&B_p[n1*K*n_c + k1_n*k_c*n_c1 + n_reg*k_c1*n_r], &beta, 
-					   		&C_p[m + m1*p + n1*(M/m_c + m_pad)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
+					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
 					   		rsc, csc, NULL, NULL);
 						}
 					}
@@ -326,28 +350,23 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 		}
 	}
 	
+
 	gettimeofday (&end, NULL);
 	diff_t = (((end.tv_sec - start.tv_sec)*1000000L
 	+end.tv_usec) - start.tv_usec) / (1000000.0);
 	printf("GEMM time: %f \n", diff_t); 
-
+// exit(1);
 	// print_packed_C(C_p, M, N, m_c, n_c);
 	// unpack_C(C, C_p, M, N, m_c, n_c, n_r, m_r, p);
 
-
-
 	gettimeofday (&start, NULL);
- 
-	unpack_C_rsc(C, C_p, M, N, m_c, n_c, n_r, m_r, p, alpha_n); 
 
+	unpack_C_rsc(C, C_p, M, N, m_c, n_c, n_r, m_r, p, alpha_n); 
 
 	gettimeofday (&end, NULL);
 	diff_t = (((end.tv_sec - start.tv_sec)*1000000L
 	+end.tv_usec) - start.tv_usec) / (1000000.0);
 	printf("unpacking time: %f \n", diff_t); 
-
-
-
 
 	for(int i = 0; i < (K/k_c + k_pad)  * (M/m_c + m_pad); i++) {
 		free(A_p[i]);
@@ -364,27 +383,68 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 
 
 
+void create_ob_A(double* A, double* A_p, int M, int K, int m1, int k1, int m2, int m_c, int k_c, int m_r, bool pad) {
+
+	int	ind2 = 0;
+	
+	if(pad) {
+		for(int m3 = 0; m3 < m_c; m3 += m_r) {
+			for(int i = 0; i < k_c; i++) {
+				for(int j = 0; j < m_r; j++) {
+
+					if((m1 + m2 + m3 + j) >=  M) {
+						A_p[ind2] = 0.0;
+					} else {
+						A_p[ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
+					}
+
+					ind2++;
+				}
+			}
+		}		
+	} 
+
+	else {
+		for(int m3 = 0; m3 < m_c; m3 += m_r) {
+			for(int i = 0; i < k_c; i++) {
+				for(int j = 0; j < m_r; j++) {
+					A_p[ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
+					ind2++;
+				}
+			}
+		}
+	}
+}
+
+
+
 void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, int p) {
 
 	int ind1 = 0;
 	int ind2 = 0;
-	int ret;
-	int m_pad = (p*m_c) - (M % (p*m_c)); 
-	int m1;
-	int k1;
+	int m1, k1, m2, ret;
 	int k_c1 = (K % k_c);
+	int mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
+	int mr_per_core = (int) ceil( ((double) mr_rem) / p );
+	int m_c1 = mr_per_core * m_r;
+
+
 	int p_l;
 
-	int m2;
+	if(mr_per_core) 
+		p_l = (int) ceil( ((double) mr_rem) / mr_per_core);
+	else
+		p_l = 0;
 
-	int M_rem;
 
-	// main portion of A that evenly fits into CBS blocks with p m_cxk_c blocks
+	int m_c1_last_core = (mr_per_core - (p_l*mr_per_core - mr_rem)) * m_r;
+
+
+	// main portion of A that evenly fits into CBS blocks with p m_cxk_c OBs
 	for(m1 = 0; m1 < (M - (M % (p*m_c))); m1 += p*m_c) {
 		for(k1 = 0; k1 < (K - (K%k_c)); k1 += k_c) {
 			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
 
-				ind2 = 0;
 				ret = posix_memalign((void**) &A_p[ind1], 64, k_c * m_c * sizeof(double));
 				
 				if(ret) {
@@ -392,15 +452,9 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 					exit(1);
 				}
 
-				for(int m3 = 0; m3 < m_c; m3 += m_r) {
-					for(int i = 0; i < k_c; i++) {
-						for(int j = 0; j < m_r; j++) {
-							A_p[ind1][ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
-							ind2++;
-						}
-					}
-				}
+				create_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c, k_c, m_r, 0);
 
+				if(DEBUG) print_array(A_p[ind1], k_c * m_c);
 				ind1++;
 			}
 		}
@@ -409,93 +463,87 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 			k1 = K - (K%k_c);
 			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
 
-				ind2 = 0;
 				ret = posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c * sizeof(double));			
 				if(ret) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
 
-				for(int m3 = 0; m3 < m_c; m3 += m_r) {
-					for(int i = 0; i < k_c1; i++) {
-						for(int j = 0; j < m_r; j++) {
-							A_p[ind1][ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
-							ind2++;
-						}
-					}
-				}
-
+				create_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c, k_c1, m_r, 0);
+				if(DEBUG) print_array(A_p[ind1], k_c1 * m_c);
 				ind1++;
 			}
 		}
 	}
 
-	// Process the final row of CBS blocks (with p_l  m_c x k_c blocks) and perform M-dim padding
+	// Process the final row of CBS blocks (each with p_l OBs) and perform M-dim padding
 	if(M % (p*m_c)) {	
 
-		p_l = (int) ceil(((double) (M % (p*m_c))) / m_c);
 		m1 = (M - (M % (p*m_c)));
-		M_rem = m1 + p_l*m_c;
+
+		// printf("m1 = %d, mr_per_core = %d, m_c1 = %d, p_l = %d, m_c1_last_core = %d  \n",
+		//  m1, mr_per_core, m_c1,p_l,m_c1_last_core);
 
 		for(k1 = 0; k1 < (K - (K%k_c)); k1 += k_c) {
-			for(m2 = 0; m2 < p_l*m_c; m2 += m_c) {
+			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
 
-				ind2 = 0;
-				ret = posix_memalign((void**) &A_p[ind1], 64, k_c * m_c * sizeof(double));
+				ret = posix_memalign((void**) &A_p[ind1], 64, k_c * m_c1 * sizeof(double));
 				
 				if(ret) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
 
-				for(int m3 = 0; m3 < m_c; m3 += m_r) {
-					for(int i = 0; i < k_c; i++) {
-						for(int j = 0; j < m_r; j++) {
-
-							if((m1+m2+m3+j) >=  M) {
-								A_p[ind1][ind2] = 0.0;
-							} else {
-								A_p[ind1][ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
-							}
-
-							ind2++;
-						}
-					}
-				}
-
+				create_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1, k_c, m_r, 0);
+				if(DEBUG) print_array(A_p[ind1], k_c * m_c1);
 				ind1++;
 			}
+
+			m2 = (p_l-1) * m_c1;
+			ind2 = 0;
+			ret = posix_memalign((void**) &A_p[ind1], 64, k_c * m_c1_last_core * sizeof(double));
+			
+			if(ret) {
+				printf("posix memalign error\n");
+				exit(1);
+			}
+
+			create_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1_last_core, k_c, m_r, 1);
+			if(DEBUG) print_array(A_p[ind1], k_c * m_c1_last_core);
+			ind1++;
 		}
-		
-		// Final CBS block (with p_l m_c x k_c1 blocks) present in the lower right hand corner of A 
+
+		// Final CBS block (with p_l-1 m_c1 x k_c1 OBs and 1 m_c1_last_core x k_c1 OB) 
+		// present in the lower right hand corner of A 
 		if(k_c1) {
 
 			k1 = K - (K%k_c);
-			for(m2 = 0; m2 < p_l*m_c; m2 += m_c) {
+			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
 				ind2 = 0;
-				ret = posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c * sizeof(double));			
+				ret = posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c1 * sizeof(double));			
 				if(ret) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
 
-				for(int m3 = 0; m3 < m_c; m3 += m_r) {
-					for(int i = 0; i < k_c1; i++) {
-						for(int j = 0; j < m_r; j++) {
-
-							if((m1 + m2 + m3 + j) >=  M) {
-								A_p[ind1][ind2] = 0.0;
-							} else {
-								A_p[ind1][ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
-							}
-
-							ind2++;
-						}
-					}
-				}
-
+				create_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1, k_c1, m_r, 0);
+				if(DEBUG) print_array(A_p[ind1], k_c1 * m_c1);
 				ind1++;
 			}
+
+			// final OB of shape m_c1_last_core x k_c1 
+			m2 = (p_l-1) * m_c1;
+			ind2 = 0;
+			ret = posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c1_last_core * sizeof(double));
+			
+			if(ret) {
+				printf("posix memalign error\n");
+				exit(1);
+			}
+
+			create_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1_last_core, k_c1, m_r, 1);
+			if(DEBUG) print_array(A_p[ind1], k_c1 * m_c1_last_core);
+			ind1++;
 		}
 	}
 }
@@ -505,7 +553,7 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 void pack_B(double* B, double* B_p, int K, int N, int k_c, int n_c, int n_r, int alpha_n, int m_c) {
 
 	int x = (int) (alpha_n * m_c);
-	int k1, k_c1, n1, n_c1, p_l;
+	int k1, k_c1, n1, n_c1, nr_rem;
 	int ind1 = 0;
 
 	// main portion of B that evenly fits into CBS blocks of size k_c x n_c 
@@ -535,10 +583,11 @@ void pack_B(double* B, double* B_p, int K, int N, int k_c, int n_c, int n_r, int
 		}
 	}
 
+
 	// Process the final column of CBS blocks (sized k_c x n_c1) and perform N-dim padding 
 	n1 = (N - (N%n_c));
-	p_l = (int) ceil(((double) (N % n_c)) / x);
-	n_c1 = x * p_l;
+	nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
+	n_c1 = nr_rem * n_r;
 
 	if(n_c1) {	
 
@@ -582,21 +631,74 @@ void pack_B(double* B, double* B_p, int K, int N, int k_c, int n_c, int n_r, int
 }
 
 
-void pack_C(double** C_p, int M, int N, int m_c, int n_c, int p, int alpha_n) {
+
+
+
+
+void create_ob_C(double* C, double* C_p, int M, int N, int m1, int n1, int m2,
+				int m_c, int n_c, int m_r, int n_r, bool pad) {
+
+	int	ind2 = 0;
+
+	if(pad) {
+
+		for(int n2 = 0; n2 < n_c; n2 += n_r) {
+			for(int m3 = 0; m3 < m_c; m3 += m_r) {
+				for(int i = 0; i < m_r; i++) {
+					for(int j = 0; j < n_r; j++) {
+						if((n1 + n2 + j) >= N  ||  (m1 + m2 + m3 + i) >=  M) {
+							C_p[ind2] = 0.0;
+						} else {
+							C_p[ind2] = C[n1 + m1*N + m2*N + n2 + m3*N + i*N + j];
+						}
+						ind2++;
+					}
+				}
+			}
+		}
+
+	} else {
+
+		for(int n2 = 0; n2 < n_c; n2 += n_r) {
+			for(int m3 = 0; m3 < m_c; m3 += m_r) {
+				for(int i = 0; i < m_r; i++) {
+					for(int j = 0; j < n_r; j++) {
+						C_p[ind2] = C[n1 + m1*N + m2*N + n2 + m3*N + i*N + j];
+						ind2++;
+					}
+				}
+			}
+		}
+	}
+}
+
+
+
+void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, int n_r, int p, int alpha_n) {
 
 	int ind1 = 0;
-	int ret;
+	int ind2, n1, m1, m2, ret;
 
-	int m, n_c1, p_lm, p_ln;
-	int x = (int) (alpha_n * m_c);
+	int mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
+	int mr_per_core = (int) ceil( ((double) mr_rem) / p );
+	int m_c1 = mr_per_core * m_r;
 
-	// p_lm = (M % (p*m_c)) / m_c;
-	// m1 = (M - (M % (p*m_c)));
-	// M_rem = m1 + p_lm*m_c;
+	int p_l;
 
-	for(int n = 0; n < (N/n_c); n++) {
-		for(m = 0; m < (M/(p*m_c)); m++) {
-			for(int p1 = 0; p1 < p; p1++) {
+	if(mr_per_core) 
+		p_l = (int) ceil( ((double) mr_rem) / mr_per_core);
+	else
+		p_l = 0;
+
+
+	int m_c1_last_core = (mr_per_core - (p_l*mr_per_core - mr_rem)) * m_r;
+
+	int nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
+	int n_c1 = nr_rem * n_r;
+
+	for(n1 = 0; n1 < (N - (N%n_c)); n1 += n_c) {
+		for(m1 = 0; m1 < (M - (M % (p*m_c))); m1 += p*m_c) {
+			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
 
 				ret = posix_memalign((void**) &C_p[ind1], 64, m_c * n_c * sizeof(double));
 				if(ret) {
@@ -604,30 +706,49 @@ void pack_C(double** C_p, int M, int N, int m_c, int n_c, int p, int alpha_n) {
 					exit(1);
 				}
 
-				ind1++; 
+				create_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c, n_c, m_r, n_r, 0);
+				if(DEBUG) print_array(C_p[ind1], m_c * n_c);
+				ind1++;
 			}
 		}
 
-		// last row of CBS result blocks (with p_lm instead of p)
-		p_lm = (int) ceil(((double) (M % (p*m_c))) / m_c);
-		for(int p1 = 0; p1 < p_lm; p1++) {
-			ret = posix_memalign((void**) &C_p[ind1], 64, m_c * n_c * sizeof(double));
+		if(M % (p*m_c)) {	
+
+			m1 = (M - (M % (p*m_c)));
+
+			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
+
+				ret = posix_memalign((void**) &C_p[ind1], 64, m_c1 * n_c * sizeof(double));				
+				if(ret) {
+					printf("posix memalign error\n");
+					exit(1);
+				}
+
+				create_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c1, n_c, m_r, n_r, 0);
+				if(DEBUG) print_array(C_p[ind1], m_c1 * n_c);
+				ind1++;
+			}
+
+			m2 = (p_l-1) * m_c1;
+			ret = posix_memalign((void**) &C_p[ind1], 64, m_c1_last_core * n_c * sizeof(double));
 			if(ret) {
 				printf("posix memalign error\n");
 				exit(1);
 			}
-			ind1++; 
+
+			create_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c1_last_core, n_c, m_r, n_r, 1);
+			if(DEBUG) print_array(C_p[ind1], m_c1 * n_c);
+			ind1++;
 		}
 	}
 
-	// Process the final column of CBS blocks (with m_c x n_c1 blocks)  
-	p_ln = (int) ceil(((double) (N % n_c)) / (x));
-	n_c1 = x * p_ln ;
+
+	n1 = (N - (N%n_c));
 
 	if(n_c1) {	
 
-		for(m = 0; m < (M/(p*m_c)); m++) {
-			for(int p1 = 0; p1 < p; p1++) {
+		for(m1 = 0; m1 < (M - (M % (p*m_c))); m1 += p*m_c) {
+			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
 
 				ret = posix_memalign((void**) &C_p[ind1], 64, m_c * n_c1 * sizeof(double));
 				if(ret) {
@@ -635,22 +756,43 @@ void pack_C(double** C_p, int M, int N, int m_c, int n_c, int p, int alpha_n) {
 					exit(1);
 				}
 
-				ind1++; 
+				create_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c, n_c1, m_r, n_r, 1);
+				if(DEBUG) print_array(C_p[ind1], m_c * n_c1);
+				ind1++;
 			}
 		}
 
-		// Process the final CBS block (with size m_c x n_c1) in lower right corner
-		p_lm = (int) ceil(((double) (M % (p*m_c))) / m_c);
-		for(int p1 = 0; p1 < p_lm; p1++) {
-			ret = posix_memalign((void**) &C_p[ind1], 64, m_c * n_c1 * sizeof(double));
+		if(M % (p*m_c)) {	
+
+			m1 = (M - (M % (p*m_c)));
+
+			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
+
+				ret = posix_memalign((void**) &C_p[ind1], 64, m_c1 * n_c1 * sizeof(double));
+				if(ret) {
+					printf("posix memalign error\n");
+					exit(1);
+				}
+
+				create_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c1, n_c1, m_r, n_r, 1);
+				if(DEBUG) print_array(C_p[ind1], m_c1 * n_c1);
+				ind1++;
+			}
+
+			m2 = (p_l-1) * m_c1;
+			ret = posix_memalign((void**) &C_p[ind1], 64, m_c1_last_core * n_c1 * sizeof(double));
 			if(ret) {
 				printf("posix memalign error\n");
 				exit(1);
 			}
-			ind1++; 
+
+			create_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c1_last_core, n_c1, m_r, n_r, 1);
+			if(DEBUG) print_array(C_p[ind1], m_c1_last_core * n_c1);
+			ind1++;
 		}
 	}
 }
+
 
 
 void unpack_C_rsc(double* C, double** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p, int alpha_n) {
@@ -658,8 +800,27 @@ void unpack_C_rsc(double* C, double** C_p, int M, int N, int m_c, int n_c, int n
 	int m_pad = (M % m_c) ? 1 : 0; 
 	int x = (int) (alpha_n * m_c);
 
-	int m1, p_lm, p_ln, n1, n_c1;
+	int m, m1, p_lm, p_ln, n1;
 	int ind1 = 0;
+
+
+	int mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
+	int mr_per_core = (int) ceil( ((double) mr_rem) / p );
+	int m_c1 = mr_per_core * m_r;
+
+	int p_l;
+
+	if(mr_per_core) 
+		p_l = (int) ceil( ((double) mr_rem) / mr_per_core);
+	else
+		p_l = 0;
+
+	int m_c1_last_core = (mr_per_core - (p_l*mr_per_core - mr_rem)) * m_r;
+
+	int nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
+	int n_c1 = nr_rem * n_r;
+
+
 	for(m1 = 0; m1 < (M/(p*m_c)); m1++) {
 		for(int m = 0; m < p; m++) {
 			for(int m2 = 0; m2 < m_c/m_r; m2++) {
@@ -667,22 +828,51 @@ void unpack_C_rsc(double* C, double** C_p, int M, int N, int m_c, int n_c, int n
 					for(n1 = 0; n1 < (N/n_c); n1++) {
 						for(int i = 0; i < n_c/n_r; i++) {
 							for(int j = 0; j < n_r; j++) {
-								C[ind1] = C_p[m1*p + m + n1*(M/m_c + m_pad)][m2*m_r*n_r + m3*n_r + i*m_c*n_r + j];
+								C[ind1] = C_p[m1*p + m + n1*((M/(p*m_c))*p  + p_l)][m2*m_r*n_r + m3*n_r + i*m_c*n_r + j];
 								ind1++;
 							}
 						}
 					}
 
 					n1 = N/n_c;
-					p_ln = (int) ceil(((double) (N % n_c)) / x);
-					n_c1 = x * p_ln;
 
 					for(int i = 0; i < n_c1/n_r; i++) {
 						for(int j = 0; j < n_r; j++) {
 							if( (i*n_r + j + n1*n_c) < N) {
-								C[ind1] = C_p[m1*p + m + n1*(M/m_c + m_pad)][m2*m_r*n_r + m3*n_r + i*m_c*n_r + j];
+								C[ind1] = C_p[m1*p + m + n1*((M/(p*m_c))*p  + p_l)][m2*m_r*n_r + m3*n_r + i*m_c*n_r + j];
 								ind1++;
 							}
+						}
+					}
+				}
+			}
+		}	
+	}
+
+	m1 = M / (p*m_c);
+
+	for(m = 0; m < p_l-1; m++) {
+
+		for(int m2 = 0; m2 < m_c1/m_r; m2++) {
+			for(int m3 = 0; m3 < m_r; m3++) { 
+				for(n1 = 0; n1 < (N/n_c); n1++) {
+					for(int i = 0; i < n_c/n_r; i++) {
+						for(int j = 0; j < n_r; j++) {
+							C[ind1] = C_p[m1*p + m + n1*((M/(p*m_c))*p + p_l)][m2*m_r*n_r + m3*n_r + i*m_c1*n_r + j];
+							ind1++;		
+						}
+					}
+				}
+
+
+				n1 = N/n_c;
+
+				for(int i = 0; i < n_c1/n_r; i++) {
+					for(int j = 0; j < n_r; j++) {
+						// ignore zero-padded rows
+						if( (i*n_r + j + n1*n_c) < N ) {
+							C[ind1] = C_p[m1*p + m + n1*((M/(p*m_c))*p + p_l)][m2*m_r*n_r + m3*n_r + i*m_c1*n_r + j];
+							ind1++;
 						}
 					}
 				}
@@ -690,35 +880,30 @@ void unpack_C_rsc(double* C, double** C_p, int M, int N, int m_c, int n_c, int n
 		}
 	}
 
-	m1 = M / (p*m_c);
-	p_lm = (int) ceil(((double) (M % (p*m_c))) / m_c);
+	m = p_l - 1;
 
-	for(int m = 0; m < p_lm; m++) {
-		for(int m2 = 0; m2 < m_c/m_r; m2++) {
-			for(int m3 = 0; m3 < m_r; m3++) { 
-				for(n1 = 0; n1 < (N/n_c); n1++) {
-					for(int i = 0; i < n_c/n_r; i++) {
-						for(int j = 0; j < n_r; j++) {
-							// ignore zero-padded rows
-							if( (m3 + m2*m_r + m*m_c + m1*p*m_c) < M) {
-								C[ind1] = C_p[m1*p + m + n1*(M/m_c + m_pad)][m2*m_r*n_r + m3*n_r + i*m_c*n_r + j];
-								ind1++;
-							}
+	for(int m2 = 0; m2 < m_c1_last_core/m_r; m2++) {
+		for(int m3 = 0; m3 < m_r; m3++) { 
+			for(n1 = 0; n1 < (N/n_c); n1++) {
+				for(int i = 0; i < n_c/n_r; i++) {
+					for(int j = 0; j < n_r; j++) {
+						if( (m3 + m2*m_r + m*m_c1 + m1*p*m_c) < M ) {
+							C[ind1] = C_p[m1*p + m + n1*((M/(p*m_c))*p + p_l)][m2*m_r*n_r + m3*n_r + i*m_c1_last_core*n_r + j];
+							ind1++;		
 						}
 					}
 				}
+			}
 
 
-				n1 = N/n_c;
-				p_ln = (int) ceil(((double) (N % n_c)) / x);
-				n_c1 = x * p_ln;
+			n1 = N/n_c;
 
-				for(int i = 0; i < n_c1/n_r; i++) {
-					for(int j = 0; j < n_r; j++) {
-						if( (i*n_r + j + n1*n_c) < N  && (m3 + m2*m_r + m*m_c + m1*p*m_c) < M) {
-							C[ind1] = C_p[m1*p + m + n1*(M/m_c + m_pad)][m2*m_r*n_r + m3*n_r + i*m_c*n_r + j];
-							ind1++;
-						}
+			for(int i = 0; i < n_c1/n_r; i++) {
+				for(int j = 0; j < n_r; j++) {
+					// ignore zero-padded rows
+					if( ((i*n_r + j + n1*n_c) < N)  && ((m3 + m2*m_r + m*m_c1 + m1*p*m_c) < M)) {
+						C[ind1] = C_p[m1*p + m + n1*((M/(p*m_c))*p + p_l)][m2*m_r*n_r + m3*n_r + i*m_c1_last_core*n_r + j];
+						ind1++;
 					}
 				}
 			}
@@ -779,6 +964,7 @@ void cake_dgemm_checker(double* A, double* B, double* C, int N, int M, int K) {
 	for(int m = 0; m < M; m++) {
 		for(int n = 0; n < N; n++) {
 			C_check[m*N + n] = 0.0;
+			// C_check[m*N + n] = C[m*N + n];
 			for(int k = 0; k < K; k++) {
 				C_check[m*N + n] += A[m*K + k] * B[k*N + n];
 			}
@@ -802,7 +988,7 @@ void cake_dgemm_checker(double* A, double* B, double* C, int N, int M, int K) {
 	            CORRECT = 0;
 	        }
 
-        // printf("%f\t%f\n", C_check[ind1], C[ind1]);
+        printf("%f\t%f\n", C_check[ind1], C[ind1]);
 
         ind1++; 
       }
@@ -825,51 +1011,6 @@ void cake_dgemm_checker(double* A, double* B, double* C, int N, int M, int K) {
  //      }
  //    }
 	// printf("\n\n\n\n");
-}
-
-
-
-void print_packed_A(double** A_p, int M, int K, int m_c, int k_c, int p) {
-
-	int k_pad = (K % k_c) ? 1 : 0; 
-	int m_pad = (M % m_c) ? 1 : 0; 
-
-	int ind = 0;
-	for(int i = 0; i < ((K/k_c + k_pad) * (M/m_c + m_pad)); i++) {
-
-
-		if(i!=0 && (i % (K/k_c * p)) == 0) { 
-			for(int j = 0; j < m_c*(K % k_c); j++) {
-				printf("%f ", A_p[i][j]);
-			}
-			ind++;
-
-		// if(( (i+1) % (K/k_c + k_pad)) == 0 ) { 
-		// 	for(int j = 0; j < m_c*(K % k_c); j++) {
-		// 		printf("%f ", A_p[i][j]);
-		// 	}
-		} else {
-			for(int j = 0; j < m_c*k_c; j++) {
-				printf("%f ", A_p[i][j]);
-			}	
-		}	
-
-		printf("\n\n");
-	}
-}
-
-
-void print_packed_C(double** C_p, int M, int N, int m_c, int n_c) {
-
-	int m_pad = (M % m_c) ? 1 : 0; 
-
-	for(int i = 0; i < ((N/n_c) * (M/m_c + m_pad)); i++) {
-		for(int j = 0; j < m_c*n_c; j++) {
-			printf("%f ", C_p[i][j]);
-		}	
-
-		printf("\n\n");
-	}
 }
 
 
@@ -963,4 +1104,14 @@ int lcm(int n1, int n2) {
 		++max;
 	}
 	return max;
+}
+
+
+void print_array(double* arr, int len) {
+
+	for(int i = 0; i < len; i++) {
+		printf("%f ", arr[i]);
+	}
+	printf("\n\n");
+
 }
