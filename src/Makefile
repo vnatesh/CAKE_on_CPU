@@ -44,7 +44,7 @@
 # --- Makefile PHONY target definitions ----------------------------------------
 #
 
-.PHONY: all bin clean run
+.PHONY: all install cake_compile clean
 
 
 
@@ -109,16 +109,21 @@ TEST_BINS      := cake_dgemm_test.x
 
 
 
+LIBS ?=
+#LIBDIR += -L. -L$(SYSTEMC_HOME)/lib-linux64 -L$(BOOST_HOME)/lib
+LIBS += $(BLIS_INSTALL_PATH)/lib/libblis.a 
+
+
 #
 # --- Targets/rules ------------------------------------------------------------
 #
 
 # --- Primary targets ---
 
-all: bin
+all: cake_compile
 
-bin: $(TEST_BINS)
-
+install:
+	./install.sh
 
 # --- Environment check rules ---
 
@@ -135,33 +140,17 @@ ifeq ($(MAKE_DEFS_MK_PRESENT),no)
 endif
 
 
-# --Object file rules --
-
-$(TEST_OBJ_PATH)/%.o: $(TEST_SRC_PATH)/%.c $(LIBBLIS_LINK)
-ifeq ($(ENABLE_VERBOSE),yes)
-	gcc $(CFLAGS) -c $< -o $@
-else
-	@echo "Compiling $@"
-	@gcc -O3 $(CFLAGS) -c $< -o $@
-endif
+cake_compile: $(wildcard *.h) $(wildcard *.c) 
+	gcc $(CFLAGS) *.c -o cake_dgemm_test.o $(LIBS) $(LDFLAGS) -o cake_dgemm_test.x
 
 
-# -- Executable file rules --
+# gcc -O3 -O2 -Wall -Wno-unused-function -Wfatal-errors -fPIC -std=c99 
+# -D_POSIX_C_SOURCE=200112L -fopenmp -I/usr/local/include/blis -DBLIS_VERSION_STRING=\"0.8.0-13\" 
+# -I. *.c -o cake_dgemm_test.o /usr/local/lib/libblis.a  -lm -lpthread -fopenmp -lrt -o cake_dgemm_test.x
 
-%.x: %.o $(LIBBLIS_LINK)
-ifeq ($(ENABLE_VERBOSE),yes)
-	gcc $< $(LIBBLIS_LINK) $(LDFLAGS) -o $@
-else
-	@echo "Linking $@ against '$(LIBBLIS_LINK) $(LDFLAGS)'"
-	@gcc -O3 $< $(LIBBLIS_LINK) $(LDFLAGS) -o $@
-endif
 
-# -- Test run rules --
-
-#run: $(TEST_BIN)
-#	./$(TEST_BIN)
 
 # -- Clean rules --
 
 clean:
-	- $(RM_F) $(TEST_OBJS) $(TEST_BINS)
+	rm -rf *.o *.x
