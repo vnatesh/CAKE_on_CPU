@@ -5,8 +5,15 @@
 #include "blis.h"
  
 
-#define DEBUG 0
+#define DEBUG 1
+#define ARR_PRINT 0
+#define CHECK_PRINT 0
 
+/*
+
+Pack 
+
+*/
 void pack_B(double* B, double* B_p, int K, int N, int k_c, int n_c, int n_r, int alpha_n, int m_c);
 
 
@@ -33,7 +40,7 @@ void set_ob_C(double* C, double* C_p, int M, int N, int m1, int n1, int m2,
 void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p);
 
 
-int get_block_dim(int m_r, int n_r, double alpha_n);
+int get_block_dim(int m_r, int n_r, double alpha_n, int M, int p);
 
 
 int get_cache_size(char* level);

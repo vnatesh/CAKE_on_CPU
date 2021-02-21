@@ -21,17 +21,17 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
     cntx_t* cntx = bli_gks_query_cntx();
     m_r = (int) bli_cntx_get_blksz_def_dt(BLIS_DOUBLE, BLIS_MR, cntx);
     n_r = (int) bli_cntx_get_blksz_def_dt(BLIS_DOUBLE, BLIS_NR, cntx);
-    // printf("m_r = %d, n_r = %d\n\n", m_r, n_r);
+    if(DEBUG) printf("m_r = %d, n_r = %d\n\n", m_r, n_r);
 
     alpha_n = 1;
-    m_c = get_block_dim(m_r, n_r, alpha_n);
+    m_c = get_block_dim(m_r, n_r, alpha_n, M, p);
     k_c = m_c;
-    // m_c = 24;
+    // m_c = 12;
     // k_c = 6;
     n_c = (int) (alpha_n * p * m_c);
 	omp_set_num_threads(p);
 
-    // printf("mc = %d, kc = %d, nc = %d\n",m_c,k_c,n_c );
+    if(DEBUG) printf("mc = %d, kc = %d, nc = %d\n",m_c,k_c,n_c );
 
 	int k_pad = (K % k_c) ? 1 : 0; 
 	int n_pad = (N % n_c) ? 1 : 0; 
@@ -220,7 +220,6 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 
 			m1 = (M / (p*m_c));
 
-
 			#pragma omp parallel for private(n_reg,m_reg,m,k1)
 			for(m = 0; m < p_l; m++) {
 
@@ -259,7 +258,7 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 	diff_t = (((end.tv_sec - start.tv_sec)*1000000L
 	+end.tv_usec) - start.tv_usec) / (1000000.0);
 	if(DEBUG) printf("GEMM time: %f \n", diff_t); 
-// exit(1);
+	// exit(1);
 	// print_packed_C(C_p, M, N, m_c, n_c);
 	// unpack_C(C, C_p, M, N, m_c, n_c, n_r, m_r, p);
 

@@ -44,29 +44,47 @@ int get_cache_size(char* level) {
 }
 
 
-int get_block_dim(int m_r, int n_r, double alpha_n) {
+int get_block_dim(int m_r, int n_r, double alpha_n, int M, int p) {
 
 	int mc_L2 = 0, mc_L3 = 0;
 	// find L3 and L2 cache sizes
 	int max_threads = omp_get_max_threads() / 2; // 2-way hyperthreaded
 	int L2_size = get_cache_size("L2");
 	int L3_size = get_cache_size("L3");
+	int mn_lcm = lcm(m_r, n_r);
+	// int mn_lcm = m_r;
 
 	// solves for the optimal block size m_c and k_c based on the L3 size
 	// L3_size >= p*mc*kc + 2*(kc*alpha*p*mc + p*mc*alpha*p*mc)     (solve for x = m_c = k_c) 
 	// We only use ~ half of the each cache to prevent our working blocks from being evicted
 	mc_L3 = (int) sqrt((((double) L3_size) / (sizeof(double)))  
 							/ (max_threads * (1 + 2*alpha_n + 2*alpha_n*max_threads)));
-	mc_L3 -= (mc_L3 % lcm(m_r, n_r));
+	mc_L3 -= (mc_L3 % mn_lcm);
 
 	// solves for optimal mc,kc based on L2 size
 	// L2_size >= 2*(mc*kc + kc*nr) + mc*nr     (solve for x = m_c = k_c) 
 	int b = 3*n_r;
 	mc_L2 = (int)  (-b + sqrt(b*b + 4*2*(((double) L2_size) / (sizeof(double))))) / (2*2)  ;
-	mc_L2 -= (mc_L2 % lcm(m_r, n_r));
+	mc_L2 -= (mc_L2 % mn_lcm);
+
+	int mc = mc_L3 < mc_L2 ? mc_L3 : mc_L2;
+	int a;
+
+	if(M < p*m_r) {
+		return m_r;
+	} else if(M < p*mc) {
+		
+		a = (M / p);
+		if(a < mn_lcm) {
+			return mn_lcm;
+		}
+
+		a -= (a % mn_lcm);
+		return a;
+	}
 
 	// return min of possible L2 and L3 cache block sizes
-	return (mc_L3 < mc_L2 ? mc_L3 : mc_L2);
+	return mc;
 }
 
 
