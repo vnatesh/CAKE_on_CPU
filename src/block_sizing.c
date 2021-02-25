@@ -71,7 +71,7 @@ int get_block_dim(int m_r, int n_r, double alpha_n, int M, int p) {
 	int a;
 
 	if(M < p*m_r) {
-		return m_r;
+		return mn_lcm;
 	} else if(M < p*mc) {
 		
 		a = (M / p);
