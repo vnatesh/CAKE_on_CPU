@@ -12,12 +12,12 @@ int main( int argc, char** argv ) {
 
 	int M, K, N, p;
 
-	// M = 1111;
-	// K = 1111;
-	// N = 2880;
-	M = 111;
-	K = 111;
-	N = 111;
+	 M = 128;
+	 K = 256;
+	 N = 10;
+	//M = 128;
+	//K = 3072;
+	//N = 768;
 
 	// M = 96;
 	// K = 14583;
@@ -36,9 +36,9 @@ int main( int argc, char** argv ) {
     p = atoi(argv[1]);
 	printf("M = %d, K = %d, N = %d\n", M,K,N);
 
-	double* A = (double*) malloc(M * K * sizeof( double ));
-	double* B = (double*) malloc(K * N * sizeof( double ));
-	double* C = (double*) calloc(M * N , sizeof( double ));
+	float* A = (float*) malloc(M * K * sizeof( float ));
+	float* B = (float*) malloc(K * N * sizeof( float ));
+	float* C = (float*) calloc(M * N , sizeof( float ));
 
 	// initialize A and B
 	gettimeofday (&start, NULL);

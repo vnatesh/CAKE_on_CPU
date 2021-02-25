@@ -1,7 +1,7 @@
 #include "cake.h"
  
 
-void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, int p) {
+void pack_A(float* A, float** A_p, int M, int K, int m_c, int k_c, int m_r, int p) {
 
 	int ind1 = 0;
 	int m1, k1, m2, p_l;
@@ -22,7 +22,7 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 		for(k1 = 0; k1 < (K - (K%k_c)); k1 += k_c) {
 			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
 				
-				if(posix_memalign((void**) &A_p[ind1], 64, k_c * m_c * sizeof(double))) {
+				if(posix_memalign((void**) &A_p[ind1], 64, k_c * m_c * sizeof(float))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
@@ -38,7 +38,7 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 			k1 = K - (K%k_c);
 			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
 
-				if(posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c * sizeof(double))) {
+				if(posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c * sizeof(float))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
@@ -58,7 +58,7 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 		for(k1 = 0; k1 < (K - (K%k_c)); k1 += k_c) {
 			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
 				
-				if(posix_memalign((void**) &A_p[ind1], 64, k_c * m_c1 * sizeof(double))) {
+				if(posix_memalign((void**) &A_p[ind1], 64, k_c * m_c1 * sizeof(float))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
@@ -70,7 +70,7 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 
 			// final row of CBS blocks each with m_c1_last_core x k_c
 			m2 = (p_l-1) * m_c1;
-			if(posix_memalign((void**) &A_p[ind1], 64, k_c * m_c1_last_core * sizeof(double))) {
+			if(posix_memalign((void**) &A_p[ind1], 64, k_c * m_c1_last_core * sizeof(float))) {
 				printf("posix memalign error\n");
 				exit(1);
 			}
@@ -87,7 +87,7 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 			k1 = K - (K%k_c);
 			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
 
-				if(posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c1 * sizeof(double))) {
+				if(posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c1 * sizeof(float))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
@@ -100,7 +100,7 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 			// last OB of A has shape m_c1_last_core x k_c1 
 			m2 = (p_l-1) * m_c1;
 			
-			if(posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c1_last_core * sizeof(double))) {
+			if(posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c1_last_core * sizeof(float))) {
 				printf("posix memalign error\n");
 				exit(1);
 			}
@@ -114,7 +114,7 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 
 
 
-void pack_B(double* B, double* B_p, int K, int N, int k_c, int n_c, int n_r, int alpha_n, int m_c) {
+void pack_B(float* B, float* B_p, int K, int N, int k_c, int n_c, int n_r, int alpha_n, int m_c) {
 
 	int k1, k_c1, n1, n_c1, nr_rem;
 	int ind1 = 0;
@@ -194,7 +194,7 @@ void pack_B(double* B, double* B_p, int K, int N, int k_c, int n_c, int n_r, int
 
 
 
-void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, int n_r, int p, int alpha_n) {
+void pack_C(float* C, float** C_p, int M, int N, int m_c, int n_c, int m_r, int n_r, int p, int alpha_n) {
 
 	int n1, m1, m2, p_l;
 
@@ -220,7 +220,7 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 		for(m1 = 0; m1 < (M - (M % (p*m_c))); m1 += p*m_c) {
 			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
 
-				if(posix_memalign((void**) &C_p[ind1], 64, m_c * n_c * sizeof(double))) {
+				if(posix_memalign((void**) &C_p[ind1], 64, m_c * n_c * sizeof(float))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
@@ -238,7 +238,7 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 
 			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
 
-				if(posix_memalign((void**) &C_p[ind1], 64, m_c1 * n_c * sizeof(double))) {
+				if(posix_memalign((void**) &C_p[ind1], 64, m_c1 * n_c * sizeof(float))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
@@ -249,7 +249,7 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 			}
 
 			m2 = (p_l-1) * m_c1;
-			if(posix_memalign((void**) &C_p[ind1], 64, m_c1_last_core * n_c * sizeof(double))) {
+			if(posix_memalign((void**) &C_p[ind1], 64, m_c1_last_core * n_c * sizeof(float))) {
 				printf("posix memalign error\n");
 				exit(1);
 			}
@@ -268,7 +268,7 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 		for(m1 = 0; m1 < (M - (M % (p*m_c))); m1 += p*m_c) {
 			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
 
-				if(posix_memalign((void**) &C_p[ind1], 64, m_c * n_c1 * sizeof(double))) {
+				if(posix_memalign((void**) &C_p[ind1], 64, m_c * n_c1 * sizeof(float))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
@@ -286,7 +286,7 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 			// last row of CBS blocks with p_l-1 m_c1 x n_c1 OBs and 1 m_c1_last_core x n_c1 OB
 			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
 
-				if(posix_memalign((void**) &C_p[ind1], 64, m_c1 * n_c1 * sizeof(double))) {
+				if(posix_memalign((void**) &C_p[ind1], 64, m_c1 * n_c1 * sizeof(float))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
@@ -298,7 +298,7 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 
 			// last OB in C (lower right corner) with shape m_c1_last_core * n_c1
 			m2 = (p_l-1) * m_c1;
-			if(posix_memalign((void**) &C_p[ind1], 64, m_c1_last_core * n_c1 * sizeof(double))) {
+			if(posix_memalign((void**) &C_p[ind1], 64, m_c1_last_core * n_c1 * sizeof(float))) {
 				printf("posix memalign error\n");
 				exit(1);
 			}
@@ -313,7 +313,7 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 
 
 // initialize an operation block of matrix A
-void set_ob_A(double* A, double* A_p, int M, int K, int m1, int k1, int m2, int m_c, int k_c, int m_r, bool pad) {
+void set_ob_A(float* A, float* A_p, int M, int K, int m1, int k1, int m2, int m_c, int k_c, int m_r, bool pad) {
 
 	int	ind2 = 0;
 	
@@ -347,7 +347,7 @@ void set_ob_A(double* A, double* A_p, int M, int K, int m1, int k1, int m2, int 
 }
 
 
-void set_ob_C(double* C, double* C_p, int M, int N, int m1, int n1, int m2,
+void set_ob_C(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
 				int m_c, int n_c, int m_r, int n_r, bool pad) {
 
 	int	ind2 = 0;

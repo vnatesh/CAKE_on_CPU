@@ -1,7 +1,7 @@
 #include "cake.h"
   
 
-void unpack_C_rsc(double* C, double** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p, int alpha_n) {
+void unpack_C_rsc(float* C, float** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p, int alpha_n) {
 
 	int m, m1, n1, p_l;
 	int ind1 = 0;
@@ -112,7 +112,7 @@ void unpack_C_rsc(double* C, double** C_p, int M, int N, int m_c, int n_c, int n
 }
 
 
-void unpack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p) {
+void unpack_C(float* C, float** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p) {
 
 	int m_pad = (M % m_c) ? 1 : 0; 
 	int m1, p_l;

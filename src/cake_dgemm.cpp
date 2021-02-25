@@ -1,26 +1,28 @@
 #include "cake.h"
 
 
-void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
+void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p) {
 	// contiguous row-storage (i.e. cs_c = 1) or contiguous column-storage (i.e. rs_c = 1). 
 	// This preference comes from how the microkernel is most efficiently able to load/store 
 	// elements of C11 from/to memory. Most microkernels use vector instructions to access 
 	// contiguous columns (or column segments) of C11
 	int m_c, k_c, n_c, m_r, n_r;	
-	double alpha, beta, alpha_n;
+	double alpha_n;
+	float alpha, beta;
 	struct timeval start, end;
 	double diff_t;
 	inc_t rsa, csa;
 	inc_t rsb, csb;
 	inc_t rsc, csc;
-	double** A_p; 
-	double** C_p;
-	double* B_p;
+	float** A_p; 
+	float** C_p;
+	float* B_p;
 
     // query block size for the microkernel
     cntx_t* cntx = bli_gks_query_cntx();
-    m_r = (int) bli_cntx_get_blksz_def_dt(BLIS_DOUBLE, BLIS_MR, cntx);
-    n_r = (int) bli_cntx_get_blksz_def_dt(BLIS_DOUBLE, BLIS_NR, cntx);
+    m_r = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, cntx);
+    n_r = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, cntx);
+    if(DEBUG) printf("M = %d, N = %d, K = %d\n", M, N, K);
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", m_r, n_r);
 
     alpha_n = 1;
@@ -55,14 +57,14 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 	    #pragma omp section
 	    {
 	    // pack A
-			A_p = (double**) malloc( (K/k_c + k_pad) * (((M / (p*m_c))*p) + p_l) * sizeof( double* ));
+			A_p = (float**) malloc( (K/k_c + k_pad) * (((M / (p*m_c))*p) + p_l) * sizeof( float* ));
 			pack_A(A, A_p, M, K, m_c, k_c, m_r, p);
 			// exit(1);
 	    }
 	    #pragma omp section
 	    {
 			// pack B
-			if(posix_memalign((void**) &B_p, 64, K * N_b * sizeof(double))) {
+			if(posix_memalign((void**) &B_p, 64, K * N_b * sizeof(float))) {
 				printf("posix memalign error\n");
 				exit(1);
 			}
@@ -72,7 +74,7 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 
 	    #pragma omp section
 	    {
-			C_p = (double**) malloc((((M / (p*m_c))*p) + p_l) * (N/n_c + n_pad) * sizeof( double* ));
+			C_p = (float**) malloc((((M / (p*m_c))*p) + p_l) * (N/n_c + n_pad) * sizeof( float* ));
 			pack_C(C, C_p, M, N, m_c, n_c, m_r, n_r, p, alpha_n);
 			// if(beta_user > 0)  pack_C(C, C_p, M, N, m_c, n_c, m_r, n_r, p, alpha_n);
 	    }
@@ -116,7 +118,7 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 					// pragma omp also here possible (j_r loop)
 					for(n_reg = 0; n_reg < (n_c / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {												
-							bli_dgemm_haswell_asm_6x8(k_c, &alpha, 
+							bli_sgemm_haswell_asm_6x16(k_c, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p + m ][m_reg*m_r*k_c], 
 					   		&B_p[n1*K*n_c + k1*k_c*n_c + n_reg*k_c*n_r], &beta, 
 					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
@@ -129,7 +131,7 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 					int k1_n = K / k_c;
 					for(n_reg = 0; n_reg < (n_c / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {
-							bli_dgemm_haswell_asm_6x8( k_c1, &alpha, 
+							bli_sgemm_haswell_asm_6x16( k_c1, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1_n*p + m ][m_reg*m_r*k_c1], 
 					   		&B_p[n1*K*n_c + k1_n*k_c*n_c + n_reg*k_c1*n_r], &beta, 
 					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
@@ -153,7 +155,7 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 				for(k1 = 0; k1 < (K / k_c); k1++) {
 					for(n_reg = 0; n_reg < (n_c / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_cx / m_r); m_reg++) {		
-							bli_dgemm_haswell_asm_6x8(k_c, &alpha, 
+							bli_sgemm_haswell_asm_6x16(k_c, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p_l + m ][m_reg*m_r*k_c], 
 					   		&B_p[n1*K*n_c + k1*k_c*n_c + n_reg*k_c*n_r], &beta, 
 					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
@@ -166,7 +168,7 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 				
 					for(n_reg = 0; n_reg < (n_c / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_cx / m_r); m_reg++) {
-							bli_dgemm_haswell_asm_6x8( k_c1, &alpha, 
+							bli_sgemm_haswell_asm_6x16( k_c1, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1_n*p_l + m ][m_reg*m_r*k_c1], 
 					   		&B_p[n1*K*n_c + k1_n*k_c*n_c + n_reg*k_c1*n_r], &beta, 
 					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
@@ -192,7 +194,7 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 					// #pragma omp parallel num_threads(p)
 					for(n_reg = 0; n_reg < (n_c1 / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {
-							bli_dgemm_haswell_asm_6x8(k_c, &alpha, 
+							bli_sgemm_haswell_asm_6x16(k_c, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p + m ][m_reg*m_r*k_c], 
 					   		&B_p[n1*K*n_c + k1*k_c*n_c1 + n_reg*k_c*n_r], &beta, 
 					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
@@ -204,7 +206,7 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 				if(k_c1) {
 					for(n_reg = 0; n_reg < (n_c1 / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {
-							bli_dgemm_haswell_asm_6x8( k_c1, &alpha, 
+							bli_sgemm_haswell_asm_6x16( k_c1, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1_n*p + m ][m_reg*m_r*k_c1], 
 					   		&B_p[n1*K*n_c + k1_n*k_c*n_c1 + n_reg*k_c1*n_r], &beta, 
 					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
@@ -228,7 +230,7 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 				for(k1 = 0; k1 < (K / k_c); k1++) {
 					for(n_reg = 0; n_reg < (n_c1 / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_cx / m_r); m_reg++) {						
-							bli_dgemm_haswell_asm_6x8(k_c, &alpha, 
+							bli_sgemm_haswell_asm_6x16(k_c, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p_l + m ][m_reg*m_r*k_c], 
 					   		&B_p[n1*K*n_c + k1*k_c*n_c1 + n_reg*k_c*n_r], &beta, 
 					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
@@ -241,7 +243,7 @@ void cake_dgemm(double* A, double* B, double* C, int M, int N, int K, int p) {
 				
 					for(n_reg = 0; n_reg < (n_c1 / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_cx / m_r); m_reg++) {
-							bli_dgemm_haswell_asm_6x8( k_c1, &alpha, 
+							bli_sgemm_haswell_asm_6x16( k_c1, &alpha, 
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1_n*p_l + m ][m_reg*m_r*k_c1], 
 					   		&B_p[n1*K*n_c + k1_n*k_c*n_c1 + n_reg*k_c1*n_r], &beta, 
 					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
