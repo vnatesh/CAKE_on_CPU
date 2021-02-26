@@ -11,13 +11,14 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p) {
 	float alpha, beta;
 	struct timeval start, end;
 	double diff_t;
-	inc_t rsa, csa;
-	inc_t rsb, csb;
-	inc_t rsc, csc;
 	float** A_p; 
 	float** C_p;
 	float* B_p;
+	inc_t rsc, csc;
+	// inc_t rsa, csa;
+	// inc_t rsb, csb;
 
+	
     // query block size for the microkernel
     cntx_t* cntx = bli_gks_query_cntx();
     m_r = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, cntx);
@@ -91,8 +92,8 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p) {
 	beta  = 1.0;
     // rsc = 1; csc = m_r;
     rsc = n_r; csc = 1;
-    rsa = 1; csa = m_r;
-    rsb = n_r; csb = 1;
+    // rsa = 1; csa = m_r;
+    // rsb = n_r; csb = 1;
 
 	// m = 6; n = 8; k = 8;
 	//rsc = 1; csc = m;

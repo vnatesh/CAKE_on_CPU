@@ -96,10 +96,11 @@ TEST_OBJS      := $(sort $(patsubst $(TEST_SRC_PATH)/%.c, \
 CINCFLAGS      := -I$(INC_PATH)
 
 # Use the "framework" CFLAGS for the configuration family.
-CFLAGS         := $(call get-user-cflags-for,$(CONFIG_NAME))
+CFLAGS_tmp         := $(call get-user-cflags-for,$(CONFIG_NAME))
 
 # Add local header paths to CFLAGS
-CFLAGS         += -I$(TEST_SRC_PATH)
+CFLAGS_tmp        += -I$(TEST_SRC_PATH)
+CFLAGS 	:= $(filter-out -std=c99, $(CFLAGS_tmp))
 
 # Locate the libblis library to which we will link.
 #LIBBLIS_LINK   := $(LIB_PATH)/$(LIBBLIS_L)

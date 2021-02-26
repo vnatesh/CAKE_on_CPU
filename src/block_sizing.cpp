@@ -2,7 +2,7 @@
 
 
 // find cache size at levels L1d,L1i,L2,and L3 using lscpu
-int get_cache_size(char* level) {
+int get_cache_size(const char* level) {
 
 	int len, size = 0;
 	FILE *fp;
@@ -49,8 +49,11 @@ int get_block_dim(int m_r, int n_r, double alpha_n, int M, int p) {
 	int mc_L2 = 0, mc_L3 = 0;
 	// find L3 and L2 cache sizes
 	int max_threads = omp_get_max_threads() / 2; // 2-way hyperthreaded
-	int L2_size = get_cache_size("L2");
-	int L3_size = get_cache_size("L3");
+
+	char const* l2 = "L2";
+	char const* l3 = "L3";
+	int L2_size = get_cache_size(l2);
+	int L3_size = get_cache_size(l3);
 	int mn_lcm = lcm(m_r, n_r);
 	// int mn_lcm = m_r;
 
