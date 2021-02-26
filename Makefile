@@ -1,45 +1,3 @@
-
-
-
-# .PHONY: all install cake_compile clean
-
-
-
-# INCDIR ?=
-# #INCDIR += -I. -I$(SYSTEMC_HOME)/include -I$(BOOST_HOME)/include -I$(CATAPULT_HOME)/Mgc_home/shared/include
-# INCDIR += -I$(BLIS_INSTALL_PATH)/include/blis -DBLIS_VERSION_STRING=\"0.8.0-13\" -I.
-
-
-# # CFLAGS ?= 
-# # CFLAGS += -O2 -Wall -Wno-unused-function -Wfatal-errors -fPIC -std=c99 \
-# # 			-D_POSIX_C_SOURCE=200112L $(INCDIR)
-# CFLAGS := $(call get-user-cflags-for,$(CONFIG_NAME))
-# CFLAGS += $(INCDIR) 
-
-# LIBS ?=
-# #LIBDIR += -L. -L$(SYSTEMC_HOME)/lib-linux64 -L$(BOOST_HOME)/lib
-# LIBS += $(BLIS_INSTALL_PATH)/lib/libblis.a -lm -lpthread -fopenmp -lrt 
-
-
-
-
-# # gcc -O3 -O2 -Wall -Wno-unused-function -Wfatal-errors -fPIC -std=c99 
-# # -D_POSIX_C_SOURCE=200112L -fopenmp -I/usr/local/include/blis -DBLIS_VERSION_STRING=\"0.8.0-13\" 
-# # -I. *.c -o cake_dgemm_test.o /usr/local/lib/libblis.a  -lm -lpthread -fopenmp -lrt -o cake_dgemm_test.x
-
-
-# all: cake_compile
-
-# install:
-# 	./install.sh
-
-# cake_compile: $(wildcard *.h) $(wildcard *.c) 
-# 	gcc $(CFLAGS) *.c -o cake_dgemm_test.o $(LIBS) -o cake_dgemm_test.x
-
-# clean:
-# 	rm -rf *.o
-
-
 #
 #
 #  BLIS    
@@ -183,10 +141,56 @@ endif
 
 
 cake_compile: $(wildcard *.h) $(wildcard *.c) 
-	g++ $(CFLAGS) cake_dgemm_test.cpp block_sizing.cpp cake_dgemm.cpp pack.cpp util.cpp unpack.cpp -o cake_dgemm_test.o $(LIBS) $(LDFLAGS) -o cake_dgemm_test.x
+	g++ $(CFLAGS) src/cake_dgemm_test.cpp src/block_sizing.cpp \
+	src/cake_dgemm.cpp src/pack.cpp src/util.cpp src/unpack.cpp \
+	-o cake_dgemm_test.o $(LIBS) $(LDFLAGS) -o cake_dgemm_test.x
 
 
 # -- Clean rules --
 
 clean:
 	rm -rf *.o *.x
+
+
+
+
+
+
+
+# .PHONY: all install cake_compile clean
+
+
+
+# INCDIR ?=
+# #INCDIR += -I. -I$(SYSTEMC_HOME)/include -I$(BOOST_HOME)/include -I$(CATAPULT_HOME)/Mgc_home/shared/include
+# INCDIR += -I$(BLIS_INSTALL_PATH)/include/blis -DBLIS_VERSION_STRING=\"0.8.0-13\" -I.
+
+
+# # CFLAGS ?= 
+# # CFLAGS += -O2 -Wall -Wno-unused-function -Wfatal-errors -fPIC -std=c99 \
+# # 			-D_POSIX_C_SOURCE=200112L $(INCDIR)
+# CFLAGS := $(call get-user-cflags-for,$(CONFIG_NAME))
+# CFLAGS += $(INCDIR) 
+
+# LIBS ?=
+# #LIBDIR += -L. -L$(SYSTEMC_HOME)/lib-linux64 -L$(BOOST_HOME)/lib
+# LIBS += $(BLIS_INSTALL_PATH)/lib/libblis.a -lm -lpthread -fopenmp -lrt 
+
+
+
+
+# # gcc -O3 -O2 -Wall -Wno-unused-function -Wfatal-errors -fPIC -std=c99 
+# # -D_POSIX_C_SOURCE=200112L -fopenmp -I/usr/local/include/blis -DBLIS_VERSION_STRING=\"0.8.0-13\" 
+# # -I. *.c -o cake_dgemm_test.o /usr/local/lib/libblis.a  -lm -lpthread -fopenmp -lrt -o cake_dgemm_test.x
+
+
+# all: cake_compile
+
+# install:
+# 	./install.sh
+
+# cake_compile: $(wildcard *.h) $(wildcard *.c) 
+# 	gcc $(CFLAGS) *.c -o cake_dgemm_test.o $(LIBS) -o cake_dgemm_test.x
+
+# clean:
+# 	rm -rf *.o
