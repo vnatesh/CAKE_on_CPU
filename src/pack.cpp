@@ -1,7 +1,7 @@
 #include "cake.h"
 
 
-void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, int p) {
+void pack_A(float* A, float** A_p, int M, int K, int m_c, int k_c, int m_r, int p) {
 
 	int ind1 = 0;
 	int m1, k1, m2, p_l;
@@ -24,7 +24,7 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 			#pragma omp parallel for private(m2)
 			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
 				// printf("hey %d\n", ind1 + m2/m_c);
-				if(posix_memalign((void**) &A_p[ind1 + m2/m_c], 64, m_c * k_c * sizeof(double))) {
+				if(posix_memalign((void**) &A_p[ind1 + m2/m_c], 64, m_c * k_c * sizeof(float))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
@@ -42,7 +42,7 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 			#pragma omp parallel for private(m2)
 			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
 
-				if(posix_memalign((void**) &A_p[ind1 + m2/m_c], 64, k_c1 * m_c * sizeof(double))) {
+				if(posix_memalign((void**) &A_p[ind1 + m2/m_c], 64, k_c1 * m_c * sizeof(float))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
@@ -63,7 +63,7 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 			#pragma omp parallel for private(m2)
 			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
 				
-				if(posix_memalign((void**) &A_p[ind1 + m2/m_c1], 64, k_c * m_c1 * sizeof(double))) {
+				if(posix_memalign((void**) &A_p[ind1 + m2/m_c1], 64, k_c * m_c1 * sizeof(float))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
@@ -76,7 +76,7 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 
 			// final row of CBS blocks each with m_c1_last_core x k_c
 			m2 = (p_l-1) * m_c1;
-			if(posix_memalign((void**) &A_p[ind1], 64, k_c * m_c1_last_core * sizeof(double))) {
+			if(posix_memalign((void**) &A_p[ind1], 64, k_c * m_c1_last_core * sizeof(float))) {
 				printf("posix memalign error\n");
 				exit(1);
 			}
@@ -94,7 +94,7 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 			#pragma omp parallel for private(m2)
 			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
 
-				if(posix_memalign((void**) &A_p[ind1 + m2/m_c1], 64, k_c1 * m_c1 * sizeof(double))) {
+				if(posix_memalign((void**) &A_p[ind1 + m2/m_c1], 64, k_c1 * m_c1 * sizeof(float))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
@@ -108,7 +108,7 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
 			// last OB of A has shape m_c1_last_core x k_c1 
 			m2 = (p_l-1) * m_c1;
 			
-			if(posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c1_last_core * sizeof(double))) {
+			if(posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c1_last_core * sizeof(float))) {
 				printf("posix memalign error\n");
 				exit(1);
 			}
@@ -122,7 +122,7 @@ void pack_A(double* A, double** A_p, int M, int K, int m_c, int k_c, int m_r, in
  
 
 
-void pack_B(double* B, double* B_p, int K, int N, int k_c, int n_c, int n_r, int alpha_n, int m_c) {
+void pack_B(float* B, float* B_p, int K, int N, int k_c, int n_c, int n_r, int alpha_n, int m_c) {
 
 	int k1, k_c1, n1, n_c1, nr_rem;
 	int ind1 = 0;
@@ -156,7 +156,7 @@ void pack_B(double* B, double* B_p, int K, int N, int k_c, int n_c, int n_r, int
 
 	// Process the final column of CBS blocks (sized k_c x n_c1) and perform N-dim padding 
 	n1 = (N - (N%n_c));
-	nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
+	nr_rem = (int) ceil( ((float) (N % n_c) / n_r)) ;
 	n_c1 = nr_rem * n_r;
 
 	if(n_c1) {	
@@ -202,7 +202,7 @@ void pack_B(double* B, double* B_p, int K, int N, int k_c, int n_c, int n_r, int
 
 
 
-void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, int n_r, int p, int alpha_n) {
+void pack_C(float* C, float** C_p, int M, int N, int m_c, int n_c, int m_r, int n_r, int p, int alpha_n) {
 
 	int n1, m1, m2, p_l;
 
@@ -229,7 +229,7 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 			#pragma omp parallel for private(m2)
 			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
 
-				if(posix_memalign((void**) &C_p[ind1 + m2/m_c], 64, m_c * n_c * sizeof(double))) {
+				if(posix_memalign((void**) &C_p[ind1 + m2/m_c], 64, m_c * n_c * sizeof(float))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
@@ -248,7 +248,7 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 			#pragma omp parallel for private(m2)
 			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
 
-				if(posix_memalign((void**) &C_p[ind1 + m2/m_c1], 64, m_c1 * n_c * sizeof(double))) {
+				if(posix_memalign((void**) &C_p[ind1 + m2/m_c1], 64, m_c1 * n_c * sizeof(float))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
@@ -260,7 +260,7 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 			ind1 += (p_l-1);
 
 			m2 = (p_l-1) * m_c1;
-			if(posix_memalign((void**) &C_p[ind1], 64, m_c1_last_core * n_c * sizeof(double))) {
+			if(posix_memalign((void**) &C_p[ind1], 64, m_c1_last_core * n_c * sizeof(float))) {
 				printf("posix memalign error\n");
 				exit(1);
 			}
@@ -280,7 +280,7 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 			#pragma omp parallel for private(m2)
 			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
 
-				if(posix_memalign((void**) &C_p[ind1 + m2/m_c], 64, m_c * n_c1 * sizeof(double))) {
+				if(posix_memalign((void**) &C_p[ind1 + m2/m_c], 64, m_c * n_c1 * sizeof(float))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
@@ -300,7 +300,7 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 			#pragma omp parallel for private(m2)
 			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
 
-				if(posix_memalign((void**) &C_p[ind1 + m2/m_c1], 64, m_c1 * n_c1 * sizeof(double))) {
+				if(posix_memalign((void**) &C_p[ind1 + m2/m_c1], 64, m_c1 * n_c1 * sizeof(float))) {
 					printf("posix memalign error\n");
 					exit(1);
 				}
@@ -313,7 +313,7 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 
 			// last OB in C (lower right corner) with shape m_c1_last_core * n_c1
 			m2 = (p_l-1) * m_c1;
-			if(posix_memalign((void**) &C_p[ind1], 64, m_c1_last_core * n_c1 * sizeof(double))) {
+			if(posix_memalign((void**) &C_p[ind1], 64, m_c1_last_core * n_c1 * sizeof(float))) {
 				printf("posix memalign error\n");
 				exit(1);
 			}
@@ -328,7 +328,7 @@ void pack_C(double* C, double** C_p, int M, int N, int m_c, int n_c, int m_r, in
 
 
 // initialize an operation block of matrix A
-void set_ob_A(double* A, double* A_p, int M, int K, int m1, int k1, int m2, int m_c, int k_c, int m_r, bool pad) {
+void set_ob_A(float* A, float* A_p, int M, int K, int m1, int k1, int m2, int m_c, int k_c, int m_r, bool pad) {
 
 	int	ind2 = 0;
 	
@@ -362,7 +362,7 @@ void set_ob_A(double* A, double* A_p, int M, int K, int m1, int k1, int m2, int 
 }
 
 
-void set_ob_C(double* C, double* C_p, int M, int N, int m1, int n1, int m2,
+void set_ob_C(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
 				int m_c, int n_c, int m_r, int n_r, bool pad) {
 
 	int	ind2 = 0;
