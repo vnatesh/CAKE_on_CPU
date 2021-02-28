@@ -7,7 +7,7 @@
 
 #define DEBUG 0
 #define ARR_PRINT 0
-#define CHECK_PRINT 1
+#define CHECK_PRINT 0
 
 /*
 
@@ -47,7 +47,9 @@ int get_cache_size(char* level);
 
 int lcm(int n1, int n2);
 
-void cake_dgemm_checker(float* A, float* B, float* C, int N, int M, int K);
+int run_tests();
+
+bool cake_dgemm_checker(float* A, float* B, float* C, int N, int M, int K);
 
 void rand_init(float* mat, int r, int c);
 

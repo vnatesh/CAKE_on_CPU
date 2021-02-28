@@ -1,6 +1,57 @@
 #include "cake.h"
 
-void cake_dgemm_checker(float* A, float* B, float* C, int N, int M, int K) {
+int run_tests() {
+
+	// float *A, *B, *C;
+	int M, K, N, m, k, n, max_threads,p;
+	max_threads = omp_get_max_threads() / 2;
+	int num_tests = 6;
+	int Ms[num_tests] = {1,10,96,111,960,2111};
+	int Ks[num_tests] = {1,10,96,111,960,2111};
+	int Ns[num_tests] = {1,10,96,111,960,2111};
+	int cnt = 0;
+
+	for(p = 2; p <= max_threads; p++)  {
+		for(m = 0; m < num_tests; m++) {
+			for(k = 0; k < num_tests; k++) {
+				for(n = 0; n < num_tests; n++) {
+					M = Ms[m];
+					K = Ks[k];
+					N = Ns[n];
+
+					float* A = (float*) malloc(M * K * sizeof( float ));
+					float* B = (float*) malloc(K * N * sizeof( float ));
+					float* C = (float*) calloc(M * N , sizeof( float ));
+				    srand(time(NULL));
+
+					rand_init(A, M, K);
+					rand_init(B, K, N);
+
+					cake_dgemm(A, B, C, M, N, K, p);
+					if(cake_dgemm_checker(A, B, C, N, M, K)) {
+						printf("TESTS FAILED on p=%d m=%d k=%d n=%d\n",p,m,k,n);
+						cnt++;
+					}
+
+					free(A);
+					free(B);
+					free(C);
+				}
+			}
+		}
+	}
+
+	if(cnt) {
+		printf("FAILED\n");
+	} else {
+		printf("ALL TESTS PASSED!\n");
+	}
+
+	return 0;
+}
+
+
+bool cake_dgemm_checker(float* A, float* B, float* C, int N, int M, int K) {
 
 	float* C_check = (float*) calloc(M * N , sizeof( float ));
 
@@ -38,13 +89,17 @@ void cake_dgemm_checker(float* A, float* B, float* C, int N, int M, int K) {
       }
     }
 
-    printf("\n\n");
+    //printf("\n\n");
 
 	if(CORRECT) {
 		printf("CORRECT!\n");
+		return 0;
 	} else {
-		printf("WRONG!\n");
-		printf("%d\n", cnt);
+		if(CHECK_PRINT) {
+			printf("WRONG!\n");
+			printf("%d\n", cnt);
+		}	
+		return 1;
 	}
 
 	free(C_check);
