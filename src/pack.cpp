@@ -124,78 +124,95 @@ void pack_A(float* A, float** A_p, int M, int K, int m_c, int k_c, int m_r, int 
 
 void pack_B(float* B, float* B_p, int K, int N, int k_c, int n_c, int n_r, int alpha_n, int m_c) {
 
-	int k1, k_c1, n1, n_c1, nr_rem;
+	int k1, k_c1, n1, n2, n_c1, nr_rem;
 	int ind1 = 0;
+
+	int local_ind;
 
 	// main portion of B that evenly fits into CBS blocks of size k_c x n_c 
 	for(n1 = 0; n1 < (N - (N%n_c)); n1 += n_c) {
+		
+		#pragma omp parallel for private(k1,local_ind)
 		for(k1 = 0; k1 < (K - (K%k_c)); k1 += k_c) {
+			local_ind = 0;
 			for(int n2 = 0; n2 < n_c; n2 += n_r) {
 				for(int i = 0; i < k_c; i++) {
 					for(int j = 0; j < n_r; j++) {
-						B_p[ind1] = B[n1 + k1*N + n2 + i*N + j];
-						ind1++;
+						B_p[ind1 + local_ind + (k1/k_c)*k_c*n_c] = B[n1 + k1*N + n2 + i*N + j];
+						local_ind++;
 					}
 				}
 			}
 		}
+		ind1 += ((K - (K%k_c))*n_c);
 
 		k1 = (K - (K%k_c));
 		k_c1 = (K % k_c);
 		if(k_c1) {
-			for(int n2 = 0; n2 < n_c; n2 += n_r) {
+
+			#pragma omp parallel for private(n2,local_ind)
+			for(n2 = 0; n2 < n_c; n2 += n_r) {
+				local_ind = 0;
 				for(int i = 0; i < k_c1; i++) {
 					for(int j = 0; j < n_r; j++) {
-						B_p[ind1] = B[n1 + k1*N + n2 + i*N + j];
-						ind1++;
+						B_p[ind1 + local_ind + n2*k_c1] = B[n1 + k1*N + n2 + i*N + j];
+						local_ind++;
 					}
 				}
 			}
+			ind1 += k_c1*n_c;
 		}
 	}
 
 	// Process the final column of CBS blocks (sized k_c x n_c1) and perform N-dim padding 
 	n1 = (N - (N%n_c));
-	nr_rem = (int) ceil( ((float) (N % n_c) / n_r)) ;
+	nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
 	n_c1 = nr_rem * n_r;
 
 	if(n_c1) {	
 
+		#pragma omp parallel for private(k1,local_ind)
 		for(k1 = 0; k1 < (K - (K%k_c)); k1 += k_c) {
+			local_ind = 0;
 			for(int n2 = 0; n2 < n_c1; n2 += n_r) {
 				for(int i = 0; i < k_c; i++) {
 					for(int j = 0; j < n_r; j++) {
 
 						if((n1 + n2 + j) >=  N) {
-							B_p[ind1] = 0.0;
+							B_p[ind1 + local_ind + (k1/k_c)*k_c*n_c1] = 0.0;
 						} else {
-							B_p[ind1] = B[n1 + k1*N + n2 + i*N + j];
+							B_p[ind1 + local_ind + (k1/k_c)*k_c*n_c1] = B[n1 + k1*N + n2 + i*N + j];
 						}
 
-						ind1++;
+						local_ind++;
 					}
 				}
 			}
 		}
+		ind1 += ((K - (K%k_c))*n_c1);
 
 		// Final CBS block (with k_c1 x n_c1 blocks) present in the lower right hand corner of B 
 		k1 = (K - (K%k_c));
 		k_c1 = (K % k_c);
 		if(k_c1) {
+
+			#pragma omp parallel for private(n2,local_ind)
 			for(int n2 = 0; n2 < n_c1; n2 += n_r) {
+				local_ind = 0;
 				for(int i = 0; i < k_c1; i++) {
 					for(int j = 0; j < n_r; j++) {
 
 						if((n1 + n2 + j) >=  N) {
-							B_p[ind1] = 0.0;
+							B_p[ind1 + local_ind + n2*k_c1] = 0.0;
 						} else {
-							B_p[ind1] = B[n1 + k1*N + n2 + i*N + j];
+							B_p[ind1 + local_ind + n2*k_c1] = B[n1 + k1*N + n2 + i*N + j];
 						}
 
-						ind1++;
+						local_ind++;
 					}
 				}
 			}
+			ind1 += k_c1*n_c1;
 		}
 	}
 }
