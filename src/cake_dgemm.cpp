@@ -61,7 +61,7 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p) {
 	gettimeofday (&start, NULL);
 
 	A_p = (float**) malloc( (K/k_c + k_pad) * (((M / (p*m_c))*p) + p_l) * sizeof( float* ));
-	pack_A1(A, A_p, M, K, m_c, k_c, m_r, p);
+	pack_A(A, A_p, M, K, m_c, k_c, m_r, p);
 	// exit(1);
 
 	gettimeofday (&end, NULL);
@@ -89,7 +89,7 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p) {
 	gettimeofday (&start, NULL);
 
 	C_p = (float**) malloc((((M / (p*m_c))*p) + p_l) * (N/n_c + n_pad) * sizeof( float* ));
-	pack_C1(C, C_p, M, N, m_c, n_c, m_r, n_r, p, alpha_n);
+	pack_C(C, C_p, M, N, m_c, n_c, m_r, n_r, p, alpha_n);
 
 	gettimeofday (&end, NULL);
 	diff_t = (((end.tv_sec - start.tv_sec)*1000000L
