@@ -29,12 +29,18 @@ void unpack_C_rsc(float* C, float** C_p, int M, int N, int m_c, int n_c, int n_r
 void unpack_C(float* C, float** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p);
 
 
-void set_ob_A(float* A, float* A_p, int M, int K, int m1, int k1, 
+void pack_ob_A(float* A, float* A_p, int M, int K, int m1, int k1, 
 				int m2, int m_c, int k_c, int m_r, bool pad);
 
 
-void set_ob_C(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
+void pack_ob_C(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
 				int m_c, int n_c, int m_r, int n_r, bool pad);
+
+
+
+void unpack_ob_C(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
+				int m_c, int n_c, int m_r, int n_r);
+
 
 
 void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p);
