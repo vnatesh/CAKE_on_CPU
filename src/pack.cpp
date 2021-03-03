@@ -29,7 +29,7 @@ void pack_A(float* A, float** A_p, int M, int K, int m_c, int k_c, int m_r, int 
 					exit(1);
 				}
 
-				set_ob_A(A, A_p[ind1 + m2/m_c], M, K, m1, k1, m2, m_c, k_c, m_r, 0);
+				pack_ob_A(A, A_p[ind1 + m2/m_c], M, K, m1, k1, m2, m_c, k_c, m_r, 0);
 
 				if(ARR_PRINT) print_array(A_p[ind1 + m2/m_c], k_c * m_c);
 			}
@@ -47,7 +47,7 @@ void pack_A(float* A, float** A_p, int M, int K, int m_c, int k_c, int m_r, int 
 					exit(1);
 				}
 
-				set_ob_A(A, A_p[ind1 + m2/m_c], M, K, m1, k1, m2, m_c, k_c1, m_r, 0);
+				pack_ob_A(A, A_p[ind1 + m2/m_c], M, K, m1, k1, m2, m_c, k_c1, m_r, 0);
 				if(ARR_PRINT) print_array(A_p[ind1 + m2/m_c], k_c1 * m_c);
 			}
 			ind1 += p;
@@ -68,7 +68,7 @@ void pack_A(float* A, float** A_p, int M, int K, int m_c, int k_c, int m_r, int 
 					exit(1);
 				}
 
-				set_ob_A(A, A_p[ind1 + m2/m_c1], M, K, m1, k1, m2, m_c1, k_c, m_r, 0);
+				pack_ob_A(A, A_p[ind1 + m2/m_c1], M, K, m1, k1, m2, m_c1, k_c, m_r, 0);
 				if(ARR_PRINT) print_array(A_p[ind1 + m2/m_c1], k_c * m_c1);
 				// ind1++;
 			}
@@ -81,7 +81,7 @@ void pack_A(float* A, float** A_p, int M, int K, int m_c, int k_c, int m_r, int 
 				exit(1);
 			}
 
-			set_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1_last_core, k_c, m_r, 1);
+			pack_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1_last_core, k_c, m_r, 1);
 			if(ARR_PRINT) print_array(A_p[ind1], k_c * m_c1_last_core);
 			ind1++;
 		}
@@ -99,7 +99,7 @@ void pack_A(float* A, float** A_p, int M, int K, int m_c, int k_c, int m_r, int 
 					exit(1);
 				}
 
-				set_ob_A(A, A_p[ind1 + m2/m_c1], M, K, m1, k1, m2, m_c1, k_c1, m_r, 0);
+				pack_ob_A(A, A_p[ind1 + m2/m_c1], M, K, m1, k1, m2, m_c1, k_c1, m_r, 0);
 				if(ARR_PRINT) print_array(A_p[ind1 + m2/m_c1], k_c1 * m_c1);
 				// ind1++;
 			}
@@ -113,7 +113,7 @@ void pack_A(float* A, float** A_p, int M, int K, int m_c, int k_c, int m_r, int 
 				exit(1);
 			}
 
-			set_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1_last_core, k_c1, m_r, 1);
+			pack_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1_last_core, k_c1, m_r, 1);
 			if(ARR_PRINT) print_array(A_p[ind1], k_c1 * m_c1_last_core);
 			ind1++;
 		}
@@ -251,7 +251,7 @@ void pack_C(float* C, float** C_p, int M, int N, int m_c, int n_c, int m_r, int 
 					exit(1);
 				}
 
-				set_ob_C(C, C_p[ind1 + m2/m_c], M, N, m1, n1, m2, m_c, n_c, m_r, n_r, 0);
+				pack_ob_C(C, C_p[ind1 + m2/m_c], M, N, m1, n1, m2, m_c, n_c, m_r, n_r, 0);
 				if(ARR_PRINT) print_array(C_p[ind1 + m2/m_c], m_c * n_c);
 				// ind1++;
 			}
@@ -270,7 +270,7 @@ void pack_C(float* C, float** C_p, int M, int N, int m_c, int n_c, int m_r, int 
 					exit(1);
 				}
 
-				set_ob_C(C, C_p[ind1 + m2/m_c1], M, N, m1, n1, m2, m_c1, n_c, m_r, n_r, 0);
+				pack_ob_C(C, C_p[ind1 + m2/m_c1], M, N, m1, n1, m2, m_c1, n_c, m_r, n_r, 0);
 				if(ARR_PRINT) print_array(C_p[ind1 + m2/m_c1], m_c1 * n_c);
 				// ind1++;
 			}
@@ -282,7 +282,7 @@ void pack_C(float* C, float** C_p, int M, int N, int m_c, int n_c, int m_r, int 
 				exit(1);
 			}
 
-			set_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c1_last_core, n_c, m_r, n_r, 1);
+			pack_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c1_last_core, n_c, m_r, n_r, 1);
 			if(ARR_PRINT) print_array(C_p[ind1], m_c1 * n_c);
 			ind1++;
 		}
@@ -302,7 +302,7 @@ void pack_C(float* C, float** C_p, int M, int N, int m_c, int n_c, int m_r, int 
 					exit(1);
 				}
 
-				set_ob_C(C, C_p[ind1 + m2/m_c], M, N, m1, n1, m2, m_c, n_c1, m_r, n_r, 1);
+				pack_ob_C(C, C_p[ind1 + m2/m_c], M, N, m1, n1, m2, m_c, n_c1, m_r, n_r, 1);
 				if(ARR_PRINT) print_array(C_p[ind1 + m2/m_c], m_c * n_c1);
 				// ind1++;
 			}
@@ -322,7 +322,7 @@ void pack_C(float* C, float** C_p, int M, int N, int m_c, int n_c, int m_r, int 
 					exit(1);
 				}
 
-				set_ob_C(C, C_p[ind1 + m2/m_c1], M, N, m1, n1, m2, m_c1, n_c1, m_r, n_r, 1);
+				pack_ob_C(C, C_p[ind1 + m2/m_c1], M, N, m1, n1, m2, m_c1, n_c1, m_r, n_r, 1);
 				if(ARR_PRINT) print_array(C_p[ind1 + m2/m_c1], m_c1 * n_c1);
 				// ind1++;
 			}
@@ -335,7 +335,7 @@ void pack_C(float* C, float** C_p, int M, int N, int m_c, int n_c, int m_r, int 
 				exit(1);
 			}
 
-			set_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c1_last_core, n_c1, m_r, n_r, 1);
+			pack_ob_C(C, C_p[ind1], M, N, m1, n1, m2, m_c1_last_core, n_c1, m_r, n_r, 1);
 			if(ARR_PRINT) print_array(C_p[ind1], m_c1_last_core * n_c1);
 			ind1++;
 		}
@@ -345,7 +345,7 @@ void pack_C(float* C, float** C_p, int M, int N, int m_c, int n_c, int m_r, int 
 
 
 // initialize an operation block of matrix A
-void set_ob_A(float* A, float* A_p, int M, int K, int m1, int k1, int m2, int m_c, int k_c, int m_r, bool pad) {
+void pack_ob_A(float* A, float* A_p, int M, int K, int m1, int k1, int m2, int m_c, int k_c, int m_r, bool pad) {
 
 	int	ind2 = 0;
 	
@@ -379,7 +379,7 @@ void set_ob_A(float* A, float* A_p, int M, int K, int m1, int k1, int m2, int m_
 }
 
 
-void set_ob_C(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
+void pack_ob_C(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
 				int m_c, int n_c, int m_r, int n_r, bool pad) {
 
 	int	ind2 = 0;
