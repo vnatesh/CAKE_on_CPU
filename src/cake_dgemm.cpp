@@ -173,7 +173,7 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p) {
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p + m ][m_reg*m_r*k_c], 
 					   		&B_p[n1*K*n_c + k1*k_c*n_c + n_reg*k_c*n_r], &beta, 
 					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, NULL);
+					   		rsc, csc, NULL, cntx);
 						}
 					}
 				}
@@ -186,7 +186,7 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p) {
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1_n*p + m ][m_reg*m_r*k_c1], 
 					   		&B_p[n1*K*n_c + k1_n*k_c*n_c + n_reg*k_c1*n_r], &beta, 
 					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, NULL);
+					   		rsc, csc, NULL, cntx);
 						}
 					}
 				}
@@ -210,7 +210,7 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p) {
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p_l + m ][m_reg*m_r*k_c], 
 					   		&B_p[n1*K*n_c + k1*k_c*n_c + n_reg*k_c*n_r], &beta, 
 					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, NULL);
+					   		rsc, csc, NULL, cntx);
 						}
 					}
 				}
@@ -223,7 +223,7 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p) {
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1_n*p_l + m ][m_reg*m_r*k_c1], 
 					   		&B_p[n1*K*n_c + k1_n*k_c*n_c + n_reg*k_c1*n_r], &beta, 
 					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, NULL);
+					   		rsc, csc, NULL, cntx);
 						}
 					}
 				}
@@ -249,7 +249,7 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p) {
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p + m ][m_reg*m_r*k_c], 
 					   		&B_p[n1*K*n_c + k1*k_c*n_c1 + n_reg*k_c*n_r], &beta, 
 					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, NULL);
+					   		rsc, csc, NULL, cntx);
 						}
 					}
 				}
@@ -261,7 +261,7 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p) {
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1_n*p + m ][m_reg*m_r*k_c1], 
 					   		&B_p[n1*K*n_c + k1_n*k_c*n_c1 + n_reg*k_c1*n_r], &beta, 
 					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, NULL);
+					   		rsc, csc, NULL, cntx);
 						}
 					}
 				}
@@ -285,7 +285,7 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p) {
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p_l + m ][m_reg*m_r*k_c], 
 					   		&B_p[n1*K*n_c + k1*k_c*n_c1 + n_reg*k_c*n_r], &beta, 
 					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, NULL);
+					   		rsc, csc, NULL, cntx);
 						}
 					}
 				}
@@ -298,7 +298,7 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p) {
 					   		&A_p[m1*p*(K/k_c + k_pad) + k1_n*p_l + m ][m_reg*m_r*k_c1], 
 					   		&B_p[n1*K*n_c + k1_n*k_c*n_c1 + n_reg*k_c1*n_r], &beta, 
 					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, NULL);
+					   		rsc, csc, NULL, cntx);
 						}
 					}
 				}
