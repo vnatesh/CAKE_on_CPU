@@ -7,7 +7,7 @@ This repository contains an implementation of the CAKE algorithm for CPUs. It ut
 git clone https://github.com/vnatesh/CAKE_on_CPU.git
 cd CAKE_on_CPU
 make install
-export BLIS_INSTALL_PATH=/usr/local
+source env.sh
 ```
 
 Installation automatically downloads and installs the following tool/dependency verions:
