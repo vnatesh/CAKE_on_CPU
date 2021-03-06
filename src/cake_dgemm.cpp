@@ -19,18 +19,27 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_c
 	// inc_t rsa, csa;
 	// inc_t rsb, csb;
 
+	gettimeofday (&start, NULL);
+
 	if(cake_cntx == NULL) {
 		cake_cntx = cake_query_cntx(M,N,K,p);
 	}
 
 	m_r = cake_cntx->mr;
 	n_r = cake_cntx->nr;
-	m_c = cake_cntx->mc;
 	alpha_n = cake_cntx->alpha;
     blis_cntx = cake_cntx->blis_cntx;		
 
     if(DEBUG) printf("M = %d, N = %d, K = %d\n", M, N, K);
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", m_r, n_r);
+
+    m_c = get_block_dim(cake_cntx, M, p);
+   
+	gettimeofday (&end, NULL);
+	diff_t = (((end.tv_sec - start.tv_sec)*1000000L
+	+end.tv_usec) - start.tv_usec) / (1000000.0);
+	if(DEBUG) printf("cntx time: %f \n", diff_t); 
+
 
    //m_c = 48;
     k_c = m_c;

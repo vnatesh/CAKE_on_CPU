@@ -11,11 +11,12 @@
 
 
 typedef struct cake_cntx_t{
+	cntx_t* blis_cntx;
+	double alpha;
 	int mr;
 	int nr;
-	int mc;
-	double alpha;
-	cntx_t* blis_cntx;
+	int L2;
+	int L3;
 } cake_cntx_t;
 
 
@@ -58,10 +59,10 @@ void unpack_ob_C(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
 void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_cntx_t* cake_cntx);
 
 
-int get_block_dim(int m_r, int n_r, double alpha_n, int M, int p);
+int get_block_dim(cake_cntx_t* cake_cntx, int M, int p);
 
 
-int get_cache_size(char* level);
+int get_cache_size(const char* level);
 
 int lcm(int n1, int n2);
 

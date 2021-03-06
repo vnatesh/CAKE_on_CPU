@@ -7,12 +7,13 @@ cake_cntx_t* cake_query_cntx(int M, int N, int K, int p) {
     double alpha = 1;
 
     // query block size for the microkernel
-    cntx_t* cntx = bli_gks_query_cntx();
-    ret->blis_cntx = cntx;
+    cntx_t* blis_cntx = bli_gks_query_cntx();
+    ret->blis_cntx = blis_cntx;
     ret->alpha = alpha;
-    ret->mr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, cntx);
-    ret->nr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, cntx);
-	ret->mc = get_block_dim(ret->mr, ret->nr, alpha, M, p); 
+    ret->mr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, blis_cntx);
+    ret->nr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, blis_cntx);
+	ret->L2 = get_cache_size("L2");
+	ret->L3 = get_cache_size("L3");
 	return ret;
 }
 
@@ -60,36 +61,30 @@ int get_cache_size(const char* level) {
 }
 
 
-int get_block_dim(int m_r, int n_r, double alpha_n, int M, int p) {
+int get_block_dim(cake_cntx_t* cake_cntx, int M, int p) {
 
 	int mc_L2 = 0, mc_L3 = 0;
-	// find L3 and L2 cache sizes
 	int max_threads = omp_get_max_threads() / 2; // 2-way hyperthreaded
-
-	char const* l2 = "L2";
-	char const* l3 = "L3";
-	int L2_size = get_cache_size(l2);
-	int L3_size = get_cache_size(l3);
-	int mn_lcm = lcm(m_r, n_r);
+	int mn_lcm = lcm(cake_cntx->mr, cake_cntx->nr);
 	// int mn_lcm = m_r;
 
 	// solves for the optimal block size m_c and k_c based on the L3 size
 	// L3_size >= p*mc*kc + 2*(kc*alpha*p*mc + p*mc*alpha*p*mc)     (solve for x = m_c = k_c) 
 	// We only use ~ half of the each cache to prevent our working blocks from being evicted
-	mc_L3 = (int) sqrt((((double) L3_size) / (sizeof(double)))  
-							/ (max_threads * (1 + 2*alpha_n + 2*alpha_n*max_threads)));
+	mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (sizeof(double)))  
+			/ (max_threads * (1 + 2*cake_cntx->alpha + 2*cake_cntx->alpha*max_threads)));
 	mc_L3 -= (mc_L3 % mn_lcm);
 
 	// solves for optimal mc,kc based on L2 size
 	// L2_size >= 2*(mc*kc + kc*nr) + mc*nr     (solve for x = m_c = k_c) 
-	int b = 3*n_r;
-	mc_L2 = (int)  (-b + sqrt(b*b + 4*2*(((double) L2_size) / (sizeof(double))))) / (2*2)  ;
+	int b = 3*cake_cntx->nr;
+	mc_L2 = (int)  (-b + sqrt(b*b + 4*2*(((double) cake_cntx->L2) / (sizeof(double))))) / (2*2)  ;
 	mc_L2 -= (mc_L2 % mn_lcm);
 
 	int mc = mc_L3 < mc_L2 ? mc_L3 : mc_L2;
 	int a;
 
-	if(M < p*m_r) {
+	if(M < p*cake_cntx->mr) {
 		return mn_lcm;
 	} else if(M < p*mc) {
 		

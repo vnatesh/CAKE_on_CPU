@@ -3,7 +3,7 @@
  
 int main( int argc, char** argv ) {
 
-	run_tests();
+//	run_tests();
 	// exit(1);
 
 	struct timeval start, end;
@@ -16,12 +16,12 @@ int main( int argc, char** argv ) {
 
 	int M, K, N, p;
 
-	 // M = 1;
-	 // K = 1;
-	 // N = 1;
-	M = 128;
-	K = 3072;
-	N = 768;
+	 M = 100;
+	 K = 100;
+	 N = 100;
+//	M = 128;
+//	K = 3072;
+//	N = 768;
 
 	// M = 96;
 	// K = 14583;
@@ -59,7 +59,9 @@ int main( int argc, char** argv ) {
     //         m, n, k, alpha, A, k, B, n, beta, C, n);
 
 	// double beta = 1.0;
-	cake_dgemm(A, B, C, M, N, K, p);
+	// cake_dgemm(A, B, C, M, N, K, p, NULL);
+	cake_cntx_t* cake_cntx = cake_query_cntx(M, N, K, p);
+	cake_dgemm(A, B, C, M, N, K, p, cake_cntx);
 	// bli_dprintm( "C: ", M, N, C, N, 1, "%4.4f", "" );
 	cake_dgemm_checker(A, B, C, N, M, K);
 
