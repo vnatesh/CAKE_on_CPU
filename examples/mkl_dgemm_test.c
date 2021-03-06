@@ -6,9 +6,14 @@
 #include <time.h> 
 #include "mkl.h"
 
+// Compile MKL test file using the intel advisor below:
+// https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/onemkl/link-line-advisor.html
 
+// gcc -fopenmp -m64 -I${MKLROOT}/include mkl_dgemm_test.c 
+// -Wl,--no-as-needed -L${MKLROOT}/lib/intel64 -lmkl_intel_lp64 -lmkl_core
+//  -lmkl_gnu_thread -lpthread -lm -ldl -o mkl_dgemm_test
 
-void rand_init(double* mat, int r, int c);
+void rand_init(float* mat, int r, int c);
 
 
 int main(int argc, char* argv[])  {
@@ -22,9 +27,9 @@ int main(int argc, char* argv[])  {
 
     mkl_set_num_threads(atoi(argv[1]));
 
-    double *A, *B, *C;
+    float *A, *B, *C;
     int m, n, k, i, j;
-    double alpha, beta;
+    float alpha, beta;
 
     m = 23095, k = 23095, n = 23095;
     // m = 30720, k = 30720, n = 30720;  
@@ -32,9 +37,9 @@ int main(int argc, char* argv[])  {
     // m = 23040, k = 23040, n = 23040;
     alpha = 1.0; beta = 0.0;
 
-    A = (double *)mkl_malloc( m*k*sizeof( double ), 64 );
-    B = (double *)mkl_malloc( k*n*sizeof( double ), 64 );
-    C = (double *)mkl_malloc( m*n*sizeof( double ), 64 );
+    A = (float *)mkl_malloc( m*k*sizeof( float ), 64 );
+    B = (float *)mkl_malloc( k*n*sizeof( float ), 64 );
+    C = (float *)mkl_malloc( m*n*sizeof( float ), 64 );
 
     printf("M = %d, K = %d, N = %d\n", m, k, n);
 
@@ -74,7 +79,7 @@ int main(int argc, char* argv[])  {
 
 
     gettimeofday (&start, NULL);
-    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                 m, n, k, alpha, A, k, B, n, beta, C, n);
     gettimeofday (&end, NULL);
     diff_t = (((end.tv_sec - start.tv_sec)*1000000L
@@ -179,13 +184,13 @@ int main(int argc, char* argv[])  {
 
 
 
-void rand_init(double* mat, int r, int c) {
+void rand_init(float* mat, int r, int c) {
     // int MAX = 65536;
     for(int i = 0; i < r*c; i++) {
         // mat[i] = (double) i;
         // mat[i] = 1.0;
         // mat[i] =  (double) (i%MAX);
-        mat[i] =  (double) rand() / RAND_MAX*2.0 - 1.0;
+        mat[i] =  (float) rand() / RAND_MAX*2.0 - 1.0;
     }   
 }
 
