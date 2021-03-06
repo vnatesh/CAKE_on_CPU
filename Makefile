@@ -108,7 +108,7 @@ CFLAGS 	:= $(filter-out -std=c99, $(CFLAGS_tmp))
 # Binary executable name.
 TEST_BINS      := cake_dgemm_test.x
 
-
+CAKE_SRC := $(CAKE_HOME)/src
 
 LIBS ?=
 #LIBDIR += -L. -L$(SYSTEMC_HOME)/lib-linux64 -L$(BOOST_HOME)/lib
@@ -142,9 +142,9 @@ endif
 
 
 cake_compile: $(wildcard *.h) $(wildcard *.c) 
-	g++ $(CFLAGS) src/cake_dgemm_test.cpp src/block_sizing.cpp \
-	src/cake_dgemm.cpp src/pack.cpp src/util.cpp src/unpack.cpp \
-	-o cake_dgemm_test.o $(LIBS) $(LDFLAGS) -o cake_dgemm_test.x
+	g++ $(CFLAGS) $(CAKE_SRC)/cake_dgemm_test.cpp $(CAKE_SRC)/block_sizing.cpp \
+	$(CAKE_SRC)/cake_dgemm.cpp $(CAKE_SRC)/pack.cpp src/util.cpp $(CAKE_SRC)/unpack.cpp \
+	-o cake_dgemm_test.o $(LIBS) $(LDFLAGS) -o $(TEST_BINS)
 
 
 # -- Clean rules --

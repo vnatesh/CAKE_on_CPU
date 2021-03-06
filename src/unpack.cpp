@@ -3,7 +3,7 @@
 
 void unpack_C_rsc(float* C, float** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p, int alpha_n) {
 
-	int m, m1, m2, n1, p_l, ind2;
+	int m1, m2, n1, p_l;
 	int ind1 = 0;
 
 	int mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
