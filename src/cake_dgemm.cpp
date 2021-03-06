@@ -1,7 +1,7 @@
 #include "cake.h"
 
 
-void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p) {
+void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_cntx_t* cake_cntx) {
 	// contiguous row-storage (i.e. cs_c = 1) or contiguous column-storage (i.e. rs_c = 1). 
 	// This preference comes from how the microkernel is most efficiently able to load/store 
 	// elements of C11 from/to memory. Most microkernels use vector instructions to access 
@@ -18,15 +18,26 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p) {
 	// inc_t rsa, csa;
 	// inc_t rsb, csb;
 
+
+	if(cake_cntx != NULL) {
+		m_r = cake_cntx->mr;
+		n_r = cake_cntx->nr;
+		m_c = cake_cntx->mc;
+	    alpha_n = cake_cntx->alpha;
+	} else {
+		cake_cntx_t* cake_cntx = cake_query_cntx(M,N,K,p);
+		m_r = cake_cntx->mr;
+		n_r = cake_cntx->nr;
+		m_c = cake_cntx->mc;
+		alpha_n = cake_cntx->alpha;
+	}
+
     // query block size for the microkernel
-    cntx_t* cntx = bli_gks_query_cntx();
-    m_r = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, cntx);
-    n_r = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, cntx);
     if(DEBUG) printf("M = %d, N = %d, K = %d\n", M, N, K);
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", m_r, n_r);
 
-    alpha_n = 1;
-    m_c = get_block_dim(m_r, n_r, alpha_n, M, p);
+    // m_c = get_block_dim(m_r, n_r, alpha_n, M, p);
+   //m_c = 48;
     k_c = m_c;
     // m_c = 12;
     // k_c = 6;
