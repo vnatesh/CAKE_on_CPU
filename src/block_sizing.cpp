@@ -1,7 +1,24 @@
 #include "cake.h"
 
 
-cake_cntx_t* cake_query_cntx(int M, int N, int K, int p) {
+cake_cntx_t* cake_query_cntx_torch(int L2, int L3) {
+
+    cake_cntx_t* ret = (cake_cntx_t*) malloc(sizeof(cake_cntx_t));
+    double alpha = 1;
+
+    // query block size for the microkernel
+    cntx_t* blis_cntx = bli_gks_query_cntx();
+    ret->blis_cntx = blis_cntx;
+    ret->alpha = alpha;
+    ret->mr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, blis_cntx);
+    ret->nr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, blis_cntx);
+	ret->L2 = L2;
+	ret->L3 = L3;
+	return ret;
+}
+
+
+cake_cntx_t* cake_query_cntx() {
 
     cake_cntx_t* ret = (cake_cntx_t*) malloc(sizeof(cake_cntx_t));
     double alpha = 1;

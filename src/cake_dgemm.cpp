@@ -22,7 +22,7 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_c
 	gettimeofday (&start, NULL);
 
 	if(cake_cntx == NULL) {
-		cake_cntx = cake_query_cntx(M,N,K,p);
+		cake_cntx = cake_query_cntx();
 	}
 
 	m_r = cake_cntx->mr;
@@ -347,7 +347,6 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_c
 	free(A_p);
 	free(B_p);
 	free(C_p);
-	free(cake_cntx);
 }
 
 

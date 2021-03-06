@@ -5,7 +5,7 @@
 #include "blis.h"
  
 
-#define DEBUG 1
+#define DEBUG 0
 #define ARR_PRINT 0
 #define CHECK_PRINT 0
 
@@ -20,8 +20,8 @@ typedef struct cake_cntx_t{
 } cake_cntx_t;
 
 
-cake_cntx_t* cake_query_cntx(int M, int N, int K, int p);
-
+cake_cntx_t* cake_query_cntx();
+cake_cntx_t* cake_query_cntx_torch(int L2, int L3);
 /*
 
 Pack 
