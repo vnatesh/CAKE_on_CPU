@@ -1,6 +1,22 @@
 #include "cake.h"
 
 
+cake_cntx_t* cake_query_cntx(int M, int N, int K, int p) {
+
+    cake_cntx_t* ret = (cake_cntx_t*) malloc(sizeof(cake_cntx_t));
+    double alpha = 1;
+
+    // query block size for the microkernel
+    cntx_t* cntx = bli_gks_query_cntx();
+    ret->blis_cntx = cntx;
+    ret->alpha = alpha;
+    ret->mr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, cntx);
+    ret->nr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, cntx);
+	ret->mc = get_block_dim(ret->mr, ret->nr, alpha, M, p); 
+	return ret;
+}
+
+
 // find cache size at levels L1d,L1i,L2,and L3 using lscpu
 int get_cache_size(const char* level) {
 

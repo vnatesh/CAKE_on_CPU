@@ -27,7 +27,7 @@ int run_tests() {
 					rand_init(A, M, K);
 					rand_init(B, K, N);
 
-					cake_dgemm(A, B, C, M, N, K, p);
+					cake_dgemm(A, B, C, M, N, K, p, NULL);
 					if(cake_dgemm_checker(A, B, C, N, M, K)) {
 						printf("TESTS FAILED on p=%d m=%d k=%d n=%d\n",p,m,k,n);
 						cnt++;

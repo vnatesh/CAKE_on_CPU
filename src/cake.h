@@ -5,9 +5,21 @@
 #include "blis.h"
  
 
-#define DEBUG 0
+#define DEBUG 1
 #define ARR_PRINT 0
 #define CHECK_PRINT 0
+
+
+typedef struct cake_cntx_t{
+	int mr;
+	int nr;
+	int mc;
+	double alpha;
+	cntx_t* blis_cntx;
+} cake_cntx_t;
+
+
+cake_cntx_t* cake_query_cntx(int M, int N, int K, int p);
 
 /*
 
@@ -43,7 +55,7 @@ void unpack_ob_C(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
 
 
 
-void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p);
+void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_cntx_t* cake_cntx);
 
 
 int get_block_dim(int m_r, int n_r, double alpha_n, int M, int p);
