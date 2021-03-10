@@ -107,42 +107,6 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_c
 	+end.tv_usec) - start.tv_usec) / (1000000.0);
 	if(DEBUG) printf("C pack time: %f \n", diff_t); 
 
-
-
-	// #pragma omp parallel sections
-	// {
-	//     #pragma omp section
-	//     {
-	//     // pack A
-	// 		A_p = (float**) malloc( (K/k_c + k_pad) * (((M / (p*m_c))*p) + p_l) * sizeof( float* ));
-	// 		pack_A(A, A_p, M, K, m_c, k_c, m_r, p);
-	// 		// exit(1);
-	//     }
-	//     #pragma omp section
-	//     {
-	// 		// pack B
-	// 		if(posix_memalign((void**) &B_p, 64, K * N_b * sizeof(float))) {
-	// 			printf("posix memalign error\n");
-	// 			exit(1);
-	// 		}
-	// 		pack_B(B, B_p, K, N, k_c, n_c, n_r, alpha_n, m_c);
-
-	//     }
-
-	//     #pragma omp section
-	//     {
-	// 		C_p = (float**) malloc((((M / (p*m_c))*p) + p_l) * (N/n_c + n_pad) * sizeof( float* ));
-	// 		pack_C(C, C_p, M, N, m_c, n_c, m_r, n_r, p, alpha_n);
-	// 		// if(beta_user > 0)  pack_C(C, C_p, M, N, m_c, n_c, m_r, n_r, p, alpha_n);
-	//     }
-
-	// }
-
-	// gettimeofday (&end, NULL);
-	// diff_t = (((end.tv_sec - start.tv_sec)*1000000L
-	// +end.tv_usec) - start.tv_usec) / (1000000.0);
-	// if(DEBUG) printf("packing time: %f \n", diff_t); 
-
 	// Set the scalars to use.
 	alpha = 1.0;
 	beta  = 1.0;

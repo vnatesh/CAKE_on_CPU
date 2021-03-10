@@ -62,7 +62,7 @@ void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_c
 int get_block_dim(cake_cntx_t* cake_cntx, int M, int p);
 
 
-int get_cache_size(const char* level);
+int get_cache_size(int level);
 
 int lcm(int n1, int n2);
 

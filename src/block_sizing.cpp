@@ -29,14 +29,14 @@ cake_cntx_t* cake_query_cntx() {
     ret->alpha = alpha;
     ret->mr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, blis_cntx);
     ret->nr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, blis_cntx);
-	ret->L2 = get_cache_size("L2");
-	ret->L3 = get_cache_size("L3");
+	ret->L2 = get_cache_size(2);
+	ret->L3 = get_cache_size(3);
 	return ret;
 }
 
 
 // find cache size at levels L1d,L1i,L2,and L3 using lscpu
-int get_cache_size(const char* level) {
+int get_cache_size(int level) {
 
 	int len, size = 0;
 	FILE *fp;
@@ -44,7 +44,7 @@ int get_cache_size(const char* level) {
 	char command[128];
 
 	sprintf(command, "lscpu --caches=NAME,ONE-SIZE \
-					| grep %s \
+					| grep L%d \
 					| grep -Eo '[0-9]*M|[0-9]*K|0-9*G' \
 					| tr -d '\n'", level);
 	fp = popen(command, "r");
@@ -56,6 +56,12 @@ int get_cache_size(const char* level) {
 
 	if(fgets(ret, sizeof(ret), fp) == NULL) {
 		printf("lscpu error\n");
+		// quick hack for raspberry pi 3 cache sizes (32 KiB L1, 512 KiB L2 shared)
+		if(level == 2) {
+			return (32 * (1 << 10));
+		} else if(level == 3) {
+			return (512 * (1 << 10));
+		}
 	}
 
 	pclose(fp);
