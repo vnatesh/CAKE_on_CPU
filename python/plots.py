@@ -50,6 +50,192 @@ def roofline():
 
 
 
+
+ 
+def plot_mem_size_R(fname = 'mem_size_R', NUM_SA = 64):
+	# 100 linearly spaced numbers
+	R = np.linspace(1.01,2,100)
+	SZ_sr = (NUM_SA*R) / (R-1)
+	plt.figure(figsize=(4,3)) 
+	plt.plot(R,SZ_sr, 'r')
+	# plt.title("Local memory size as a function of R")
+	plt.xlabel("R", fontsize = 20)
+	plt.ylabel("memory size (tiles)", fontsize = 20)
+	plt.savefig("%s.pdf" % fname, bbox_inches='tight')
+	plt.show()
+	plt.close('all')
+
+
+def ext_mem_accesses(M,K,N,Sx,Sy,s,alpha,tile_sz):
+	'''
+		inputs : MMM dims and arch params
+		return number accesses (loads and stores) to external memory (DRAM)
+	'''
+	M_sr = s*((Sx*Sy)/(s*s))*tile_sz
+	K_sr = s*tile_sz
+	N_sr = s*((Sx*Sy)/(s*s))*alpha*tile_sz
+	num_cbs_blks = K/K_sr * M/M_sr * N/N_sr
+	dram_transfers_per_blk = (M_sr*K_sr +  K_sr*N_sr) # CAKE transmits only weight and data
+	result = M*N
+	return(num_cbs_blks*dram_transfers_per_blk + result)
+
+
+def local_mem_size(Sx,Sy,s,alpha,tile_sz):
+	'''
+		inputs : MMM dims and arch params
+		return : local memory (SRAM) size in bytes
+	'''
+	M_sr = s*((Sx*Sy)/(s*s))*tile_sz
+	K_sr = s*tile_sz
+	N_sr = s*((Sx*Sy)/(s*s))*alpha*tile_sz
+	weights = M_sr*K_sr
+	data = K_sr*N_sr
+	partial = M_sr*N_sr
+	return((weights+data+partial)*4)
+
+
+
+
+def plot_DRAM_access(M,K,N,tile_sz, fname = 'dram_acc'):
+	plt.rcParams.update({'font.size': 12})
+	# NUM_SA = [4,8,16,32,64,128,256]
+	NUM_SA = [1,2,4,8]
+	markers = ['o','v']
+	colors = ['g','b'] 	
+	# C = [(2,2),(4,2),(4,4),(8,4),(8,8),(16,8),(16,16)]
+	# C = [(4,4),(8,4),(8,8),(16,8)]
+	# C = [(8,8,8,2),(16,8,8,2),(16,16,8,2),(32,16,8,2)]
+	C = [(8,8,8,1.25),(16,8,8,1.25),(16,16,16,1.125),(32,16,16,1.125)]
+	labels = ['CAKE DRAM','Intel i9 DRAM', 'CAKE SRAM', 'i9 SRAM']
+	mem_acc = [ext_mem_accesses(M,K,N,c[0],c[1],c[2],c[3],tile_sz) / (10**9) for c in C]
+	mem_sz = [local_mem_size(c[0],c[1],c[2],c[3],tile_sz) for c in C]
+	#
+	NUM_CPUs = [1,2,3,4,5,6,7,8,9,10]
+	cpu_mem_acc = [0]*len(NUM_CPUs)
+	for i in NUM_CPUs:
+		df1 = pandas.read_csv('reports/report_%d.csv' % i,skiprows=17,skipfooter=17)
+		df2 = pandas.read_csv('reports/report_%d.csv' % i,skipfooter=20)
+		avg_dram_bw = df1['Average']._values[0]
+		elapsed_time = df2[df2['Metric Name']=='Elapsed Time']['Metric Value']._values[0]
+		cpu_mem_acc[i-1] = (avg_dram_bw * elapsed_time)/4 # divide by 4 bytes to get number of 32bit floats transferred
+	# cpu_mem_acc = [1633248996, 1548046440, 1270838124, 2028060840, 1592447772, 1208436252, 1764052920, 1372841184]
+	#
+	plt.plot(list(NUM_SA), list(mem_acc), label = labels[0],  marker = markers[0], color = colors[0])
+	plt.plot(list(NUM_CPUs), list(cpu_mem_acc), label = labels[1],  marker = markers[1], color = colors[1])
+	# plt.plot(list(NUM_SA), list(mem_sz), label = labels[2], marker = markers[0], color = colors[0])
+	# plt.plot(list(NUM_CPUs),[20*(10**6)] * len(NUM_CPUs), label = labels[3], marker = markers[1], color = colors[1])
+	#
+	plt.title('DRAM Accesses in CAKE vs. Intel i9 CPU')
+	plt.xlabel("Number of PEs", fontsize = 12)
+	plt.ylabel("Number of Values Transferred (10^9)", fontsize = 12)
+	plt.legend(loc = "upper right", prop={'size': 12})
+	# plt.savefig("%s.pdf" % fname, bbox_inches='tight')
+	plt.show()
+	plt.clf()
+	plt.close('all')
+
+
+
+def plot_cpu_speedup(fname = 'cpu_speedup'):
+	plt.rcParams.update({'font.size': 12})
+	NUM_SA = [1,2,4,8,16]
+	markers = ['o','v','s','d','^']
+	colors = ['b','g','aqua','k','m']
+	labels = ['CAKE', 'Intel i9', 'Ideal']
+	# mem_acc = [ext_mem_accesses(M,K,N,c[0],c[1],s,R,tile_sz) / (10**9) for c in C]
+	# mem_sz = [local_mem_size(c[0],c[1],s,R,tile_sz) for c in C]
+	#
+	NUM_CPUs = [1,2,3,4,5,6,7,8,9,10]
+	cpu_elapsed_time = [0]*len(NUM_CPUs)
+	# CAKE_elapsed_time = [71305460/2,19123775,10546984,6311018]
+	# CAKE_elapsed_time = [50135100,25104475,16777327,9743581,8388875,4395388]	
+	# CAKE_elapsed_time = [50135100,25104475,12583052,9001763,5243533]	
+	# CAKE_elapsed_time = [50135100,25104475,12583052,8695457,5243533]	
+	# CAKE_elapsed_time = [50135100,25104475,12583052,8558623,4719757]	
+	# CAKE_elapsed_time = [151003278,76596190,35684702,18788206]	
+	# CAKE_elapsed_time = [582219,325740,164047,136049,82573]	
+	CAKE_elapsed_time = [412221,280535,147790,136049,82573]	
+	for i in NUM_CPUs:
+		df2 = pandas.read_csv('reports/report_%d.csv' % i,skipfooter=20)
+		cpu_elapsed_time[i-1] = df2[df2['Metric Name']=='Elapsed Time']['Metric Value']._values[0]
+	# cpu_mem_acc = [1633248996, 1548046440, 1270838124, 2028060840, 1592447772, 1208436252, 1764052920, 1372841184]
+	#
+	speedup_cpu = [max(cpu_elapsed_time) / i for i in cpu_elapsed_time]
+	speedup_CAKE = [max(CAKE_elapsed_time) / i for i in CAKE_elapsed_time]
+	plt.plot(list(NUM_SA), list(speedup_CAKE), label = labels[0],  marker = markers[0], color = colors[0])
+	plt.plot(list(NUM_CPUs), list(speedup_cpu), label = labels[1],  marker = markers[1], color = colors[1])
+	plt.plot(list(NUM_CPUs), list(NUM_CPUs), label = labels[2],  linewidth=2, color = colors[2])	
+	# plt.plot(list(NUM_SA), list(mem_sz), label = labels[2], marker = markers[0], color = colors[0])
+	# plt.plot(list(NUM_CPUs),[20*(10**6)] * len(NUM_CPUs), label = labels[3], marker = markers[1], color = colors[1])
+	#
+	plt.title('Speedup for MMM on CAKE vs Intel CPU')
+	plt.xlabel("Number of PEs", fontsize = 12)
+	plt.ylabel("Speedup", fontsize = 12)
+	plt.legend(loc = "lower right", prop={'size': 12})
+	# plt.savefig("%s.pdf" % fname, bbox_inches='tight')
+	plt.show()
+	plt.clf()
+	plt.close('all')
+
+
+
+def plot_cpu_dram_bw(fname = 'cpu_dram_bw'):
+	plt.rcParams.update({'font.size': 12})
+	# NUM_SA = [4,8,16,32,64,128,256]
+	markers = ['o','v']
+	colors = ['g','b'] 	
+	# C = [(2,2),(4,2),(4,4),(8,4),(8,8),(16,8),(16,16)]
+	# C = [(4,4),(8,4),(8,8),(16,8)]
+	labels = ['MM Avg. DRAm bw', 'Peak DRAM bw']
+	#
+	NUM_CPUs = [1,2,3,4,5,6,7,8,9,10]
+	avg_dram_bw = [0]*len(NUM_CPUs)
+	for i in NUM_CPUs:
+		df1 = pandas.read_csv('reports/report_%d.csv' % i,skiprows=17,skipfooter=17)
+		avg_dram_bw[i-1] = df1['Average']._values[0]
+	# cpu_mem_acc = [1633248996, 1548046440, 1270838124, 2028060840, 1592447772, 1208436252, 1764052920, 1372841184]
+	#
+	plt.plot(list(NUM_CPUs), list(avg_dram_bw), label = labels[0],  marker = markers[0], color = colors[0])
+	plt.plot(list(NUM_CPUs), [40]*len(NUM_CPUs), label = labels[1],  color = colors[1],linewidth=2)
+	# plt.plot(list(NUM_SA), list(mem_sz), label = labels[2], marker = markers[0], color = colors[0])
+	# plt.plot(list(NUM_CPUs),[20*(10**6)] * len(NUM_CPUs), label = labels[3], marker = markers[1], color = colors[1])
+	#
+	plt.title('DRAM bw Utilization vs Num CPU Cores')
+	plt.xlabel("Number of Cores", fontsize = 12)
+	plt.ylabel("Average DRAM bw (GB/s)", fontsize = 12)
+	plt.legend(loc = "lower right", prop={'size': 12})
+	# plt.savefig("%s.pdf" % fname, bbox_inches='tight')
+	plt.show()
+	plt.clf()
+	plt.close('all')
+
+
+def plot_local_mem_size(M,K,N,s,R,tile_sz):
+	plt.rcParams.update({'font.size': 12})
+	# NUM_SA = [4,8,16,32,64,128,256]
+	NUM_SA = [1,2,4,8]
+	markers = ['o','v']
+	colors = ['g','b'] 	
+	# C = [(2,2),(4,2),(4,4),(8,4),(8,8),(16,8),(16,16)]
+	C = [(4,4),(8,4),(8,8),(16,8)]
+	labels = ['CAKE SRAM', 'i9 SRAM']
+	mem_sz = [local_mem_size(M,K,N,c[0],c[1],s,R,tile_sz) for c in C]
+	NUM_CPUs = [1,2,3,4,5,6,7,8]
+	cpu_mem_acc = [1633248996, 1548046440, 1270838124, 2028060840, 1592447772, 1208436252, 1764052920, 1372841184]
+	#
+	plt.plot(list(NUM_SA), list(mem_sz), label = labels[0], marker = markers[0], color = colors[0])
+	plt.plot(list(NUM_CPUs),[20*(10**6)] * len(NUM_CPUs), label = labels[1], marker = markers[1], color = colors[1])
+	#
+	plt.title('SRAM Size in CAKE vs. Intel i9 CPU')
+	plt.xlabel("Number of PEs", fontsize = 12)
+	plt.ylabel("Bytes", fontsize = 12)
+	plt.legend(loc = "upper right", prop={'size': 12})
+	# plt.savefig("%s.pdf" % fname, bbox_inches='tight')
+	plt.show()
+	plt.clf()
+	plt.close('all')
+
+
 # number of dram accesses for sgemm in bytes
 def cake_cpu_DRAM_accesses(m,n,k,mc,kc,alpha,p):
 	return (((float(m*n*k)/(alpha*p*mc) + float(m*n*k)/(p*mc) + m*n)) / float(10**9))*4	
