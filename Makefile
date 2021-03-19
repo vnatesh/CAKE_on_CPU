@@ -114,7 +114,6 @@ LIBS ?=
 #LIBDIR += -L. -L$(SYSTEMC_HOME)/lib-linux64 -L$(BOOST_HOME)/lib
 LIBS += $(BLIS_INSTALL_PATH)/lib/libblis.a 
 
-
 #
 # --- Targets/rules ------------------------------------------------------------
 #
@@ -144,7 +143,7 @@ endif
 cake_compile: $(wildcard *.h) $(wildcard *.c) 
 	g++ $(CFLAGS) $(CAKE_SRC)/cake_dgemm_test.cpp $(CAKE_SRC)/block_sizing.cpp \
 	$(CAKE_SRC)/cake_dgemm.cpp $(CAKE_SRC)/pack.cpp src/util.cpp $(CAKE_SRC)/unpack.cpp \
-	-o cake_dgemm_test.o $(LIBS) $(LDFLAGS) -o $(TEST_BINS)
+	$(LIBS) $(LDFLAGS) -o $(TEST_BINS)
 
 
 # -- Clean rules --

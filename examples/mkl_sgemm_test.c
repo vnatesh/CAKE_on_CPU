@@ -9,9 +9,9 @@
 // Compile MKL test file using the intel advisor below:
 // https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/onemkl/link-line-advisor.html
 
-// gcc -fopenmp -m64 -I${MKLROOT}/include mkl_dgemm_test.c 
+// gcc -fopenmp -m64 -I${MKLROOT}/include mkl_sgemm_test.c 
 // -Wl,--no-as-needed -L${MKLROOT}/lib/intel64 -lmkl_intel_lp64 -lmkl_core
-//  -lmkl_gnu_thread -lpthread -lm -ldl -o mkl_dgemm_test
+//  -lmkl_gnu_thread -lpthread -lm -ldl -o mkl_sgemm_test
 
 void rand_init(float* mat, int r, int c);
 
