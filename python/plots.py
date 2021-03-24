@@ -35,8 +35,8 @@ def roofline():
 	plt.title('Roofline Model for Various Pod Sizes')
 	plt.xscale('log', basex=2)
 	plt.yscale('log', basey=2)
-	plt.xlabel('Operational Intensity (tile mults / tile)', fontsize = 20)
-	plt.ylabel('Performance (tile mults / cycle)', fontsize = 20)
+	plt.xlabel('Operational Intensity (tile mults / tile)', fontsize = 18)
+	plt.ylabel('Performance (tile mults / cycle)', fontsize = 18)
 	# plt.grid()
 	plt.axvline(16, label = 'memory/compute\nboundary', linestyle='dashed')
 	# plt.text(16,0,'memory vs compute boundary',rotation=90)
@@ -59,8 +59,8 @@ def plot_mem_size_R(fname = 'mem_size_R', NUM_SA = 64):
 	plt.figure(figsize=(4,3)) 
 	plt.plot(R,SZ_sr, 'r')
 	# plt.title("Local memory size as a function of R")
-	plt.xlabel("R", fontsize = 20)
-	plt.ylabel("memory size (tiles)", fontsize = 20)
+	plt.xlabel("R", fontsize = 18)
+	plt.ylabel("memory size (tiles)", fontsize = 18)
 	plt.savefig("%s.pdf" % fname, bbox_inches='tight')
 	plt.show()
 	plt.close('all')
@@ -236,9 +236,9 @@ def plot_local_mem_size(M,K,N,s,R,tile_sz):
 	plt.close('all')
 
 
-# number of dram accesses for sgemm in bytes
+# number of dram accesses for sgemm in bytes...includes copy of input matrices due to packing
 def cake_cpu_DRAM_accesses(m,n,k,mc,kc,alpha,p):
-	return (((float(m*n*k)/(alpha*p*mc) + float(m*n*k)/(p*mc) + m*n)) / float(10**9))*4	
+	return (((float(m*n*k)/(alpha*p*mc) + float(m*n*k)/(p*mc) + m*n) + 3*(m*n + m*k + k*n)) / float(10**9))*4	
 
 def cake_cpu_cache_sz(mc,kc,alpha,p):
 	return (p*mc*kc*(1+alpha) + alpha*(p**2)*(mc**2))*4	
@@ -249,8 +249,6 @@ def cake_cpu_cache_sz(mc,kc,alpha,p):
 def mkl_cpu_DRAM_accesses(m,n,k,mc,kc,nc):
 	return (((float(m*k*n)/(nc)) + (n*k) + (float(m*n*k)/kc)) / float(10**9))*4	
 
-def mkl_cpu_DRAM_accesses_float(m,n,k,mc,kc,nc):
-	return (((float(m*k*n)/(nc)) + (n*k) + (float(m*n*k)/kc)) / float(10**9))*4	
 
 def plot_cake_vs_mkl_cpu_theoretical(M,N,K,mc,kc,nc,p):
 	plt.rcParams.update({'font.size': 12})
@@ -281,58 +279,49 @@ def plot_cake_vs_mkl_cpu(M,N,K,mc,kc,alpha):
 	NUM_CPUs = [1,2,3,4,5,6,7,8,9,10]
 	cpu_mem_acc = [0]*len(NUM_CPUs)
 	gflops_cpu = [0]*len(NUM_CPUs)
-	#
+	cake_mem_acc = [0]*len(NUM_CPUs)
+	gflops_cake = [0]*len(NUM_CPUs)
 	#
 	for i in range(len(NUM_CPUs)):
 		df1 = pandas.read_csv('reports/report_mkl_%d.csv' % NUM_CPUs[i],skiprows=17,skipfooter=17)
 		df2 = pandas.read_csv('reports/report_mkl_%d.csv' % NUM_CPUs[i],skipfooter=20)
 		avg_dram_bw = df1['Average']._values[0]
-		# cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / float(NUM_CPUs[i])
-		cpu_time = df2[df2['Metric Name'] == 'Elapsed Time']['Metric Value']._values[0] 
-		gflops_cpu[i] = (float(M*N*K) / cpu_time) / (10**9) # / (float(NUM_CPUs[i]))
-		cpu_mem_acc[i] = float(avg_dram_bw * cpu_time)  # number of GB transferred b/w processors and DRAM
+		elapsed_time = df2[df2['Metric Name'] == 'Elapsed Time']['Metric Value']._values[0] 
+		cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / float(NUM_CPUs[i])
+		gflops_cpu[i] = (float(M*N*K) / cpu_time) / (10**9)
+		cpu_mem_acc[i] = float(avg_dram_bw * elapsed_time)  # number of GB transferred b/w processors and DRAM
 	#
-	#
-	NUM_CPUs_cake = [1,2,3,4,5,6,7,8,9,10]
-	# NUM_CPUs_cake = [2,4,5,8,10]
-	cake_mem_acc = [0]*len(NUM_CPUs_cake)
-	gflops_cake = [0]*len(NUM_CPUs_cake)
-	#
-	#
-	for i in range(len(NUM_CPUs_cake)):
-		df1 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % NUM_CPUs_cake[i],skiprows=17,skipfooter=17)
-		df2 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % NUM_CPUs_cake[i],skipfooter=20)
+	for i in range(len(NUM_CPUs)):
+		df1 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % NUM_CPUs[i],skiprows=17,skipfooter=17)
+		df2 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % NUM_CPUs[i],skipfooter=20)
 		avg_dram_bw = df1['Average']._values[0]
-		# cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / float(NUM_CPUs_cake[i])
-		cpu_time = df2[df2['Metric Name'] == 'Elapsed Time']['Metric Value']._values[0] 
-		gflops_cake[i] = (float(M*N*K) / cpu_time) / (10**9) # / (float(NUM_CPUs_cake[i]))
-		cake_mem_acc[i] = float(avg_dram_bw * cpu_time) 
+		elapsed_time = df2[df2['Metric Name'] == 'Elapsed Time']['Metric Value']._values[0] 
+		cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / float(NUM_CPUs[i])
+		gflops_cake[i] = (float(M*N*K) / cpu_time) / (10**9)
+		cake_mem_acc[i] = float(avg_dram_bw * elapsed_time) 
 	#
-	#
-	plt.plot(NUM_CPUs_cake, cake_mem_acc, label = labels[0],  marker = markers[0], color = colors[5])
+	plt.plot(NUM_CPUs, cake_mem_acc, label = labels[0],  marker = markers[0], color = colors[5])
 	plt.plot(NUM_CPUs, cpu_mem_acc, label = labels[1],  marker = markers[1], color = colors[1])
+	cake_mem_acc = [cake_cpu_DRAM_accesses(M,N,K,mc,kc,alpha,i) for i in NUM_CPUs]
+	# mkl_mem_acc = [mkl_cpu_DRAM_accesses(M,N,K,mc,kc,mc*10) for i in NUM_CPUs]
+	plt.plot(NUM_CPUs, cake_mem_acc, label = labels[2], color = colors[0], linewidth = 2)
+	# plt.plot(list(NUM_CPUs), list(mkl_mem_acc), label = labels[3], color = colors[1], linewidth = 2)
 	#
-	NUM_CPUs_t = [1,2,3,4,5,6,7,8,9,10]
-	cake_mem_acc = [cake_cpu_DRAM_accesses(M,N,K,mc,kc,alpha,i) for i in NUM_CPUs_t]
-	# mkl_mem_acc = [mkl_cpu_DRAM_accesses(M,N,K,mc,kc,960) for i in NUM_CPUs_t]
-	plt.plot(NUM_CPUs_t, cake_mem_acc, label = labels[2], color = colors[0], linewidth = 2)
-	# plt.plot(list(NUM_CPUs_t), list(mkl_mem_acc), label = labels[3], color = colors[1], linewidth = 2)
-	#
-	plt.title('DRAM Accesses in CAKE vs MKL')
-	plt.xlabel("Number of PEs", fontsize = 12)
-	plt.ylabel("Gigabytes Transferred", fontsize = 12)
-	plt.legend(loc = "upper right", prop={'size': 10})
+	plt.title('DRAM Accesses in CAKE vs MKL', fontsize = 18)
+	plt.xlabel("Number of Cores", fontsize = 18)
+	plt.ylabel("Gigabytes Transferred", fontsize = 18)
+	plt.legend(loc = "center right", prop={'size': 10})
 	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
 	plt.show()
 	plt.clf()
 	plt.close('all')
 	#
-	plt.plot(list(NUM_CPUs_cake), list(gflops_cake), label = labels[0],  marker = markers[2], color = colors[2])
+	plt.plot(list(NUM_CPUs), list(gflops_cake), label = labels[0],  marker = markers[2], color = colors[2])
 	plt.plot(list(NUM_CPUs), list(gflops_cpu), label = labels[1],  marker = markers[3], color = colors[3])
 	#
-	plt.title('Performance of CAKE vs MKL')
-	plt.xlabel("Number of PEs", fontsize = 12)
-	plt.ylabel("Performance (GFLOPS/sec)", fontsize = 12)
+	plt.title('Performance of CAKE vs MKL',fontsize = 18)
+	plt.xlabel("Number of Cores", fontsize = 18)
+	plt.ylabel("Performance (GFLOPS/sec)", fontsize = 18)
 	plt.legend(loc = "lower right", prop={'size': 12})
 	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
 	plt.show()
@@ -519,7 +508,7 @@ def plot_cake_vs_armpl_cpu(M,N,K,mc,kc,alpha):
 	plt.plot(list(NUM_CPUs), list(cake_mem_acc), label = labels[2], color = colors[0], linewidth = 2)
 	#
 	plt.title('DRAM Accesses in CAKE vs ARMPL')
-	plt.xlabel("Number of PEs", fontsize = 12)
+	plt.xlabel("Number of Cores", fontsize = 12)
 	plt.ylabel("Gigabytes Transferred", fontsize = 12)
 	plt.legend(loc = "upper right", prop={'size': 10})
 	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
@@ -531,7 +520,7 @@ def plot_cake_vs_armpl_cpu(M,N,K,mc,kc,alpha):
 	plt.plot(list(NUM_CPUs), list(gflops_cpu), label = labels[1],  marker = markers[3], color = colors[3])
 	#
 	plt.title('Performance of CAKE vs ARMPL')
-	plt.xlabel("Number of PEs", fontsize = 12)
+	plt.xlabel("Number of Cores", fontsize = 12)
 	plt.ylabel("Performance (GFLOPS/sec)", fontsize = 12)
 	plt.legend(loc = "lower right", prop={'size': 12})
 	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
@@ -540,36 +529,41 @@ def plot_cake_vs_armpl_cpu(M,N,K,mc,kc,alpha):
 	plt.close('all')
 
 
-
-def plot_internal_bw_cpu(exp, arr_size, file_name, ncores):
-	plt.rcParams.update({'font.size': 12})
-	markers = ['o','v','s','d','^']
-	colors = ['b','g','aqua','k','m','r']
-	# labels = ['']	
+def get_LLC_pmbw(exp, arr_size, file_name, ncores):
 	a = open(file_name,'r').read().split('\n')
 	a = [i for i in a if exp in i]
 	a = [i.split('\t') for i in a]
 	a = [i for i in a if i[6] == 'areasize=%d' % arr_size]
-	NUM_CPUs = range(1,ncores+1)
 	int_bw = []
+	NUM_CPUs = range(1,ncores+1)
 	for i in range(len(NUM_CPUs)):
 		int_bw.append(float(a[i][-2][10:]) / (10**9))
 	#
-	plt.plot(list(NUM_CPUs), int_bw,  marker = markers[2], color = colors[1])
-	plt.title('L2 Cache Bandwidth on ARM CPU')
-	plt.xlabel("Number of Cores", fontsize = 12)
-	plt.ylabel("Bandwidth (GB/s)", fontsize = 12)
+	return int_bw
+
+
+def plot_internal_bw_cpu():
+	labels = ['Intel i9','ARM Cortex v8 A53', 'AMD Ryzen 9 5950X']
+	plt.rcParams.update({'font.size': 12})
+	markers = ['o','v','s','d','^']
+	colors = ['b','g','aqua','k','m','r']
+	int_bw_intel = get_LLC_pmbw('ScanWrite64PtrUnrollLoop', 2**24, 'stats.txt', 10)
+	int_bw_arm = get_LLC_pmbw('ScanWrite64PtrUnrollLoop', 2**18, 'stats_arm.txt', 4)
+	int_bw_amd = get_LLC_pmbw('ScanWrite64PtrUnrollLoop', 2**24, 'stats_amd.txt', 16)
+	NUM_CPUs = list(range(1,17))
+	plt.plot(NUM_CPUs[:10], int_bw_intel, label = labels[0], marker = markers[0], color = colors[0])
+	plt.plot(NUM_CPUs[:4], int_bw_arm, label = labels[1], marker = markers[1], color = colors[1])
+	plt.plot(NUM_CPUs, int_bw_amd, label = labels[2], marker = markers[2], color = colors[2])
+	#
+	plt.title('LLC Bandwidth on Different CPUs',fontsize = 18)
+	plt.xlabel("Number of Cores", fontsize = 18)
+	plt.ylabel("Bandwidth (GB/s)", fontsize = 18)
 	plt.xticks(NUM_CPUs)
-	# plt.legend(loc = "lower right", prop={'size': 12})
+	plt.legend(loc = "uper left", prop={'size': 12})
 	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
 	plt.show()
 	plt.clf()
 	plt.close('all')
-
-# plot_internal_bw_cpu('ScanWrite64PtrUnrollLoop', 2**24, 'stats.txt', 10)
-plot_internal_bw_cpu('ScanWrite64PtrUnrollLoop', 2**18, 'stats_arm.txt', 4)
-
-
 
 
 

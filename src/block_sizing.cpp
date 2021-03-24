@@ -43,11 +43,19 @@ int get_cache_size(int level) {
 	char ret[16];
 	char command[128];
 
-	sprintf(command, "lscpu --caches=NAME,ONE-SIZE \
-					| grep L%d \
-					| grep -Eo '[0-9]*M|[0-9]*K|0-9*G' \
-					| tr -d '\n'", level);
-	fp = popen(command, "r");
+	if(level < 3) {
+		sprintf(command, "lscpu --caches=NAME,ONE-SIZE \
+						| grep L%d \
+						| grep -Eo '[0-9]*M|[0-9]*K|0-9*G' \
+						| tr -d '\n'", level);
+		fp = popen(command, "r");
+	} else {
+		sprintf(command, "lscpu --caches=NAME,ALL-SIZE \
+						| grep L%d \
+						| grep -Eo '[0-9]*M|[0-9]*K|0-9*G' \
+						| tr -d '\n'", level);
+		fp = popen(command, "r");
+	}
 
 	if (fp == NULL) {
 		printf("Failed to run command\n" );
