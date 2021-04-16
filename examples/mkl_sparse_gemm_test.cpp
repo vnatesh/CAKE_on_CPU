@@ -75,8 +75,8 @@ int run_sparse_matrix_dense_matrix_multiply_example(const cl::sycl::device &dev)
     oneapi::mkl::transpose transpose_val = oneapi::mkl::transpose::nontrans;
 
     // Matrix data size
-    intType nrows        = 1024; // M input size represents length of word embedding vector) 
-    intType ncols        = 33708; // K vocabulary size
+    intType nrows        = 33708; // M vocabulary size 
+    intType ncols        = 1024; // K input size represents length of word embedding vector) 
     std::int64_t columns = 5000; // N -  batch size...number of words (columns)
     std::int64_t ldb     = columns;
     std::int64_t ldc     = columns;

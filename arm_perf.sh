@@ -12,17 +12,22 @@ mkdir reports_arm;
 cd CAKE_on_CPU;
 make;
 
-
-for i in {1..4}
+for j in {1..10}
 do
-	perf stat -e rC0 -o ../reports_arm/report_cake_$i ./cake_dgemm_test.x $i;
+	for i in {1..4}
+	do
+		perf stat -e rC0 -o ../reports_arm/report_cake_$i-$j ./cake_dgemm_test.x $i;
+	done
 done
 
 cd ..;
 
-for i in {1..4}
+for j in {1..10}
 do
-	perf stat -e rC0 -o reports_arm/report_arm_$i ./arm_test $i;
+	for i in {1..4}
+	do
+		perf stat -e rC0 -o reports_arm/report_arm_$i-$j ./arm_test $i;
+	done
 done
 
 # python python/plots.py

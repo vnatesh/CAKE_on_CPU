@@ -5,6 +5,7 @@ import numpy as np
 import os
 import re
 
+intel_color = '#0071c5'
 
 def op_intensity(M,N,K,M_sr,N_sr):
 	M,N,K= float(M), float(N), float(K)
@@ -23,10 +24,10 @@ def roofline():
 	# Peak performance (tile mults/cycle)
 	P_max = 32
 	# Peak DRAM bw (tiles/cycle)
-	b_s = 2
+	b_max = 2
 	#
 	oi_list = [1/8., 1/4., 1/2., 1, 2, 3, 4, 6, 8, 16, 32, 64]
-	p = [min(P_max, b_s*x) for x in oi_list]
+	p = [min(P_max, b_max*x) for x in oi_list]
 	plt.plot(oi_list, p,'-b', label  = "roofline", linewidth=4, color = 'black')
 	plt.scatter([s2],[0.893], color = 'r', s=40)
 	plt.scatter([s4],[1.904], color = 'b', s=40)
@@ -50,8 +51,6 @@ def roofline():
 
 
 
-
- 
 def plot_mem_size_R(fname = 'mem_size_R', NUM_SA = 64):
 	# 100 linearly spaced numbers
 	R = np.linspace(1.01,2,100)
@@ -108,60 +107,65 @@ def mkl_cpu_DRAM_accesses(m,n,k,mc,kc,nc):
 	return (((float(m*k*n)/(nc)) + (n*k) + (float(m*n*k)/kc)) / float(10**9))*4	
 
 
-def plot_cake_vs_mkl_cpu(M,N,K,mc,kc,alpha):
+def plot_cake_vs_mkl_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_mkl', ntrials=10):
 	plt.rcParams.update({'font.size': 12})
 	markers = ['o','v','s','d','^']
 	colors = ['b','g','aqua','k','m','r']
-	labels = ['CAKE Observed', 'MKL Observed','CAKE Theoretical', 'MKL Theoretical']
-	NUM_CPUs = [1,2,3,4,5,6,7,8,9,10]
-	cpu_mem_acc = [0]*len(NUM_CPUs)
-	gflops_cpu = [0]*len(NUM_CPUs)
-	cake_mem_acc = [0]*len(NUM_CPUs)
-	gflops_cake = [0]*len(NUM_CPUs)
+	labels = ['CAKE Observed', 'MKL Observed','CAKE Optimal', 'MKL Optimal']
+	NUM_CPUs = list(range(1,11))
+	gflops_cpu_arr=[];gflops_cake_arr=[];dram_bw_cake_arr=[];dram_bw_cpu_arr=[];cake_mem_acc_arr=[]
+	dram_bw_cpu = 0; dram_bw_cake = 0; gflops_cpu = 0; gflops_cake = 0; elapsed_time = 0
 	#
 	for i in range(len(NUM_CPUs)):
-		df1 = pandas.read_csv('reports/report_mkl_%d.csv' % NUM_CPUs[i],skiprows=17,skipfooter=17)
-		df2 = pandas.read_csv('reports/report_mkl_%d.csv' % NUM_CPUs[i],skipfooter=20)
-		avg_dram_bw = df1['Average']._values[0]
-		elapsed_time = df2[df2['Metric Name'] == 'Elapsed Time']['Metric Value']._values[0] 
-		cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / float(NUM_CPUs[i])
-		gflops_cpu[i] = (float(M*N*K) / cpu_time) / (10**9)
-		cpu_mem_acc[i] = float(avg_dram_bw * elapsed_time)  # number of GB transferred b/w processors and DRAM
+		for j in range(1,ntrials+1):
+			df1 = pandas.read_csv('reports/report_mkl_%d-%d.csv' % (NUM_CPUs[i],j) ,skiprows=17,skipfooter=17)
+			df2 = pandas.read_csv('reports/report_mkl_%d-%d.csv' % (NUM_CPUs[i],j),skipfooter=20)
+			dram_bw_cpu += (df1['Average']._values[0])
+			cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / float(NUM_CPUs[i])
+			gflops_cpu += ((float(M*N*K) / cpu_time) / (10**9))
+			#
+			df1 = pandas.read_csv('reports/report_cake_dgemm_%d-%d.csv' % (NUM_CPUs[i],j),skiprows=17,skipfooter=17)
+			df2 = pandas.read_csv('reports/report_cake_dgemm_%d-%d.csv' % (NUM_CPUs[i],j),skipfooter=20)
+			dram_bw_cake += (df1['Average']._values[0])
+			cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / float(NUM_CPUs[i])
+			gflops_cake += ((float(M*N*K) / cpu_time) / (10**9))
+			elapsed_time += df2[df2['Metric Name'] == 'Elapsed Time']['Metric Value']._values[0] 
 		#
-		df1 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % NUM_CPUs[i],skiprows=17,skipfooter=17)
-		df2 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % NUM_CPUs[i],skipfooter=20)
-		avg_dram_bw = df1['Average']._values[0]
-		elapsed_time = df2[df2['Metric Name'] == 'Elapsed Time']['Metric Value']._values[0] 
-		cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / float(NUM_CPUs[i])
-		gflops_cake[i] = (float(M*N*K) / cpu_time) / (10**9)
-		cake_mem_acc[i] = float(avg_dram_bw * elapsed_time) 
+		dram_bw_cpu_arr.append(dram_bw_cpu / ntrials)
+		dram_bw_cake_arr.append(dram_bw_cake / ntrials)
+		gflops_cpu_arr.append(gflops_cpu / ntrials)
+		gflops_cake_arr.append(gflops_cake / ntrials)
+		cake_mem_acc_arr.append(cake_cpu_DRAM_accesses(M,N,K,mc,kc,alpha,NUM_CPUs[i]) / (elapsed_time/ntrials))
+		dram_bw_cpu = 0; dram_bw_cake = 0; gflops_cpu = 0; gflops_cake = 0; elapsed_time = 0
 	#
 	# plt.subplot(1, 2, 1)
-	plt.plot(NUM_CPUs, cake_mem_acc, label = labels[0],  marker = markers[0], color = colors[5])
-	plt.plot(NUM_CPUs, cpu_mem_acc, label = labels[1],  marker = markers[1], color = colors[3])
-	cake_mem_acc = [cake_cpu_DRAM_accesses(M,N,K,mc,kc,alpha,i) for i in NUM_CPUs]
-	# mkl_mem_acc = [mkl_cpu_DRAM_accesses(M,N,K,mc,kc,mc*10) for i in NUM_CPUs]
-	plt.plot(NUM_CPUs, cake_mem_acc, label = labels[2], color = colors[0], linewidth = 2)
+	plt.figure(figsize = (6,4))
+	plt.plot(NUM_CPUs, dram_bw_cpu_arr, label = labels[1],  marker = markers[1], color = intel_color)
+	plt.plot(NUM_CPUs, dram_bw_cake_arr, label = labels[0],  marker = markers[0], color = colors[5])
+	plt.plot(NUM_CPUs, cake_mem_acc_arr, label = labels[2], color = colors[5], linewidth = 2, linestyle='dashed')
 	# plt.plot(list(NUM_CPUs), list(mkl_mem_acc), label = labels[3], color = colors[1], linewidth = 2)
 	#
-	plt.title('DRAM Accesses in CAKE vs MKL')
-	plt.xlabel("Number of Cores", fontsize = 16)
-	plt.ylabel("DRAM Accesses (GB)", fontsize = 16)
+	plt.title('(a) Intel DRAM Bandwidth in CAKE vs MKL')
+	plt.xlabel("Number of Cores", fontsize = 18)
+	plt.xticks(NUM_CPUs)
+	plt.ylabel("Avg. DRAM Bw (GB/s)", fontsize = 18)
 	plt.legend(loc = "center right", prop={'size': 10})
-	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
-	plt.show()
-	plt.clf()
-	plt.close('all')
+	plt.savefig("%s_dram.pdf" % fname, bbox_inches='tight')
+	# plt.show()
+	# plt.clf()
+	# plt.close('all')
 	#
 	# plt.subplot(1, 2, 2)
-	plt.plot(list(NUM_CPUs), list(gflops_cake), label = labels[0],  marker = markers[2], color = colors[5])
-	plt.plot(list(NUM_CPUs), list(gflops_cpu), label = labels[1],  marker = markers[3], color = colors[3])
+	plt.figure(figsize = (6,4))
+	plt.plot(list(NUM_CPUs), list(gflops_cpu_arr), label = labels[1],  marker = markers[3], color = intel_color)
+	plt.plot(list(NUM_CPUs), list(gflops_cake_arr), label = labels[0],  marker = markers[2], color = colors[5])
 	#
-	plt.title('Computation Throughput in CAKE vs MKL')
-	plt.xlabel("Number of Cores", fontsize = 16)
-	plt.ylabel("Throughput (GFLOP/s)", fontsize = 16)
+	plt.title('(b) Computation Throughput in CAKE vs MKL')
+	plt.xlabel("Number of Cores", fontsize = 18)
+	plt.xticks(NUM_CPUs)
+	plt.ylabel("Throughput (GFLOP/s)", fontsize = 18)
 	plt.legend(loc = "upper left", prop={'size': 12})
-	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
+	# plt.savefig("%s_perf.pdf" % fname, bbox_inches='tight')
 	# plt.suptitle('Performance of CAKE vs MKL', fontsize = 18)
 	plt.show()
 	plt.clf()
@@ -169,251 +173,127 @@ def plot_cake_vs_mkl_cpu(M,N,K,mc,kc,alpha):
 
 
 
-def plot_cake_vs_armpl_cpu(M,N,K,mc,kc,alpha):
+def plot_cake_vs_armpl_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_armpl', ntrials=10):
 	plt.rcParams.update({'font.size': 12})
 	markers = ['o','v','s','d','^']
 	colors = ['b','g','aqua','k','m','r']
-	labels = ['CAKE Observed', 'ARMPL Observed', 'CAKE Theoretical']
+	labels = ['CAKE Observed', 'ARMPL Observed', 'CAKE Optimal']
 	NUM_CPUs = [1,2,3,4]
-	cpu_mem_acc = [0]*len(NUM_CPUs)
-	gflops_cpu = [0]*len(NUM_CPUs)
-	cake_mem_acc = [0]*len(NUM_CPUs)
-	gflops_cake = [0]*len(NUM_CPUs)
-	#
+	gflops_cpu_arr=[];gflops_cake_arr=[];dram_bw_cake_arr=[];dram_bw_cpu_arr=[];cake_mem_acc_arr=[]
+	dram_bw_cpu = 0; dram_bw_cake = 0; gflops_cpu = 0; gflops_cake = 0; cake_mem_acc = 0
 	#
 	for i in range(len(NUM_CPUs)):
-		a = open('reports_arm/report_arm_%d' % NUM_CPUs[i],'r').read().split('\n')
-		cpu_mem_acc[i] = (int(re.search(r'\d+', a[5]).group())*64.0) / (10.0**9)
-		cpu_time = float(re.search(r'\d+\.\d+', a[7]).group())
-		gflops_cpu[i] = (float(M*N*K) / cpu_time) / (10**9)# / (float(NUM_CPUs[i]))
+		for j in range(1,ntrials+1):
+			a = open('reports_arm/report_arm_%d-%d' % (NUM_CPUs[i],j),'r').read().split('\n')
+			cpu_time = float(re.search(r'\d+\.\d+', a[7]).group())
+			dram_bw_cpu += ((int(re.search(r'\d+', a[5]).group())*64.0) / cpu_time) / (10.0**9)
+			gflops_cpu += (float(M*N*K) / cpu_time) / (10**9)
+			#
+			a = open('reports_arm/report_cake_%d-%d' % (NUM_CPUs[i],j),'r').read().split('\n')
+			cpu_time = float(re.search(r'\d+\.\d+', a[7]).group())
+			dram_bw_cake += ((int(re.search(r'\d+', a[5]).group())*64.0) / cpu_time) / (10.0**9)
+			gflops_cake += (float(M*N*K) / cpu_time) / (10**9)# / (float(NUM_CPUs[i]))
+			cake_mem_acc += cake_cpu_DRAM_accesses(M,N,K,mc,kc,alpha,NUM_CPUs[i]) / cpu_time
 		#
-		a = open('reports_arm/report_cake_%d' % NUM_CPUs[i],'r').read().split('\n')
-		cake_mem_acc[i] = (int(re.search(r'\d+', a[5]).group())*64.0) / (10.0**9)
-		cpu_time = float(re.search(r'\d+\.\d+', a[7]).group())
-		gflops_cake[i] = (float(M*N*K) / cpu_time) / (10**9)# / (float(NUM_CPUs[i]))
+		dram_bw_cpu_arr.append(dram_bw_cpu / ntrials)
+		dram_bw_cake_arr.append(dram_bw_cake / ntrials)
+		gflops_cpu_arr.append(gflops_cpu / ntrials)
+		gflops_cake_arr.append(gflops_cake / ntrials)
+		cake_mem_acc_arr.append(cake_mem_acc / ntrials)
+		dram_bw_cpu = 0; dram_bw_cake = 0; gflops_cpu = 0; gflops_cake = 0; cake_mem_acc = 0
 	#
 	# plt.subplot(1, 2, 1)
-	plt.plot(list(NUM_CPUs), list(cake_mem_acc), label = labels[0],  marker = markers[0], color = colors[5])
-	plt.plot(list(NUM_CPUs), list(cpu_mem_acc), label = labels[1],  marker = markers[1], color = colors[3])
+	plt.figure(figsize = (6,4))
+	plt.plot(list(NUM_CPUs), list(dram_bw_cpu_arr), label = labels[1],  marker = markers[1], color = colors[4])
+	plt.plot(list(NUM_CPUs), list(dram_bw_cake_arr), label = labels[0],  marker = markers[0], color = colors[5])
+	plt.plot(list(NUM_CPUs), list(cake_mem_acc_arr), label = labels[2], color = colors[5], linewidth = 2, linestyle='dashed')
 	#
-	cake_mem_acc = [cake_cpu_DRAM_accesses(M,N,K,mc,kc,alpha,i) for i in NUM_CPUs]
-	plt.plot(list(NUM_CPUs), list(cake_mem_acc), label = labels[2], color = colors[0], linewidth = 2)
-	#
-	plt.title('DRAM Accesses in CAKE vs ARMPL')
-	plt.xlabel("Number of Cores", fontsize = 12)
-	plt.ylabel("DRAM Accesses (GB)", fontsize = 12)
+	plt.title('(a) DRAM Bandwidth in CAKE vs ARMPL')
+	plt.xlabel("Number of Cores", fontsize = 18)
+	plt.xticks(NUM_CPUs)
+	plt.ylabel("Avg. DRAM Bw (GB/s)", fontsize = 18)
 	plt.legend(loc = "center right", prop={'size': 10})
-	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
-	plt.show()
-	plt.clf()
-	plt.close('all')
+	plt.savefig("%s_dram.pdf" % fname, bbox_inches='tight')
+	# plt.show()
+	# plt.clf()
+	# plt.close('all')
 	#
-	# plt.subplot(1, 2, 2)
-	plt.plot(list(NUM_CPUs), list(gflops_cake), label = labels[0],  marker = markers[2], color = colors[5])
-	plt.plot(list(NUM_CPUs), list(gflops_cpu), label = labels[1],  marker = markers[3], color = colors[3])
+	plt.figure(figsize = (6,4))
+	plt.plot(list(NUM_CPUs), list(gflops_cake_arr), label = labels[0],  marker = markers[2], color = colors[5])
+	plt.plot(list(NUM_CPUs), list(gflops_cpu_arr), label = labels[1],  marker = markers[3], color = colors[4])
 	#
 	plt.ticklabel_format(useOffset=False, style='plain')
-	plt.title('Computation Throughput of CAKE vs ARMPL')
-	plt.xlabel("Number of Cores", fontsize = 12)
-	plt.ylabel("Throughput (GFLOP/s)", fontsize = 12)
+	plt.title('(b) Computation Throughput of CAKE vs ARMPL')
+	plt.xlabel("Number of Cores", fontsize = 18)
+	plt.xticks(NUM_CPUs)
+	plt.ylabel("Throughput (GFLOP/s)", fontsize = 18)
 	plt.legend(loc = "upper left", prop={'size': 12})
-	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
+	plt.savefig("%s_perf.pdf" % fname, bbox_inches='tight')
 	# plt.suptitle('Performance of CAKE vs ARMPL', fontsize = 18)
 	plt.show()
 	plt.clf()
 	plt.close('all')
 
 
-def plot_cake_vs_amd_cpu(M,N,K,mc,kc,alpha):
+
+def plot_cake_vs_amd_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_amd', ntrials=10):
 	plt.rcParams.update({'font.size': 12})
 	markers = ['o','v','s','d','^']
 	colors = ['b','g','aqua','k','m','r']
-	labels = ['CAKE Observed', 'OpenBlas Observed','CAKE Theoretical']
+	labels = ['CAKE Observed', 'OpenBlas Observed','CAKE Optimal']
 	NUM_CPUs = list(range(1,17))
-	cpu_mem_acc = [0]*len(NUM_CPUs)
-	gflops_cpu = [0]*len(NUM_CPUs)
-	cake_mem_acc = [0]*len(NUM_CPUs)
-	gflops_cake = [0]*len(NUM_CPUs)
+	#
+	gflops_cpu_arr=[];gflops_cake_arr=[];dram_bw_cake_arr=[];dram_bw_cpu_arr=[]
+	dram_bw_cpu = 0; dram_bw_cake = 0; gflops_cpu = 0; gflops_cake = 0
 	#
 	for i in range(len(NUM_CPUs)):
-		a = open("reports/report_cake_amd_%d.csv" % NUM_CPUs[i],'r').read()
-		data = [i for i in a.split('\n') if 'PID' in i][0].split(',')
-		cpu_time = float(data[1]) / NUM_CPUs[i]
-		cake_mem_acc[i] = (float(data[2])*50000*64) / (10**9)
-		gflops_cake[i] = (float(M*N*K) / cpu_time) / (10**9)
+		for j in range(1,ntrials+1):
+			a = open("reports/report_cake_amd_%d-%d.csv" % (NUM_CPUs[i], j) ,'r').read()
+			data = [i for i in a.split('\n') if 'PID' in i][0].split(',')
+			cpu_time = float(data[1]) / NUM_CPUs[i]
+			dram_bw_cake += (((float(data[2])*50000*64) / cpu_time) / (10**9))
+			gflops_cake += ((float(M*N*K) / cpu_time) / (10**9))
+			#
+			a = open("reports/report_openblas_amd_%d-%d.csv" % (NUM_CPUs[i], j),'r').read()
+			data = [i for i in a.split('\n') if 'PID' in i][0].split(',')
+			cpu_time = float(data[1]) / NUM_CPUs[i]
+			dram_bw_cpu += (((float(data[2])*50000*64) / cpu_time) / (10**9))
+			gflops_cpu += ((float(M*N*K) / cpu_time) / (10**9))
+			print((((float(data[2])*50000*64) / cpu_time) / (10**9)))
 		#
-		a = open("reports/report_openblas_amd_%d.csv" % NUM_CPUs[i],'r').read()
-		data = [i for i in a.split('\n') if 'PID' in i][0].split(',')
-		cpu_time = float(data[1]) / NUM_CPUs[i]
-		cpu_mem_acc[i] = (float(data[2])*50000*64) / (10**9)
-		gflops_cpu[i] = (float(M*N*K) / cpu_time) / (10**9)
+		dram_bw_cpu_arr.append(dram_bw_cpu / ntrials)
+		dram_bw_cake_arr.append(dram_bw_cake / ntrials)
+		gflops_cpu_arr.append(gflops_cpu / ntrials)
+		gflops_cake_arr.append(gflops_cake / ntrials)
+		dram_bw_cpu = 0; dram_bw_cake = 0; gflops_cpu = 0; gflops_cake = 0
 	#
-	plt.plot(NUM_CPUs, cake_mem_acc, label = labels[0],  marker = markers[0], color = colors[5])
-	plt.plot(NUM_CPUs, cpu_mem_acc, label = labels[1],  marker = markers[1], color = colors[3])
-	# cake_mem_acc_theo = [cake_cpu_DRAM_accesses(M,N,K,mc,kc,alpha,i) for i in NUM_CPUs]
-	# # # mkl_mem_acc = [mkl_cpu_DRAM_accesses(M,N,K,mc,kc,mc*10) for i in NUM_CPUs]
-	# plt.plot(NUM_CPUs, cake_mem_acc_theo, label = labels[2], color = colors[0], linewidth = 2)
-	# plt.plot(list(NUM_CPUs), list(mkl_mem_acc), label = labels[3], color = colors[1], linewidth = 2)
+	plt.figure(figsize = (6,4))
+	plt.plot(NUM_CPUs, dram_bw_cpu_arr, label = labels[1],  marker = markers[1], color = colors[3])
+	plt.plot(NUM_CPUs, dram_bw_cake_arr, label = labels[0],  marker = markers[0], color = colors[5])
 	#
-	plt.title('L1 Refills From DRAM in CAKE vs OpenBlas', fontsize = 18)
+	plt.title('(a) DRAM Bandwidth in CAKE vs OpenBlas')
 	plt.xlabel("Number of Cores", fontsize = 18)
-	plt.ylabel("Gigabytes Transferred", fontsize = 18)
+	plt.xticks(NUM_CPUs)
+	plt.ylabel("Avg. DRAM Bw (GB/s)", fontsize = 18)
 	plt.legend(loc = "center right", prop={'size': 10})
-	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
-	plt.show()
-	plt.clf()
-	plt.close('all')
+	plt.savefig("%s_dram.pdf" % fname, bbox_inches='tight')
+	# plt.show()
+	# plt.clf()
+	# plt.close('all')
 	#
-	plt.plot(list(NUM_CPUs), list(gflops_cake), label = labels[0],  marker = markers[2], color = colors[5])
-	plt.plot(list(NUM_CPUs), list(gflops_cpu), label = labels[1],  marker = markers[3], color = colors[3])
+	plt.figure(figsize = (6,4))
+	plt.plot(list(NUM_CPUs), list(gflops_cake_arr), label = labels[0],  marker = markers[2], color = colors[5])
+	plt.plot(list(NUM_CPUs), list(gflops_cpu_arr), label = labels[1],  marker = markers[3], color = colors[3])
 	#
-	plt.title('Computation Throughput of CAKE vs OpenBlas',fontsize = 14)
+	plt.title('(b) Computation Throughput of CAKE vs OpenBlas')
 	plt.xlabel("Number of Cores", fontsize = 18)
-	plt.ylabel("Performance (GFLOPS/sec)", fontsize = 18)
+	plt.xticks(NUM_CPUs)
+	plt.ylabel("Throughput (GFLOPS/sec)", fontsize = 18)
 	plt.legend(loc = "lower right", prop={'size': 12})
-	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
-	plt.show()
-	plt.clf()
-	plt.close('all')
-
-plot_cake_vs_amd_cpu(23040,23040,23040,96,96,1)
-
-
-def plot_cake_vs_mkl_sparse():
-	plt.rcParams.update({'font.size': 12})
-	markers = ['o','v','s','d','^']
-	colors = ['b','g','aqua','k','m','r']
-	labels = ['CAKE Observed', 'MKL Observed','CAKE Theoretical', 'MKL Theoretical']
-	density = [0.5,0.4,0.3,0.2,0.1,0.05,0.02,0.01,0.005]
-	N = 5000
-	K = 33708
-	M = 1024
-	p = 20 # num threads used by sparse
-	#
-	df1 = pandas.read_csv('sparse.csv')
-	avg_dram_bw = df1['bw']._values
-	cpu_times = df1['cpu_time']._values / p
-	gflops_cpu = [((M*N*K) / cpu_times[i]) / (10**9) for i in range(len(density))] # / (float(density[i]))
-	cpu_mem_acc = avg_dram_bw * cpu_times  # number of GB transferred b/w processors and DRAM
-	#
-	#
-	cake_cpu_times = [0]*len(density)
-	cake_mem_acc = [0]*len(density)
-	gflops_cake = [0]*len(density)
-	#
-	#
-	for i in range(len(density)):
-		df1 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % N, skiprows=17,skipfooter=17)
-		df2 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % N, skipfooter=25)
-		avg_dram_bw = df1['Average']._values[0]
-		cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / 10
-		cake_cpu_times[i] = cpu_time
-		gflops_cake[i] = (float(M*N*K) / cpu_time) # / (float(density[i]))
-		cake_mem_acc[i] = float(avg_dram_bw * cpu_time) 
-	#
-	plt.plot(list(density), list(cake_mem_acc), label = labels[0],  marker = markers[0], color = colors[5])
-	plt.plot(list(density), list(cpu_mem_acc), label = labels[1],  marker = markers[1], color = colors[1])
-	#
-	# cake_mem_acc = [cake_cpu_DRAM_accesses(M,N,K,mc,kc,960,i) for i in density]
-	# cake_mem_acc = [cake_cpu_DRAM_accesses(M,N,i,mc,kc,alpha,10) for i in density]
-	# mkl_mem_acc = [mkl_cpu_DRAM_accesses(M,i,K,mc,kc,960) for i in density]
-	# plt.plot(list(density), list(cake_mem_acc), label = labels[2], color = colors[0], linewidth = 2)
-	# plt.plot(list(density), list(mkl_mem_acc), label = labels[3], color = colors[1], linewidth = 2)
-	#
-	plt.title('Effect of Sparsity on Transformer Training DRAM Access')
-	plt.xlabel("Density", fontsize = 12)
-	plt.ylabel("Gigabytes Transferred", fontsize = 12)
-	plt.legend(loc = "upper left", prop={'size': 10})
-	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
-	plt.show()
-	plt.clf()
-	plt.close('all')
-	#
-	#
-	#
-	plt.plot(list(density), list(gflops_cake), label = labels[0],  marker = markers[2], color = colors[2])
-	plt.plot(list(density), list(gflops_cpu), label = labels[1],  marker = markers[3], color = colors[3])
-	#
-	plt.title('Effect of Sparsity on Transformer Training Performance')
-	plt.xlabel("Density", fontsize = 12)
-	plt.ylabel("Performance (GFLOPS/sec)", fontsize = 12)
-	plt.legend(loc = "upper right", prop={'size': 12})
-	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
-	plt.show()
-	plt.clf()
-	plt.close('all')
-	#
-
-
-
-def plot_cake_vs_mkl_transformer(p,mc,kc,alpha):
-	plt.rcParams.update({'font.size': 12})
-	markers = ['o','v','s','d','^']
-	colors = ['b','g','aqua','k','m','r']
-	labels = ['CAKE Observed', 'MKL Observed','CAKE Theoretical', 'MKL Theoretical']
-	batch_size = list(range(1000,10001,1000))
-	cpu_times = [0]*len(batch_size)
-	cpu_mem_acc = [0]*len(batch_size)
-	gflops_cpu = [0]*len(batch_size)
-	K = 33708
-	M = 1024
-	#
-	for i in range(len(batch_size)):
-		df1 = pandas.read_csv('reports/report_mkl_%d.csv' % batch_size[i],skiprows=17,skipfooter=17)
-		df2 = pandas.read_csv('reports/report_mkl_%d.csv' % batch_size[i],skipfooter=25)
-		avg_dram_bw = df1['Average']._values[0]
-		cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / p
-		cpu_times[i] = cpu_time
-		gflops_cpu[i] = (float(M*K*batch_size[i]) / cpu_time) # / (float(batch_size[i]))
-		cpu_mem_acc[i] = float(avg_dram_bw * cpu_time)  # number of GB transferred b/w processors and DRAM
-	#
-	#
-	cake_cpu_times = [0]*len(batch_size)
-	cake_mem_acc = [0]*len(batch_size)
-	gflops_cake = [0]*len(batch_size)
-	#
-	#
-	for i in range(len(batch_size)):
-		df1 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % batch_size[i],skiprows=17,skipfooter=17)
-		df2 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % batch_size[i],skipfooter=25)
-		avg_dram_bw = df1['Average']._values[0]
-		cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / p
-		cake_cpu_times[i] = cpu_time
-		gflops_cake[i] = (float(M*K*batch_size[i]) / cpu_time) # / (float(batch_size[i]))
-		cake_mem_acc[i] = float(avg_dram_bw * cpu_time) 
-	#
-	plt.plot(list(batch_size), list(cake_mem_acc), label = labels[0],  marker = markers[0], color = colors[5])
-	plt.plot(list(batch_size), list(cpu_mem_acc), label = labels[1],  marker = markers[1], color = colors[1])
-	#
-	# cake_mem_acc = [cake_cpu_DRAM_accesses(M,N,K,mc,kc,960,i) for i in batch_size]
-	# cake_mem_acc = [cake_cpu_DRAM_accesses(M,N,i,mc,kc,alpha,10) for i in batch_size]
-	# mkl_mem_acc = [mkl_cpu_DRAM_accesses(M,i,K,mc,kc,960) for i in batch_size]
-	# plt.plot(list(batch_size), list(cake_mem_acc), label = labels[2], color = colors[0], linewidth = 2)
-	# plt.plot(list(batch_size), list(mkl_mem_acc), label = labels[3], color = colors[1], linewidth = 2)
-	#
-	plt.title('DRAM Accesses In Transformer Training')
-	plt.xlabel("Batch Size", fontsize = 12)
-	plt.ylabel("Gigabytes Transferred", fontsize = 12)
-	plt.legend(loc = "upper right", prop={'size': 10})
-	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
-	plt.show()
-	plt.clf()
-	plt.close('all')
-	#
-	#
-	#
-	plt.plot(list(batch_size), list(gflops_cake), label = labels[0],  marker = markers[2], color = colors[2])
-	plt.plot(list(batch_size), list(gflops_cpu), label = labels[1],  marker = markers[3], color = colors[3])
-	#
-	plt.title('Performance of Transformer')
-	plt.xlabel("Batch Size", fontsize = 12)
-	plt.ylabel("Performance (GFLOPS/sec)", fontsize = 12)
-	plt.legend(loc = "lower right", prop={'size': 12})
-	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
-	plt.show()
-	plt.clf()
-	plt.close('all')
-	#
+	plt.savefig("%s_perf.pdf" % fname, bbox_inches='tight')
+	# plt.show()
+	# plt.clf()
+	# plt.close('all')
 
 
 def get_LLC_pmbw(exp, arr_size, file_name, ncores):
@@ -429,29 +309,83 @@ def get_LLC_pmbw(exp, arr_size, file_name, ncores):
 	return int_bw
 
 
-def plot_internal_bw_cpu():
+def plot_internal_bw_cpu(cpu):
 	labels = ['Intel i9','ARM Cortex v8 A53', 'AMD Ryzen 9 5950X']
 	plt.rcParams.update({'font.size': 12})
+	plt.figure(figsize = (6,4))
 	markers = ['o','v','s','d','^']
 	colors = ['b','g','aqua','k','m','r']
 	int_bw_intel = get_LLC_pmbw('ScanWrite64PtrUnrollLoop', 2**24, 'stats.txt', 10)
 	int_bw_arm = get_LLC_pmbw('ScanWrite64PtrUnrollLoop', 2**18, 'stats_arm.txt', 4)
 	int_bw_amd = get_LLC_pmbw('ScanWrite64PtrUnrollLoop', 2**24, 'stats_amd.txt', 16)
-	NUM_CPUs = list(range(1,17))
-	plt.plot(NUM_CPUs[:10], int_bw_intel, label = labels[0], marker = markers[0], color = colors[0])
-	plt.plot(NUM_CPUs[:4], int_bw_arm, label = labels[1], marker = markers[1], color = colors[1])
-	plt.plot(NUM_CPUs, int_bw_amd, label = labels[2], marker = markers[2], color = colors[2])
 	#
-	plt.title('LLC Bandwidth on Different CPUs',fontsize = 18)
+	if 'Intel' in cpu:
+		NUM_CPUs = list(range(1,11))
+		plt.plot(NUM_CPUs[:10], int_bw_intel, label = labels[0], marker = markers[0], color = colors[1])
+	elif 'ARM' in cpu:
+		NUM_CPUs = list(range(1,5))
+		plt.plot(NUM_CPUs[:4], int_bw_arm, label = labels[1], marker = markers[1], color = colors[1])
+	elif'AMD' in cpu:
+		NUM_CPUs = list(range(1,17))
+		plt.plot(NUM_CPUs, int_bw_amd, label = labels[2], marker = markers[2], color = colors[1])
+	#
+	plt.title('(c) Internal Bandwidth On %s CPU' % cpu)
 	plt.xlabel("Number of Cores", fontsize = 18)
-	plt.ylabel("Bandwidth (GB/s)", fontsize = 18)
 	plt.xticks(NUM_CPUs)
-	plt.legend(loc = "uper left", prop={'size': 12})
-	# plt.savefig("./plots/%s.pdf" % fname, bbox_inches='tight')
+	plt.ylabel("Bandwidth (GB/s)", fontsize = 18)
+	# plt.legend(loc = "upper left", prop={'size': 12})
+	plt.savefig("%s_cache_bw.pdf" % cpu, bbox_inches='tight')
+	# plt.show()
+	# plt.clf()
+	# plt.close('all')
+
+
+
+def plot_cake_vs_mkl_sparse(fname = 'cake_vs_mkl_sparse'):
+	plt.rcParams.update({'font.size': 12})
+	markers = ['o','v','s','d','^']
+	colors = ['b','g','aqua','k','m','r']
+	labels = ['CAKE Observed', 'MKL Observed','CAKE Optimal', 'MKL Optimal']
+	density = [(1-i)*100 for i in [0.5,0.4,0.3,0.2,0.1,0.05,0.02,0.01,0.005]]
+	N = 5000
+	K = 2048
+	M = 33708
+	#
+	df1 = pandas.read_csv('sparse.csv')
+	cpu_times = df1['cpu_time']._values
+	dram_bw_cpu = df1['bw']._values  # number of GB transferred b/w processors and DRAM
+	gflops_cpu = [(float(M*N*K) / cpu_times[i]) / (10**9) for i in range(len(density))] # / (float(density[i]))
+	#
+	#
+	dram_bw_cake = [7.284 for i in range(len(density))]
+	gflops_cake = [(float(M*N*K) / 0.607994) / (10**9) for i in range(len(density))]
+	dram_bw_cake_theo = [cake_cpu_DRAM_accesses(M,N,K,144,144,1,10) for i in density]
+	#
+	plt.plot(list(density), list(dram_bw_cpu), label = labels[1],  marker = markers[1], color = intel_color)
+	# plt.plot(list(density), list(dram_bw_cake_theo), label = labels[2],  marker = markers[3], color = colors[5], linestyle = 'dashed')
+	plt.plot(list(density), list(dram_bw_cake), label = labels[0],  marker = markers[0], color = colors[5])
+	#
+	plt.title('(a) DRAM Bandwidth for SparseMM in CAKE vs MKL')
+	plt.xlabel("Percent Sparsity", fontsize = 18)
+	plt.ylabel("Avg. DRAM Bw (GB/s)", fontsize = 18)
+	plt.legend(loc = "center left", prop={'size': 14})
+	# plt.savefig("%s_dram.pdf" % fname, bbox_inches='tight')
 	plt.show()
 	plt.clf()
 	plt.close('all')
-
+	#
+	plt.plot(list(density), list(gflops_cake), label = labels[0],  marker = markers[2], color = colors[5])
+	plt.plot(list(density), list(gflops_cpu), label = labels[1],  marker = markers[3], color = intel_color)
+	#
+	plt.title('(b) Comp. Throughput of SparseMM in CAKE vs MKL')
+	plt.xlabel("Percent Sparsity", fontsize = 18)
+	plt.ylabel("Throughput (GFLOP/s)", fontsize = 18)
+	plt.legend(loc = "upper left", prop={'size': 14})
+	# plt.savefig("%s_perf.pdf" % fname, bbox_inches='tight')
+	plt.show()
+	plt.clf()
+	plt.close('all')
+	
 
 
 def plot_bank_area():
@@ -475,5 +409,339 @@ def plot_bank_area():
 
 
 if __name__ == '__main__':
-	plot_cake_vs_mkl_cpu(23040,23040,23040)
-	plot_cake_vs_mkl_cpu(23040,23040,23040,96,96,1):
+	# plot_cake_vs_mkl_cpu(23040,23040,23040,144,144,1)
+	# plot_cake_vs_armpl_cpu(3000,3000,3000,48,48,1)
+	# plot_cake_vs_amd_cpu(23040,23040,23040,144,144,1)
+	# plot_internal_bw_cpu('Intel')
+	# plot_internal_bw_cpu('AMD')
+	# plot_internal_bw_cpu('ARM')
+	# plot_cake_vs_mkl_sparse()
+	# plot_cake_vs_mkl_transformer(10,144,144,1)
+
+
+
+
+
+
+
+
+
+#------------ OLD PLOTS--------------#
+
+
+# def plot_cake_vs_mkl_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_mkl'):
+# 	plt.rcParams.update({'font.size': 12})
+# 	markers = ['o','v','s','d','^']
+# 	colors = ['b','g','aqua','k','m','r']
+# 	labels = ['CAKE Observed', 'MKL Observed','CAKE Optimal', 'MKL Optimal']
+# 	NUM_CPUs = list(range(1,11))
+# 	gflops_cpu=[];gflops_cake=[];dram_bw_cake=[];dram_bw_cpu=[];cake_mem_acc=[]
+# 	#
+# 	for i in range(len(NUM_CPUs)):
+# 		df1 = pandas.read_csv('reports/report_mkl_%d.csv' % NUM_CPUs[i],skiprows=17,skipfooter=17)
+# 		df2 = pandas.read_csv('reports/report_mkl_%d.csv' % NUM_CPUs[i],skipfooter=20)
+# 		dram_bw_cpu.append(df1['Average']._values[0])
+# 		cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / float(NUM_CPUs[i])
+# 		gflops_cpu.append((float(M*N*K) / cpu_time) / (10**9))
+# 		#
+# 		df1 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % NUM_CPUs[i],skiprows=17,skipfooter=17)
+# 		df2 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % NUM_CPUs[i],skipfooter=20)
+# 		dram_bw_cake.append(df1['Average']._values[0])
+# 		cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / float(NUM_CPUs[i])
+# 		gflops_cake.append((float(M*N*K) / cpu_time) / (10**9))
+# 		elapsed_time = df2[df2['Metric Name'] == 'Elapsed Time']['Metric Value']._values[0] 
+# 		cake_mem_acc.append(cake_cpu_DRAM_accesses(M,N,K,mc,kc,alpha,NUM_CPUs[i]) / elapsed_time)
+# 	#
+# 	# plt.subplot(1, 2, 1)
+# 	plt.figure(figsize = (6, 4))
+# 	plt.plot(NUM_CPUs, dram_bw_cpu, label = labels[1],  marker = markers[1], color = intel_color)
+# 	plt.plot(NUM_CPUs, dram_bw_cake, label = labels[0],  marker = markers[0], color = colors[5])
+# 	plt.plot(NUM_CPUs, cake_mem_acc, label = labels[2], color = colors[5], linewidth = 2, linestyle='dashed')
+# 	# plt.plot(list(NUM_CPUs), list(mkl_mem_acc), label = labels[3], color = colors[1], linewidth = 2)
+# 	#
+# 	plt.title('(a) DRAM Bandwidth in CAKE vs MKL')
+# 	plt.xlabel("Number of Cores", fontsize = 16)
+# 	plt.xticks(NUM_CPUs)
+# 	plt.ylabel("Avg. DRAM Bw (GB/s)", fontsize = 16)
+# 	plt.legend(loc = "upper left", prop={'size': 11})
+# 	plt.savefig("%s_dram.pdf" % fname, bbox_inches='tight')
+# 	# plt.show()
+# 	# plt.clf()
+# 	# plt.close('all')
+# 	#
+# 	# plt.subplot(1, 2, 2)
+# 	plt.figure(figsize = (6, 4))
+# 	plt.plot(list(NUM_CPUs), list(gflops_cpu), label = labels[1],  marker = markers[3], color = intel_color)
+# 	plt.plot(list(NUM_CPUs), list(gflops_cake), label = labels[0],  marker = markers[2], color = colors[5])
+# 	#
+# 	plt.title('(b) Computation Throughput in CAKE vs MKL')
+# 	plt.xlabel("Number of Cores", fontsize = 16)
+# 	plt.xticks(NUM_CPUs)
+# 	plt.ylabel("Throughput (GFLOP/s)", fontsize = 16)
+# 	plt.legend(loc = "upper left", prop={'size': 12})
+# 	plt.savefig("%s_perf.pdf" % fname, bbox_inches='tight')
+# 	# plt.show()
+# 	# plt.clf()
+# 	# plt.close('all')
+
+
+# def plot_cake_vs_armpl_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_armpl'):
+# 	plt.rcParams.update({'font.size': 12})
+# 	markers = ['o','v','s','d','^']
+# 	colors = ['b','g','aqua','k','m','r']
+# 	labels = ['CAKE Observed', 'ARMPL Observed', 'CAKE Optimal']
+# 	NUM_CPUs = [1,2,3,4]
+# 	dram_bw_cpu=[];gflops_cpu=[];dram_bw_cake=[];gflops_cake=[];cake_mem_acc=[]
+# 	#
+# 	for i in range(len(NUM_CPUs)):
+# 		a = open('reports_arm/report_arm_%d' % NUM_CPUs[i],'r').read().split('\n')
+# 		cpu_time = float(re.search(r'\d+\.\d+', a[7]).group())
+# 		dram_bw_cpu.append(((int(re.search(r'\d+', a[5]).group())*64.0) / cpu_time) / (10.0**9))
+# 		gflops_cpu.append((float(M*N*K) / cpu_time) / (10**9))# / (float(NUM_CPUs[i]))
+# 		#
+# 		a = open('reports_arm/report_cake_%d' % NUM_CPUs[i],'r').read().split('\n')
+# 		cpu_time = float(re.search(r'\d+\.\d+', a[7]).group())
+# 		dram_bw_cake.append(((int(re.search(r'\d+', a[5]).group())*64.0) / cpu_time) / (10.0**9))
+# 		gflops_cake.append((float(M*N*K) / cpu_time) / (10**9))# / (float(NUM_CPUs[i]))
+# 		cake_mem_acc.append(cake_cpu_DRAM_accesses(M,N,K,mc,kc,alpha,NUM_CPUs[i]) / cpu_time)
+# 	#
+# 	# plt.subplot(1, 2, 1)
+# 	plt.figure(figsize = (6,4))
+# 	plt.plot(list(NUM_CPUs), list(dram_bw_cpu), label = labels[1],  marker = markers[1], color = colors[4])
+# 	plt.plot(list(NUM_CPUs), list(dram_bw_cake), label = labels[0],  marker = markers[0], color = colors[5])
+# 	plt.plot(list(NUM_CPUs), list(cake_mem_acc), label = labels[2], color = colors[5], linewidth = 2, linestyle='dashed')
+# 	#
+# 	plt.title('(a) DRAM Bandwidth in CAKE vs ARMPL')
+# 	plt.xlabel("Number of Cores", fontsize = 18)
+# 	plt.xticks(NUM_CPUs)
+# 	plt.ylabel("Avg. DRAM Bw (GB/s)", fontsize = 18)
+# 	plt.legend(loc = "center right", prop={'size': 10})
+# 	plt.savefig("%s_dram.pdf" % fname, bbox_inches='tight')
+# 	# plt.show()
+# 	# plt.clf()
+# 	# plt.close('all')
+# 	#
+# 	plt.figure(figsize = (6,4))
+# 	plt.plot(list(NUM_CPUs), list(gflops_cake), label = labels[0],  marker = markers[2], color = colors[5])
+# 	plt.plot(list(NUM_CPUs), list(gflops_cpu), label = labels[1],  marker = markers[3], color = colors[4])
+# 	#
+# 	plt.ticklabel_format(useOffset=False, style='plain')
+# 	plt.title('(b) Computation Throughput of CAKE vs ARMPL')
+# 	plt.xlabel("Number of Cores", fontsize = 18)
+# 	plt.xticks(NUM_CPUs)
+# 	plt.ylabel("Throughput (GFLOP/s)", fontsize = 18)
+# 	plt.legend(loc = "upper left", prop={'size': 12})
+# 	plt.savefig("%s_perf.pdf" % fname, bbox_inches='tight')
+# 	# plt.suptitle('Performance of CAKE vs ARMPL', fontsize = 18)
+# 	# plt.show()
+# 	# plt.clf()
+# 	# plt.close('all')
+
+
+# def plot_cake_vs_amd_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_amd'):
+# 	plt.rcParams.update({'font.size': 12})
+# 	markers = ['o','v','s','d','^']
+# 	colors = ['b','g','aqua','k','m','r']
+# 	labels = ['CAKE Observed', 'OpenBlas Observed','CAKE Optimal']
+# 	NUM_CPUs = list(range(1,17))
+# 	dram_bw_cpu=[];gflops_cpu=[];dram_bw_cake=[];gflops_cake=[]
+# 	#
+# 	for i in range(len(NUM_CPUs)):
+# 		a = open("reports/report_cake_amd_%d.csv" % NUM_CPUs[i],'r').read()
+# 		data = [i for i in a.split('\n') if 'PID' in i][0].split(',')
+# 		cpu_time = float(data[1]) / NUM_CPUs[i]
+# 		dram_bw_cake.append(((float(data[2])*50000*64) / cpu_time) / (10**9))
+# 		gflops_cake.append((float(M*N*K) / cpu_time) / (10**9))
+# 		#
+# 		a = open("reports/report_openblas_amd_%d.csv" % NUM_CPUs[i],'r').read()
+# 		data = [i for i in a.split('\n') if 'PID' in i][0].split(',')
+# 		cpu_time = float(data[1]) / NUM_CPUs[i]
+# 		dram_bw_cpu.append(((float(data[2])*50000*64) / cpu_time) / (10**9))
+# 		gflops_cpu.append((float(M*N*K) / cpu_time) / (10**9))
+# 	#
+# 	plt.figure(figsize = (6,4))
+# 	plt.plot(NUM_CPUs, dram_bw_cpu, label = labels[1],  marker = markers[1], color = colors[3])
+# 	plt.plot(NUM_CPUs, dram_bw_cake, label = labels[0],  marker = markers[0], color = colors[5])
+# 	#
+# 	plt.title('(a) DRAM Bandwidth in CAKE vs OpenBlas')
+# 	plt.xlabel("Number of Cores", fontsize = 18)
+# 	plt.xticks(NUM_CPUs)
+# 	plt.ylabel("Avg. DRAM Bw (GB/s)", fontsize = 18)
+# 	plt.legend(loc = "center right", prop={'size': 10})
+# 	plt.savefig("%s_dram.pdf" % fname, bbox_inches='tight')
+# 	# plt.show()
+# 	# plt.clf()
+# 	# plt.close('all')
+# 	#
+# 	plt.figure(figsize = (6,4))
+# 	plt.plot(list(NUM_CPUs), list(gflops_cake), label = labels[0],  marker = markers[2], color = colors[5])
+# 	plt.plot(list(NUM_CPUs), list(gflops_cpu), label = labels[1],  marker = markers[3], color = colors[3])
+# 	#
+# 	plt.title('(b) Computation Throughput of CAKE vs OpenBlas')
+# 	plt.xlabel("Number of Cores", fontsize = 18)
+# 	plt.xticks(NUM_CPUs)
+# 	plt.ylabel("Throughput (GFLOPS/sec)", fontsize = 18)
+# 	plt.legend(loc = "lower right", prop={'size': 12})
+# 	plt.savefig("%s_perf.pdf" % fname, bbox_inches='tight')
+# 	# plt.show()
+# 	# plt.clf()
+# 	# plt.close('all')
+
+
+
+
+# labels = list(map(str,range(1000,10001,1000)))
+# women_means = [0.450558,0.381210,0.354841,0.347499,0.341100,0.334189,0.336083,0.328989,0.326314,0.316413]
+# men_means = [0.549442,0.618790,0.645159,0.652501,0.658900,0.665811,0.663917,0.671011,0.673686,0.683587]
+# x = np.arange(len(labels))  # the label locations
+# width = 0.35  # the width of the bars
+# fig, ax = plt.subplots()
+# rects1 = ax.bar(x - width/2, men_means, width, label='GEMM')
+# rects2 = ax.bar(x + width/2, women_means, width, label='Packing')
+# # Add some text for labels, title and custom x-axis tick labels, etc.
+# ax.set_ylabel('percent of runtime')
+# ax.set_title('Packing Cost in CAKE')
+# ax.set_xticks(x)
+# ax.set_xticklabels(labels)
+# ax.legend()
+
+# ax.bar_label(rects1, padding=3)
+# ax.bar_label(rects2, padding=3)
+# fig.tight_layout()
+# plt.show()
+
+
+
+# def plot_cake_vs_mkl_transformer(p,mc,kc,alpha,fname = 'cake_vs_mkl_weight'):
+# 	plt.rcParams.update({'font.size': 12})
+# 	markers = ['o','v','s','d','^']
+# 	colors = ['b','g','aqua','k','m','r']
+# 	labels = ['MKL Observed', 'CAKE Observed','CAKE Optimal', 'MKL Optimal']
+# 	batch_size = list(range(1000,10001,1000))
+# 	gflops_cpu=[];gflops_cake=[];dram_bw_cake=[];dram_bw_cpu=[];cake_mem_acc=[]
+# 	K = 8000
+# 	M = 33708
+# 	#
+# 	for i in range(len(batch_size)):
+# 		df1 = pandas.read_csv('reports/report_mkl_%d.csv' % batch_size[i],skiprows=17,skipfooter=17)
+# 		df2 = pandas.read_csv('reports/report_mkl_%d.csv' % batch_size[i],skipfooter=25)
+# 		dram_bw_cpu.append(df1['Average']._values[0])
+# 		cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / float(p)
+# 		gflops_cpu.append((float(M*K*batch_size[i]) / cpu_time) / (10**9)) # / (float(batch_size[i]))
+# 	#
+# 		df1 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % batch_size[i],skiprows=17,skipfooter=17)
+# 		df2 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % batch_size[i],skipfooter=25)
+# 		dram_bw_cake.append(df1['Average']._values[0])
+# 		elapsed_time = df2[df2['Metric Name'] == 'Elapsed Time']['Metric Value']._values[0] 
+# 		cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / float(p)
+# 		gflops_cake.append((float(M*K*batch_size[i]) / cpu_time) / (10**9)) # / (float(batch_size[i]))
+# 		cake_mem_acc.append(cake_cpu_DRAM_accesses(M,batch_size[i],K,mc,kc,alpha,p) / elapsed_time)
+# 	#
+# 	plt.figure(figsize = (6,4))
+# 	plt.plot(list(batch_size), list(dram_bw_cpu), label = labels[0],  marker = markers[0], color = intel_color)
+# 	plt.plot(list(batch_size), list(dram_bw_cake), label = labels[1],  marker = markers[1], color = colors[5])
+# 	plt.plot(list(batch_size), list(cake_mem_acc), label = labels[2], color = colors[5], linewidth = 2, linestyle='dashed')
+# 	#
+# 	plt.title('(a) DRAM Bandwidth in Gradient Computation')
+# 	plt.xlabel("Batch Size", fontsize = 16)
+# 	plt.xticks(batch_size)
+# 	plt.ylabel("DRAM Bw (GB/s)", fontsize = 16)
+# 	plt.legend(loc = "center right", prop={'size': 10})
+# 	plt.savefig("%s_dram.pdf" % fname, bbox_inches='tight')
+# 	# plt.show()
+# 	# plt.clf()
+# 	# plt.close('all')
+# 	#
+# 	#
+# 	plt.figure(figsize = (6,4))
+# 	plt.plot(list(batch_size), list(gflops_cpu), label = labels[0],  marker = markers[3], color = intel_color)
+# 	plt.plot(list(batch_size), list(gflops_cake), label = labels[1],  marker = markers[2], color = colors[5])
+# 	#
+# 	plt.title('(b) Gradient Computation in CAKE vs MKL')
+# 	plt.xlabel("Batch Size", fontsize = 16)
+# 	plt.xticks(batch_size)
+# 	plt.ylabel("Comp. Throughput (GFLOP/s)", fontsize = 16)
+# 	plt.legend(loc = "lower right", prop={'size': 12})
+# 	plt.savefig("%s_perf.pdf" % fname, bbox_inches='tight')
+# 	# plt.show()
+# 	# plt.clf()
+# 	# plt.close('all')
+# 	#
+
+
+# def op_intensity_cpu(m,n,k,mc,kc,alpha,p):
+# 	return ((m*n*k) / (cake_cpu_DRAM_accesses(m,n,k,mc,kc,alpha,p) * (10**9)))
+
+# def roofline_cpu(m,n,k,p,cpu):
+# 	plt.rcParams.update({'font.size': 16})
+# 	colors = ['b','g','aqua','k','m','r']
+# 	if 'Intel' in cpu:	
+# 		df1 = pandas.read_csv('reports/report_mkl_%d.csv' % p,skiprows=17,skipfooter=17)
+# 		df2 = pandas.read_csv('reports/report_mkl_%d.csv' % p,skipfooter=20)
+# 		dram_bw_cpu = df1['Average']._values[0]
+# 		cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / float(p)
+# 		elapsed_time = df2[df2['Metric Name'] == 'Elapsed Time']['Metric Value']._values[0] 
+# 		oi_cpu = float(2*m*n*k) / (elapsed_time * dram_bw_cpu * 10**9)
+# 		gflops_cpu = (float(2*m*n*k) / cpu_time) / (10**9)
+# 		#
+# 		df1 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % p,skiprows=17,skipfooter=17)
+# 		df2 = pandas.read_csv('reports/report_cake_dgemm_%d.csv' % p,skipfooter=20)
+# 		dram_bw_cake= df1['Average']._values[0]
+# 		cpu_time = df2[df2['Metric Name'] == 'CPU Time']['Metric Value']._values[0] / float(p)
+# 		elapsed_time = df2[df2['Metric Name'] == 'Elapsed Time']['Metric Value']._values[0] 
+# 		oi_cake = float(2*m*n*k) / (elapsed_time * dram_bw_cake * 10**9)
+# 		gflops_cake = (float(2*m*n*k) / cpu_time) / (10**9)
+# 		#
+# 		color = intel_color
+# 		# Peak performance (GFLOP/s https://gadgetversus.com/processor/intel-core-i9-10900k-specs/ 
+# 		# 5.3 clock rate * 2 FMAs/clock * (AVX2 256bit reg / 32 bit float) * 10 cores
+# 		P_max = 848*2
+# 		# Peak DRAM bw (GB/s)
+# 		b_max = 40
+# 		#
+# 	# elif 'AMD' in cpu:
+# 	# 	a = open("reports/report_cake_amd_%d.csv" % p,'r').read()
+# 	# 	data = [i for i in a.split('\n') if 'PID' in i][0].split(',')
+# 	# 	cpu_time = float(data[1]) / p
+# 	# 	dram_bw_cake = ((float(data[2])*50000*64) / cpu_time) / (10**9)
+# 	# 	oi_cake = float(2*m*n*k) / (cpu_time * dram_bw_cake * 10**9)
+# 	# 	gflops_cake = (float(2*m*n*k) / cpu_time) / (10**9)
+# 	# 	#
+# 	# 	a = open("reports/report_openblas_amd_%d.csv" % p,'r').read()
+# 	# 	data = [i for i in a.split('\n') if 'PID' in i][0].split(',')
+# 	# 	cpu_time = float(data[1]) / p
+# 	# 	dram_bw_cpu = ((float(data[2])*50000*64) / cpu_time) / (10**9)
+# 	# 	oi_cpu = float(2*m*n*k) / (cpu_time * dram_bw_cpu * 10**9)
+# 	# 	gflops_cpu = (float(2*m*n*k) / cpu_time) / (10**9)
+# 	# 	#
+# 	# 	color = colors[3]
+# 	# 	# Peak performance (GFLOP/s https://gadgetversus.com/processor/intel-core-i9-10900k-specs/ 
+# 	# 	# 4.9 max clock rate * 2 FMAs/clock * (AVX2 256bit reg / 32 bit float) * 16 cores
+# 	# 	P_max = 1254*2
+# 	# 	# Peak DRAM bw (GB/s)
+# 	# 	b_max = 47
+# 	#
+# 	oi_list = list(range(0,201))
+# 	p = [min(P_max, b_max*x) for x in oi_list]
+# 	plt.figure(figsize = (6,4))
+# 	plt.plot(oi_list, p,'-b', label  = "roofline", linewidth=4, color = 'black')
+# 	plt.scatter([oi_cpu],[gflops_cpu], color = intel_color, s=40)
+# 	plt.scatter([oi_cake],[gflops_cake], color = 'r', s=40)
+# 	#
+# 	plt.title('Roofline Model %s CPU' % cpu)
+# 	# plt.xscale('log', basex=2)
+# 	# plt.yscale('log', basey=2)
+# 	plt.xlabel('Operational Intensity (FLOP/byte)', fontsize = 16)
+# 	plt.ylabel('Comp. Throughput (GFLOP/s)', fontsize = 16)
+# 	# plt.grid()
+# 	plt.axvline(P_max/b_max, label = 'memory/compute\nboundary', linestyle='dashed')
+# 	# plt.text(16,0,'memory vs compute boundary',rotation=90)
+# 	plt.annotate("MKL", (oi_cpu ,gflops_cpu-150))
+# 	plt.annotate("CAKE", (oi_cake ,gflops_cake-150))
+# 	# plt.annotate("s = 8", (1.5 ,2.3))
+# 	plt.legend(loc = "lower right", prop={'size': 15})
+# 	# plt.savefig("roofline.pdf", bbox_inches='tight')
+# 	plt.show()
+# 	plt.clf()
+# 	plt.close('all')
+
