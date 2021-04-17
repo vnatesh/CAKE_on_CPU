@@ -6,6 +6,7 @@ import os
 import re
 
 intel_color = '#0071c5'
+os.chdir("/Users/vikas/Documents/test")
 
 def op_intensity(M,N,K,M_sr,N_sr):
 	M,N,K= float(M), float(N), float(K)
@@ -150,12 +151,11 @@ def plot_cake_vs_mkl_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_mkl', ntrials=10):
 	plt.xticks(NUM_CPUs)
 	plt.ylabel("Avg. DRAM Bw (GB/s)", fontsize = 18)
 	plt.legend(loc = "center right", prop={'size': 10})
-	plt.savefig("%s_dram.pdf" % fname, bbox_inches='tight')
-	# plt.show()
-	# plt.clf()
-	# plt.close('all')
+	# plt.savefig("%s_dram.pdf" % fname, bbox_inches='tight')
+	plt.show()
+	plt.clf()
+	plt.close('all')
 	#
-	# plt.subplot(1, 2, 2)
 	plt.figure(figsize = (6,4))
 	plt.plot(list(NUM_CPUs), list(gflops_cpu_arr), label = labels[1],  marker = markers[3], color = intel_color)
 	plt.plot(list(NUM_CPUs), list(gflops_cake_arr), label = labels[0],  marker = markers[2], color = colors[5])
@@ -166,7 +166,6 @@ def plot_cake_vs_mkl_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_mkl', ntrials=10):
 	plt.ylabel("Throughput (GFLOP/s)", fontsize = 18)
 	plt.legend(loc = "upper left", prop={'size': 12})
 	# plt.savefig("%s_perf.pdf" % fname, bbox_inches='tight')
-	# plt.suptitle('Performance of CAKE vs MKL', fontsize = 18)
 	plt.show()
 	plt.clf()
 	plt.close('all')
@@ -409,7 +408,7 @@ def plot_bank_area():
 
 
 if __name__ == '__main__':
-	# plot_cake_vs_mkl_cpu(23040,23040,23040,144,144,1)
+	plot_cake_vs_mkl_cpu(23040,23040,23040,144,144,1)
 	# plot_cake_vs_armpl_cpu(3000,3000,3000,48,48,1)
 	# plot_cake_vs_amd_cpu(23040,23040,23040,144,144,1)
 	# plot_internal_bw_cpu('Intel')
