@@ -106,7 +106,7 @@ CFLAGS 	:= $(filter-out -std=c99, $(CFLAGS_tmp))
 #LIBBLIS_LINK   := $(LIB_PATH)/$(LIBBLIS_L)
 
 # Binary executable name.
-TEST_BINS      := cake_dgemm_test.x
+TEST_BINS      := cake_sgemm_test.x
 
 CAKE_SRC := $(CAKE_HOME)/src
 
@@ -141,8 +141,8 @@ endif
 
 
 cake_compile: $(wildcard *.h) $(wildcard *.c) 
-	g++ $(CFLAGS) $(CAKE_SRC)/cake_dgemm_test.cpp $(CAKE_SRC)/block_sizing.cpp \
-	$(CAKE_SRC)/cake_dgemm.cpp $(CAKE_SRC)/pack.cpp src/util.cpp $(CAKE_SRC)/unpack.cpp \
+	g++ $(CFLAGS) $(CAKE_SRC)/cake_sgemm_test.cpp $(CAKE_SRC)/block_sizing.cpp \
+	$(CAKE_SRC)/cake_sgemm.cpp $(CAKE_SRC)/pack.cpp src/util.cpp $(CAKE_SRC)/unpack.cpp \
 	$(LIBS) $(LDFLAGS) -o $(TEST_BINS)
 
 
@@ -176,7 +176,7 @@ clean:
 
 # # gcc -O3 -O2 -Wall -Wno-unused-function -Wfatal-errors -fPIC -std=c99 
 # # -D_POSIX_C_SOURCE=200112L -fopenmp -I/usr/local/include/blis -DBLIS_VERSION_STRING=\"0.8.0-13\" 
-# # -I. *.c -o cake_dgemm_test.o /usr/local/lib/libblis.a  -lm -lpthread -fopenmp -lrt -o cake_dgemm_test.x
+# # -I. *.c -o cake_sgemm_test.o /usr/local/lib/libblis.a  -lm -lpthread -fopenmp -lrt -o cake_sgemm_test.x
 
 
 # all: cake_compile
@@ -185,7 +185,7 @@ clean:
 # 	./install.sh
 
 # cake_compile: $(wildcard *.h) $(wildcard *.c) 
-# 	gcc $(CFLAGS) *.c -o cake_dgemm_test.o $(LIBS) -o cake_dgemm_test.x
+# 	gcc $(CFLAGS) *.c -o cake_sgemm_test.o $(LIBS) -o cake_sgemm_test.x
 
 # clean:
 # 	rm -rf *.o
