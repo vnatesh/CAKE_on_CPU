@@ -8,7 +8,7 @@ import linear_cpp
 
 # linear_cpp = load(name = 'linear_cpp', 
 #                 sources = ['cake_pytorch_float/linear.cpp', 'cake_pytorch_float/block_sizing.cpp', 
-#                             'cake_pytorch_float/cake_dgemm.cpp', 'cake_pytorch_float/pack.cpp', 'cake_pytorch_float/util.cpp', 'cake_pytorch_float/unpack.cpp'],
+#                             'cake_pytorch_float/cake_sgemm.cpp', 'cake_pytorch_float/pack.cpp', 'cake_pytorch_float/util.cpp', 'cake_pytorch_float/unpack.cpp'],
 #                 extra_cflags = ['-O3','-Wall','-Wno-unused-function','-Wfatal-errors', '-fopenmp',
 #                                 '-fPIC',' -D_POSIX_C_SOURCE=200112L', '-DBLIS_VERSION_STRING=\"0.8.0-13\"'],
 #                 extra_ldflags = ['/usr/local/lib/libblis.a', '-lm', '-lpthread', '-lrt' ],
@@ -48,6 +48,8 @@ class cake_linear(nn.Module):
     def forward(self, data):
         return cake_linear_function.apply(data, self.weight, self.bias)
 
+
+# get the CPU cache sizes here lscpu
 
 
 # class cake_linear_function(torch.autograd.Function):
