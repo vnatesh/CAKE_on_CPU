@@ -56,7 +56,7 @@ void unpack_ob_C(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
 
 
 
-void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_cntx_t* cake_cntx);
+void cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_cntx_t* cake_cntx);
 
 
 int get_block_dim(cake_cntx_t* cake_cntx, int M, int p);
@@ -68,7 +68,7 @@ int lcm(int n1, int n2);
 
 int run_tests();
 
-bool cake_dgemm_checker(float* A, float* B, float* C, int N, int M, int K);
+bool cake_sgemm_checker(float* A, float* B, float* C, int N, int M, int K);
 
 void rand_init(float* mat, int r, int c);
 

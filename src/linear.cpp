@@ -35,7 +35,7 @@ torch::Tensor linear_forward(torch::Tensor& cache_sz, torch::Tensor& input,  tor
 
   // cake_sgemm call
   cake_cntx_t* cake_cntx = cake_query_cntx_torch(cache_sz[0].item<int>(), cache_sz[1].item<int>());
-  cake_dgemm(input_c, weight_c, output_c, M, N, K, p, cake_cntx);
+  cake_sgemm(input_c, weight_c, output_c, M, N, K, p, cake_cntx);
 
   auto options = torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCPU);
   auto output = torch::from_blob((void*) output_c, {M*N}, options);
@@ -64,7 +64,7 @@ std::vector<torch::Tensor> linear_backward(torch::Tensor& cache_sz, torch::Tenso
   float* grad_input_c = (float*) calloc(M * N , sizeof( float ));
   int p = 10; // number of cores to use
 
-  cake_dgemm(grad_output_c, weight_c, grad_input_c, M, N, K, p, cake_cntx);
+  cake_sgemm(grad_output_c, weight_c, grad_input_c, M, N, K, p, cake_cntx);
 
 
   auto options = torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCPU);
@@ -81,7 +81,7 @@ std::vector<torch::Tensor> linear_backward(torch::Tensor& cache_sz, torch::Tenso
   float* input_c = (float*) input.data_ptr<float>();
   float* grad_weight_c = (float*) calloc(M1 * N1 , sizeof( float ));
 
-  cake_dgemm(grad_output_c, input_c, grad_weight_c, M1, N1, K1, p, cake_cntx);
+  cake_sgemm(grad_output_c, input_c, grad_weight_c, M1, N1, K1, p, cake_cntx);
 
   options = torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCPU);
   auto grad_weight = torch::from_blob((void*) grad_weight_c, {M1*N1}, options);

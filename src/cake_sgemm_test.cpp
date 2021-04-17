@@ -55,15 +55,15 @@ int main( int argc, char** argv ) {
 	+end.tv_usec) - start.tv_usec) / (1000000.0);
 	if(DEBUG) printf("init time: %f \n", diff_t); 
 
-    // cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+    // cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
     //         m, n, k, alpha, A, k, B, n, beta, C, n);
 
 	// double beta = 1.0;
-	// cake_dgemm(A, B, C, M, N, K, p, NULL);
+	// cake_sgemm(A, B, C, M, N, K, p, NULL);
 	cake_cntx_t* cake_cntx = cake_query_cntx();
-	cake_dgemm(A, B, C, M, N, K, p, cake_cntx);
+	cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
 	// bli_dprintm( "C: ", M, N, C, N, 1, "%4.4f", "" );
-	cake_dgemm_checker(A, B, C, N, M, K);
+	cake_sgemm_checker(A, B, C, N, M, K);
 
 	free(A);
 	free(B);

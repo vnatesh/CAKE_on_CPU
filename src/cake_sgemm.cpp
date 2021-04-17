@@ -1,7 +1,7 @@
 #include "cake.h"
 
 
-void cake_dgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_cntx_t* cake_cntx) {
+void cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_cntx_t* cake_cntx) {
 	// contiguous row-storage (i.e. cs_c = 1) or contiguous column-storage (i.e. rs_c = 1). 
 	// This preference comes from how the microkernel is most efficiently able to load/store 
 	// elements of C11 from/to memory. Most microkernels use vector instructions to access 
