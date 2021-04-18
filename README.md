@@ -8,6 +8,7 @@ git clone https://github.com/vnatesh/CAKE_on_CPU.git
 cd CAKE_on_CPU
 make install
 source env.sh
+make build
 ```
 
 Installation automatically downloads and installs the following tool/dependency verions:
