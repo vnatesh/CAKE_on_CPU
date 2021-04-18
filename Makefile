@@ -44,7 +44,7 @@
 # --- Makefile PHONY target definitions ----------------------------------------
 #
 
-.PHONY: all install cake_compile clean
+.PHONY: all install cake_build clean
 
 
 
@@ -120,11 +120,13 @@ LIBS += $(BLIS_INSTALL_PATH)/lib/libblis.a
 
 # --- Primary targets ---
 
-all: cake_compile
+all: cake_build
 
-install:
+install: install_script cake_build
+
+install_script:
 	./install.sh
-
+	
 # --- Environment check rules ---
 
 check-env: check-env-make-defs check-env-fragments check-env-config-mk
@@ -140,7 +142,7 @@ ifeq ($(MAKE_DEFS_MK_PRESENT),no)
 endif
 
 
-cake_compile: $(wildcard *.h) $(wildcard *.c) 
+cake_build: $(wildcard *.h) $(wildcard *.c) 
 	g++ $(CFLAGS) $(CAKE_SRC)/block_sizing.cpp \
 	$(CAKE_SRC)/cake_sgemm.cpp $(CAKE_SRC)/pack.cpp src/util.cpp $(CAKE_SRC)/unpack.cpp \
 	$(LIBS) $(LDFLAGS) -shared -o $(LIBCAKE)
@@ -152,7 +154,7 @@ clean:
 	rm -rf *.o *.so
 
 
-# .PHONY: all install cake_compile clean
+# .PHONY: all install cake_build clean
 
 
 
@@ -179,12 +181,12 @@ clean:
 # # -I. *.c -o cake_sgemm_test.o /usr/local/lib/libblis.a  -lm -lpthread -fopenmp -lrt -o cake_sgemm_test.x
 
 
-# all: cake_compile
+# all: cake_build
 
 # install:
 # 	./install.sh
 
-# cake_compile: $(wildcard *.h) $(wildcard *.c) 
+# cake_build: $(wildcard *.h) $(wildcard *.c) 
 # 	gcc $(CFLAGS) *.c -o cake_sgemm_test.o $(LIBS) -o cake_sgemm_test.x
 
 # clean:
