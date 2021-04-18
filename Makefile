@@ -82,13 +82,13 @@ endif
 # --- General build definitions ------------------------------------------------
 #
 
-TEST_SRC_PATH  := .
+INCLUDE_PATH  := $(CAKE_HOME)/include
 TEST_OBJ_PATH  := .
 
 # Gather all local object files.
-TEST_OBJS      := $(sort $(patsubst $(TEST_SRC_PATH)/%.c, \
+TEST_OBJS      := $(sort $(patsubst $(INCLUDE_PATH)/%.c, \
                                     $(TEST_OBJ_PATH)/%.o, \
-                                    $(wildcard $(TEST_SRC_PATH)/*.c)))
+                                    $(wildcard $(INCLUDE_PATH)/*.c)))
 
 # Override the value of CINCFLAGS so that the value of CFLAGS returned by
 # get-user-cflags-for() is not cluttered up with include paths needed only
@@ -99,14 +99,14 @@ CINCFLAGS      := -I$(INC_PATH)
 CFLAGS_tmp         := $(call get-user-cflags-for,$(CONFIG_NAME))
 
 # Add local header paths to CFLAGS
-CFLAGS_tmp        += -I$(TEST_SRC_PATH)
-CFLAGS 	:= $(filter-out -std=c99, $(CFLAGS_tmp))
+CFLAGS_tmp        += -I$(INCLUDE_PATH)
+CFLAGS 	:= $(filter-out -fopenmp -std=c99, $(CFLAGS_tmp))
 
 # Locate the libblis library to which we will link.
 #LIBBLIS_LINK   := $(LIB_PATH)/$(LIBBLIS_L)
 
-# Binary executable name.
-TEST_BINS      := cake_sgemm_test.x
+# shared library name.
+LIBCAKE      := libcake.so
 
 CAKE_SRC := $(CAKE_HOME)/src
 
@@ -141,15 +141,15 @@ endif
 
 
 cake_compile: $(wildcard *.h) $(wildcard *.c) 
-	g++ $(CFLAGS) $(CAKE_SRC)/cake_sgemm_test.cpp $(CAKE_SRC)/block_sizing.cpp \
+	g++ $(CFLAGS) $(CAKE_SRC)/block_sizing.cpp \
 	$(CAKE_SRC)/cake_sgemm.cpp $(CAKE_SRC)/pack.cpp src/util.cpp $(CAKE_SRC)/unpack.cpp \
-	$(LIBS) $(LDFLAGS) -o $(TEST_BINS)
+	$(LIBS) $(LDFLAGS) -shared -o $(LIBCAKE)
 
 
 # -- Clean rules --
 
 clean:
-	rm -rf *.o *.x
+	rm -rf *.o *.so
 
 
 # .PHONY: all install cake_compile clean
