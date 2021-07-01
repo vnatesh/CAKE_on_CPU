@@ -23,3 +23,6 @@ See [wiki](https://github.com/vnatesh/CAKE_on_CPU/wiki) for usage.
 <img  src="https://github.com/vnatesh/maestro/blob/master/images/cake_diagram.png" width="500">
 </p>
  -->
+
+
+Running Experiments:
