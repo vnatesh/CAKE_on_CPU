@@ -53,6 +53,7 @@ int main(int argc, char* argv[])  {
 
     gettimeofday (&start, NULL);
 
+    srand(time(NULL));
     rand_init(A, m, k);
     rand_init(B, k, n);
 

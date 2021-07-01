@@ -502,8 +502,10 @@ plot_cake_vs_armpl_shape()
 def mem_req_barplot():
 	plt.figure(figsize = (6,4))
 	N = 4
-	cake = (3.4, 3.1, 2.5, 1.2)
-	mkl = (0, 0.5, 0.6, 5.1)
+	# cake = (3.4, 3.1, 2.5, 1.2)
+	# mkl = (0, 0.5, 0.6, 5.1)
+	cake = (3.8, 1.3, 2, 2.1)
+	mkl = (4.2, 0.3, 2.1, 2.2)
 	labels = ['L1', 'L2', 'L3', 'Main Memory']
 	ind = np.arange(N) 
 	width = 0.35       

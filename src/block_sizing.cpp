@@ -99,17 +99,18 @@ int get_block_dim(cake_cntx_t* cake_cntx, int M, int p) {
 	int mn_lcm = lcm(cake_cntx->mr, cake_cntx->nr);
 	// int mn_lcm = m_r;
 
-	// solves for the optimal block size m_c and k_c based on the L3 size
-	// L3_size >= p*mc*kc + 2*(kc*alpha*p*mc + p*mc*alpha*p*mc)     (solve for x = m_c = k_c) 
+	// computes the optimal block size m_c and k_c based on the L3 size
+	// L3_size >= 2*(p*mc*kc + alpha*p*mc*kc) + 2*(p*mc*alpha*p*mc)     (solve for x = m_c = k_c) 
 	// We only use ~ half of the each cache to prevent our working blocks from being evicted
-	mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (sizeof(float)))  
-			/ (max_threads * (1 + 2*cake_cntx->alpha + 2*cake_cntx->alpha*max_threads)));
+	// and to allow for double buffering of partial results in L3
+	mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (2*sizeof(float)))  
+			/ (max_threads * (1 + cake_cntx->alpha + cake_cntx->alpha*max_threads)));
 	mc_L3 -= (mc_L3 % mn_lcm);
 
 	// solves for optimal mc,kc based on L2 size
-	// L2_size >= 2*(mc*kc + kc*nr) + mc*nr     (solve for x = m_c = k_c) 
-	int b = 3*cake_cntx->nr;
-	mc_L2 = (int)  (-b + sqrt(b*b + 4*2*(((double) cake_cntx->L2) / (sizeof(float))))) / (2*2)  ;
+	// L2_size >= 2*(mc*kc + kc*nr) + 2*(mc*nr)     (solve for x = m_c = k_c) 
+	int b = 2*cake_cntx->nr;
+	mc_L2 = (int)  (-b + sqrt(b*b + 4*(((double) cake_cntx->L2) / (2*sizeof(float))))) / 2 ;
 	mc_L2 -= (mc_L2 % mn_lcm);
 
 	int mc = mc_L3 < mc_L2 ? mc_L3 : mc_L2;
