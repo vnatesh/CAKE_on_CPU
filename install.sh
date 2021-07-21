@@ -22,7 +22,7 @@ make distclean
 export BLIS_INSTALL_PATH=/usr/local
 cd ..
 
-# build CAKE pytorch extension 
-cd python
-python3 setup.py install --user
+# # build CAKE pytorch extension 
+# cd python
+# python3 setup.py install --user
 

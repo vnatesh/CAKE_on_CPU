@@ -71,7 +71,6 @@ int main( int argc, char** argv ) {
 	// gettimeofday (&start, NULL);
 	clock_gettime(CLOCK_REALTIME, &start);
 	// for(int i = 0; i < 1; i++) {
-	sleep(1);
 	cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
 	// }
 	// bli_dprintm( "C: ", M, N, C, N, 1, "%4.4f", "" );
