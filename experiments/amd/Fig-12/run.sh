@@ -25,7 +25,7 @@ do
 	for ((i=1; i <= $NCORES; i++));
 	do
 		echo "======= Starting Cake with $i threads =========="
-		AMDuProfCLI collect --event event=pmcx044,umask=0x48,interval=50000 --event event=timer --omp -o reports/report_cake_amd_$i-$j cake_sgemm_test $i;
+		AMDuProfCLI collect --event event=pmcx044,umask=0x48,interval=50000 --event event=timer --omp -o reports/report_cake_amd_$i-$j ./cake_sgemm_test $i;
 		AMDuProfCLI report -i reports/report_cake_amd_$i-$j.caperf -o reports/;
 		mv reports/report_cake_amd_$i-$j/report_cake_amd_$i-$j.csv reports;
 		rm -rf reports/report_cake_amd_$i-$j;
@@ -39,7 +39,7 @@ do
 	for ((i=1; i <= $NCORES; i++));
 	do
 		echo "======= Starting openblas with $i threads =========="
-		AMDuProfCLI collect --event event=pmcx044,umask=0x48,interval=50000 --event event=timer --omp -o reports/report_openblas_amd_$i-$j openblas $i;
+		AMDuProfCLI collect --event event=pmcx044,umask=0x48,interval=50000 --event event=timer --omp -o reports/report_openblas_amd_$i-$j ./openblas $i;
 		AMDuProfCLI report -i reports/report_openblas_amd_$i-$j.caperf -o reports/;
 		mv reports/report_openblas_amd_$i/report_openblas_amd_$i-$j.csv reports;
 		rm -rf reports/report_openblas_amd_$i-$j;
