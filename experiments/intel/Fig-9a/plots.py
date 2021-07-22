@@ -10,7 +10,7 @@ intel_color = '#0071c5'
 
 
 
-def plot_cake_vs_mkl_shape(fname = 'cake_vs_mkl_shape', ntrials=1):
+def plot_cake_vs_mkl_shape(fname = 'cake_vs_mkl_shape'):
 	plt.rcParams.update({'font.size': 12})
 	markers = ['o','v','s','d','^']
 	colors = ['b','g','k','m','r']
@@ -45,4 +45,4 @@ def plot_cake_vs_mkl_shape(fname = 'cake_vs_mkl_shape', ntrials=1):
 
 
 if __name__ == '__main__':
-	plot_cake_vs_mkl_shape(ntrials = sys.argv[1])
+	plot_cake_vs_mkl_shape()

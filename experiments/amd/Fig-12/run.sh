@@ -41,11 +41,11 @@ do
 		echo "======= Starting openblas with $i threads =========="
 		AMDuProfCLI collect --event event=pmcx044,umask=0x48,interval=50000 --event event=timer --omp -o reports/report_openblas_amd_$i-$j ./openblas $i;
 		AMDuProfCLI report -i reports/report_openblas_amd_$i-$j.caperf -o reports/;
-		mv reports/report_openblas_amd_$i/report_openblas_amd_$i-$j.csv reports;
+		mv reports/report_openblas_amd_$i-$j/report_openblas_amd_$i-$j.csv reports;
 		rm -rf reports/report_openblas_amd_$i-$j;
 		rm reports/report_openblas_amd_$i-$j.caperf;
 	done
 done
 
 
-python plots.py $NTRIALS;
+python3 plots.py $NTRIALS;

@@ -78,4 +78,4 @@ def plot_cake_vs_amd_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_amd', ntrials=10):
 
 
 if __name__ == '__main__':
-	plot_cake_vs_amd_cpu(23040,23040,23040,144,144,1,ntrials=sys.argv[1])
+	plot_cake_vs_amd_cpu(23040,23040,23040,144,144,1,ntrials=int(sys.argv[1]))

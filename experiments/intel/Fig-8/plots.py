@@ -6,7 +6,7 @@ import os
 import re
 import sys
 
-def plot_small_mat(x, label="", ntrials=10):
+def plot_small_mat(x, label=""):
     plt_title = f"{label} Relative Throughput for M = {'' if x < 2 else x}N"
     plt.rcParams.update({"font.size": 12})
     plt.rcParams.update({"figure.figsize": (5,5)})
@@ -97,7 +97,7 @@ def plot_small_mat(x, label="", ntrials=10):
     plt.close("all")
 
 
-plot_small_mat(1, label="(a)",ntrials=sys.argv[1])
-plot_small_mat(2, label="(b)",ntrials=sys.argv[1])
-plot_small_mat(4, label="(c)",ntrials=sys.argv[1])
-plot_small_mat(8, label="(d)",ntrials=sys.argv[1])
+plot_small_mat(1, label="(a)")
+plot_small_mat(2, label="(b)")
+plot_small_mat(4, label="(c)")
+plot_small_mat(8, label="(d)")
