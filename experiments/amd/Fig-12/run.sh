@@ -6,6 +6,8 @@ source env.sh;
 cd experiments/amd/Fig-12;
 mkdir reports;
 
+sudo ldconfig $CAKE_HOME;
+
 # compile openblas test
 gcc -fopenmp -o openblas openblas.c \
 -I /opt/OpenBLAS/include -L/opt/OpenBLAS/lib \
