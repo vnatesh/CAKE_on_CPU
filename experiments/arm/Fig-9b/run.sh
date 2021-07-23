@@ -43,7 +43,7 @@ do
 done
 
 
-python plots.py $NTRIALS;
+python3 plots.py;
 
 
 

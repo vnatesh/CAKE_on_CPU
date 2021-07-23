@@ -3,26 +3,26 @@
  
 int main( int argc, char** argv ) {
 
-//	run_tests();
+	//	run_tests();
 	// exit(1);
 
 	// struct timeval start, end;
 	struct timespec start, end;
 	double diff_t;
 
-    if(argc < 2) {
-        printf("Enter number of threads and dim size\n");
-        exit(1);
-    }
+	if(argc < 2) {
+	    printf("Enter number of threads and dim size\n");
+	    exit(1);
+	}
 
 	int M, K, N, p;
 
-	 // M = atoi(argv[1]);
-	 // K = atoi(argv[2]);
-	 // N = atoi(argv[3]);
-	 M = atoi(argv[2]);
-	 K = M;
-	 N = M;
+	// M = atoi(argv[1]);
+	// K = atoi(argv[2]);
+	// N = atoi(argv[3]);
+	M = atoi(argv[2]);
+	K = M;
+	N = M;
 	// M = 3000;
 	// K = 3000;
 	// N = 3000;
@@ -46,8 +46,8 @@ int main( int argc, char** argv ) {
 	// K = 960;
 	// N = 960;
 
-    p = atoi(argv[1]);
-    // p = 10;
+	p = atoi(argv[1]);
+	// p = 10;
 
 	printf("M = %d, K = %d, N = %d\n", M,K,N);
 
@@ -56,13 +56,13 @@ int main( int argc, char** argv ) {
 	float* C = (float*) calloc(M * N , sizeof( float ));
 
 	// initialize A and B
-    srand(time(NULL));
+	srand(time(NULL));
 	rand_init(A, M, K);
 	rand_init(B, K, N);
 	// rand_init(C, M, N);
 
-    // cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-    //         m, n, k, alpha, A, k, B, n, beta, C, n);
+	// cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+	//         m, n, k, alpha, A, k, B, n, beta, C, n);
 
 	cake_cntx_t* cake_cntx = cake_query_cntx();
 
@@ -71,10 +71,10 @@ int main( int argc, char** argv ) {
 	cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
 	// }
 	// bli_dprintm( "C: ", M, N, C, N, 1, "%4.4f", "" );
-    clock_gettime(CLOCK_REALTIME, &end);
-    long seconds = end.tv_sec - start.tv_sec;
-    long nanoseconds = end.tv_nsec - start.tv_nsec;
-    diff_t = seconds + nanoseconds*1e-9;
+	clock_gettime(CLOCK_REALTIME, &end);
+	long seconds = end.tv_sec - start.tv_sec;
+	long nanoseconds = end.tv_nsec - start.tv_nsec;
+	diff_t = seconds + nanoseconds*1e-9;
 	printf("sgemm time: %f \n", diff_t); 
 
 
@@ -86,12 +86,12 @@ int main( int argc, char** argv ) {
 	fclose(fp);
 
 	// cake_sgemm_checker(A, B, C, N, M, K);
-	
+
 	free(A);
 	free(B);
 	free(C);
 
 	return 0;
-}
+	}
 
 
