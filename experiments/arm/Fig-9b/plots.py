@@ -15,7 +15,7 @@ def plot_cake_vs_armpl_shape(fname = 'cake_vs_armpl_shape'):
 	NUM_CPUs = list(range(1,5))
 	#
 	plt.figure(figsize = (6,4))
-	df1 = pandas.read_csv('results_arm_new')
+	df1 = pandas.read_csv('results_sq')
 	for j in range(1000,3001,1000):
 		single_core_armpl = df1[(df1['algo'] == 'armpl') & (df1['size'] == j) & (df1['p'] == 1)]['time'].mean()
 		single_core_cake = df1[(df1['algo'] == 'cake') & (df1['size'] == j) & (df1['p'] == 1)]['time'].mean()
@@ -43,6 +43,7 @@ def plot_cake_vs_armpl_shape(fname = 'cake_vs_armpl_shape'):
 	plt.show()
 	plt.clf()
 	plt.close('all')
+
 
 if __name__ == '__main__':
 	plot_cake_vs_armpl_shape()

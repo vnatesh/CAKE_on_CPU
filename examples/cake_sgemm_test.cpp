@@ -3,8 +3,8 @@
  
 int main( int argc, char** argv ) {
 
-    if(argc < 2) {
-        printf("Enter number of threads and dim size\n");
+    if(argc < 3) {
+        printf("Enter M, K, and N\n");
         exit(1);
     }
 

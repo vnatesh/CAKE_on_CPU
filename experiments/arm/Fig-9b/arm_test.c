@@ -34,7 +34,9 @@ int main(int argc, char* argv[])  {
     int m, n, k, i, j;
     float alpha, beta;
 
-    m = 3000, k = 3000, n = 3000;
+    m = atoi(argv[2]);
+    k = m;
+    n = m;
     alpha = 1.0; beta = 0.0;
 
     A = (float *) malloc(m * k * sizeof(float));
@@ -60,19 +62,17 @@ int main(int argc, char* argv[])  {
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                 m, n, k, alpha, A, k, B, n, beta, C, n);
 
-
     clock_gettime(CLOCK_REALTIME, &end);
     long seconds = end.tv_sec - start.tv_sec;
     long nanoseconds = end.tv_nsec - start.tv_nsec;
     diff_t = seconds + nanoseconds*1e-9;
     printf("sgemm time: %f \n", diff_t); 
 
-
     char fname[50];
     snprintf(fname, sizeof(fname), "results_sq");
     FILE *fp;
     fp = fopen(fname, "a");
-    fprintf(fp, "armpl,%d,%d,%f\n",p,M,diff_t);
+    fprintf(fp, "armpl,%d,%d,%f\n",p,m,diff_t);
     fclose(fp);
 
 

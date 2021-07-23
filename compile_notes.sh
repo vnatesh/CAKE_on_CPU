@@ -80,3 +80,11 @@ make sointel64 examples="spblas/sparse_gemm" sycl_devices=cpu
 vtune --collect memory-access -data-limit=0 \
 -result-dir=/opt/intel/oneapi/mkl/2021.1.1/examples/sycl/prof_result \
 /opt/intel/oneapi/mkl/2021.1.1/examples/sycl/_results/intel64_so_tbb/spblas/sparse_gemm.out 
+
+
+# run perf and socwatch power reports
+perf stat -a -e "power/energy-pkg/","power/energy-ram/" -o \
+power_reports/cake_M$k-K500-N500-$j ./cake_sgemm_test $k 500 500;
+
+/opt/intel/oneapi/vtune/2021.1.1/socwatch/x64/socwatch -t 20 -f ddr-bw -o \
+power_reports/cake_socw_M$k-K$K-N$N-$j -p ./cake_sgemm_test $k $K $N;

@@ -10,26 +10,29 @@ test.o  /opt/arm/armpl_20.3_gcc-7.1/lib/libarmpl_lp64_mp.a \
 mkdir reports_arm;
 
 # compile cake_sgemm_test
-cd CAKE_on_CPU;
 make;
 
-for j in {1..10}
+NTRIALS=10;
+NCORES=4;
+
+# run matmul bench
+for ((j=1; j <= $NTRIALS; j++));
 do
-	for i in {1..4}
+	for ((i=1; i <= $NCORES; i++));
 	do
-		perf stat -e rC0 -o ../reports_arm/report_cake_$i-$j ./cake_sgemm_test $i;
+		perf stat -e rC0 -o reports_arm/report_cake_$i-$j ./cake_sgemm_test $i;
 	done
 done
 
-cd ..;
 
-for j in {1..10}
+
+for ((j=1; j <= $NTRIALS; j++));
 do
-	for i in {1..4}
+	for ((i=1; i <= $NCORES; i++));
 	do
 		perf stat -e rC0 -o reports_arm/report_arm_$i-$j ./arm_test $i;
 	done
 done
 
 
-python3 plots.py; 
+python3 plots.py $NTRIALS; 
