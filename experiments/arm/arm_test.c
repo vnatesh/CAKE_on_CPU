@@ -19,7 +19,7 @@ void rand_init(float* mat, int r, int c);
 
 
 int main(int argc, char* argv[])  {
-    struct timeval start, end;
+    struct timespec start, end;
     double diff_t;
     // printf("max threads %d\n\n", mkl_get_max_threads());
     if(argc < 2) {
@@ -34,7 +34,7 @@ int main(int argc, char* argv[])  {
     int m, n, k, i, j;
     float alpha, beta;
 
-    m = 4000, k = 4000, n = 4000;
+    m = 3000, k = 3000, n = 3000;
     alpha = 1.0; beta = 0.0;
 
     A = (float *) malloc(m * k * sizeof(float));
@@ -51,49 +51,31 @@ int main(int argc, char* argv[])  {
       return 1;
     }
 
-    gettimeofday (&start, NULL);
 
     rand_init(A, m, k);
     rand_init(B, k, n);
 
+    clock_gettime(CLOCK_REALTIME, &start);
 
-    // for (i = 0; i < (m*k); i++) {
-    //     // A[i] = (double)(i+1);
-    //     A[i] = (double)(i);
-    // }
-
-    // for (i = 0; i < (k*n); i++) {
-    //     // B[i] = (double)(-i-1);
-    //     B[i] = (double)(i);
-    // }
-
-    // for (i = 0; i < (m*n); i++) {
-    //     C[i] = 0.0;
-    // }
-
-    gettimeofday (&end, NULL);
-    diff_t = (((end.tv_sec - start.tv_sec)*1000000L
-    +end.tv_usec) - start.tv_usec) / (1000000.0);
-    printf("init time: %f \n", diff_t); 
-
-    gettimeofday (&start, NULL);
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                 m, n, k, alpha, A, k, B, n, beta, C, n);
-    gettimeofday (&end, NULL);
-    diff_t = (((end.tv_sec - start.tv_sec)*1000000L
-    +end.tv_usec) - start.tv_usec) / (1000000.0);
-    printf("GEMM time: %f \n", diff_t); 
 
 
-    printf ("\n Computations completed.\n\n");
+    clock_gettime(CLOCK_REALTIME, &end);
+    long seconds = end.tv_sec - start.tv_sec;
+    long nanoseconds = end.tv_nsec - start.tv_nsec;
+    diff_t = seconds + nanoseconds*1e-9;
+    printf("sgemm time: %f \n", diff_t); 
 
 
-//	for(int i = 0; i < m*n; i++) {
-//		printf("%f ", C[i]);
-//	}
+    char fname[50];
+    snprintf(fname, sizeof(fname), "results_sq");
+    FILE *fp;
+    fp = fopen(fname, "a");
+    fprintf(fp, "armpl,%d,%d,%f\n",p,M,diff_t);
+    fclose(fp);
 
 
-    printf ("\n Deallocating memory \n\n");
     free(A);
     free(B);
     free(C);
