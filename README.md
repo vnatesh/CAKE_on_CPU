@@ -25,7 +25,7 @@ In the `examples` directory, you will find a simple script `cake_sgemm_test.cpp`
 g++ -I/home/vnatesh/CAKE_on_CPU/include -I/usr/local/include/blis cake_sgemm_test.cpp -L/home/vnatesh/CAKE_on_CPU -lcake -o cake_sgemm_test
 
 ~/CAKE_on_CPU/examples$ ./cake_sgemm_test 3 3 3
-M = 5, K = 5, N = 5
+M = 3, K = 3, N = 3
 0.546852	0.546852
 -0.430778	-0.430778
 -0.633527	-0.633527
@@ -50,7 +50,7 @@ Before running experiments, make sure the following additional dependencies are 
 * `ARMPL 21.0.0` 
 * `OpenBLAS 0.3.14.dev` 
 
-The experiments are organized in separate directories for each CPU architecture tested (Intel, AMD, ARM). Each arch-specific directory contains sub-directories corresponding to figures in the CAKE paper. To run an experiment and plot the associated figure, simply enter the directory and execute the `run.sh` file. An example to generate Figure 10 for the Intel CPU tested is shown below. Experiments should be performed in `sudo` mode to enable permissions for hardware profiling.
+The experiments are organized in separate directories for each CPU architecture tested (Intel, AMD, ARM). Each arch-specific directory contains sub-directories corresponding to figures in the CAKE paper (<http://www.eecs.harvard.edu/~htk/publication/2021-sc-kung-natesh-sabot.pdf>). To run an experiment and plot the associated figure, simply enter the directory and execute the `run.sh` file. An example to generate Figure 10 for the Intel CPU tested is shown below. Experiments should be performed in `sudo` mode to enable permissions for hardware profiling.
 
 ```bash
 ~/CAKE_on_CPU$ sudo -s
