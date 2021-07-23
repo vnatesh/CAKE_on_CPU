@@ -1,12 +1,13 @@
 #!/bin/bash
 
 # Run matmul bench on raspberry pi 3b for 1..4 cores through linux perf
-cd ~;
-mkdir reports_arm;
-
 
 # compile arm_test with ARMPL
-./arm_test.sh;
+gcc -I/opt/arm/armpl_20.3_gcc-7.1/include -fopenmp  arm_test.c -o \
+test.o  /opt/arm/armpl_20.3_gcc-7.1/lib/libarmpl_lp64_mp.a \
+-L{ARMPL_DIR}/lib -lm -o arm_test;
+
+mkdir reports_arm;
 
 # compile cake_sgemm_test
 cd CAKE_on_CPU;
@@ -16,7 +17,7 @@ for j in {1..10}
 do
 	for i in {1..4}
 	do
-		perf stat -e rC0 -o ../reports_arm/report_cake_$i-$j ./cake_dgemm_test.x $i;
+		perf stat -e rC0 -o ../reports_arm/report_cake_$i-$j ./cake_sgemm_test $i;
 	done
 done
 
@@ -30,6 +31,5 @@ do
 	done
 done
 
-# python python/plots.py
-# scp -r plots vikas@10.0.0.185:/Users/vikas/Documents/cake_pytorch/test/;
-scp -r reports_arm vikas@10.0.0.185:/Users/vikas/test/;
+
+python3 plots.py; 
