@@ -43,9 +43,9 @@ CORRECT!
 Before running experiments, make sure the following additional dependencies are installed:
 
 * `Intel`
- ⋅⋅* `Vtune 2021.1.1` 
- ⋅⋅* `OpenMP 4.5` 
- ⋅⋅* `Linux perf 5.4.86` 
+	* `Vtune 2021.1.1` 
+	* `OpenMP 4.5` 
+	* `Linux perf 5.4.86` 
 
 * `AMD` 
  ⋅⋅* `OpenMP 4.5` 
