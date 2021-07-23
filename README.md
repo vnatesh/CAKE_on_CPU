@@ -43,19 +43,19 @@ CORRECT!
 Before running experiments, make sure the following additional dependencies are installed:
 
 * `Intel`
-⋅⋅* `Vtune 2021.1.1` 
-⋅⋅* `OpenMP 4.5` 
-⋅⋅* `Linux perf 5.4.86` 
+ ⋅⋅* `Vtune 2021.1.1` 
+ ⋅⋅* `OpenMP 4.5` 
+ ⋅⋅* `Linux perf 5.4.86` 
 
 * `AMD` 
-⋅⋅* `OpenMP 4.5` 
-⋅⋅* `AMD uProf 3.4.468` 
-⋅⋅* `OpenBLAS 0.3.14.dev` 
+ ⋅⋅* `OpenMP 4.5` 
+ ⋅⋅* `AMD uProf 3.4.468` 
+ ⋅⋅* `OpenBLAS 0.3.14.dev` 
 
 * `ARM` 
-⋅⋅* `ARMPL 21.0.0` 
-⋅⋅* `OpenMP 4.5` 
-⋅⋅* `Linux perf 5.4.86` 
+ ⋅⋅* `ARMPL 21.0.0` 
+ ⋅⋅* `OpenMP 4.5` 
+ ⋅⋅* `Linux perf 5.4.86` 
 
 The experiments are organized in separate directories for each CPU architecture tested (Intel, AMD, ARM). Each arch-specific directory contains sub-directories corresponding to figures in the CAKE paper (<http://www.eecs.harvard.edu/~htk/publication/2021-sc-kung-natesh-sabot.pdf>). To run an experiment and plot the associated figure, simply enter the directory and execute the `run.sh` file. An example to generate Figure 10 for the Intel CPU tested is shown below. Experiments should be performed in `sudo` mode to enable permissions for hardware profiling.
 
