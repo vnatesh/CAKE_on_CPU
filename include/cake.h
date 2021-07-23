@@ -7,7 +7,7 @@
 
 #define DEBUG 0
 #define ARR_PRINT 0
-#define CHECK_PRINT 0
+#define CHECK_PRINT 1
 
 
 typedef struct cake_cntx_t{
