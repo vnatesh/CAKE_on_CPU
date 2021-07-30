@@ -1,0 +1,36 @@
+Hierarchy Level,Metric Name,Metric Value
+0,Elapsed Time,31.199309
+1,CPU Time,201.166563
+1,Memory Bound,4.0
+2,L1 Bound,0.3
+2,L2 Bound,0.6
+2,L3 Bound,0.2
+2,DRAM Bound,2.8
+3,DRAM Bandwidth Bound,14.1
+2,Store Bound,0.1
+1,Loads,1150836924072
+1,Stores,21097832916
+1,LLC Miss Count,18001260
+1,Average Latency (cycles),7.518633
+1,Total Thread Count,8
+1,Paused Time,0.0
+0,Bandwidth Utilization,
+0,Bandwidth Domain,Platform Maximum,Observed Maximum,Average,% of Elapsed Time with High BW Utilization(%)
+0,"DRAM, GB/sec",41.000000,32.400000,22.012346,14.1
+0,Collection and Platform Info,
+1,Application Command Line,/tmp/CAKE_on_CPU/experiments/intel/Fig-10/mkl_sgemm_test "8" 
+1,User Name,root
+1,Operating System,5.8.0-59-generic DISTRIB_ID=Ubuntu DISTRIB_RELEASE=20.04 DISTRIB_CODENAME=focal DISTRIB_DESCRIPTION="Ubuntu 20.04.2 LTS"
+1,Computer Name,alienware
+1,Result Size,830035053
+1,Collection start time,17:26:00 23/07/2021 UTC
+1,Collection stop time,17:26:31 23/07/2021 UTC
+1,Collector Type,Event-based sampling driver
+1,CPU,
+2,Name,Intel(R) microarchitecture code named Cometlake H/S
+2,Frequency,3695998417
+2,Logical CPU Count,20
+2,Max DRAM Single-Package Bandwidth,41000000000.000000
+2,Cache Allocation Technology,
+3,Level 2 capability,not detected
+3,Level 3 capability,not detected
