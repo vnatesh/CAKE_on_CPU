@@ -9,9 +9,15 @@ git clone https://github.com/flame/blis.git
 cd blis
 
 # configire BLIS with openmp
-# using haswell for now, change to select system correctly later
-./configure --enable-threading=openmp haswell
-# for AMD zen2/3 CPUs, configure with  
+if [[ $(dpkg --print-architecture) = arm64 ]] 
+then
+	# use auto for ARM
+	./configure --enable-threading=openmp auto
+else
+	# for AMD zen2/3 CPUs, configure with haswell
+	./configure --enable-threading=openmp haswell
+fi
+
 # ./configure --enable-threading=openmp haswell
 make -j4
 make check

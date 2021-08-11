@@ -8,6 +8,10 @@ import sys
 
 
 
+def cake_cpu_DRAM_accesses(m,n,k,mc,kc,alpha,p):
+	return (((float(m*n*k)/(alpha*p*mc) + float(m*n*k)/(p*mc) + m*n) + 3*(m*n + m*k + k*n)) / float(10**9))*4	
+
+
 def plot_cake_vs_armpl_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_armpl', ntrials=10):
 	plt.rcParams.update({'font.size': 12})
 	markers = ['o','v','s','d','^']

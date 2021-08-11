@@ -9,6 +9,7 @@ cd CAKE_on_CPU
 make install
 source env.sh
 make build
+sudo ldconfig $CAKE_HOME
 ```
 
 Installation automatically downloads and installs the following tool/dependency verions:
