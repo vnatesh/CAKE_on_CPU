@@ -12,7 +12,8 @@ cd blis
 if [[ $(dpkg --print-architecture) = arm64 ]] 
 then
 	# use auto for ARM
-	./configure --enable-threading=openmp auto
+	# ./configure --enable-threading=openmp auto
+	./configure --enable-threading=openmp armv8a
 else
 	# for AMD zen2/3 CPUs, configure with haswell
 	./configure --enable-threading=openmp haswell

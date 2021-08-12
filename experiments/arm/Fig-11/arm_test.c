@@ -28,7 +28,8 @@ int main(int argc, char* argv[])  {
     }
 
     // mkl_set_num_threads(atoi(argv[1]));
-    omp_set_num_threads(atoi(argv[1]));
+    int p = atoi(argv[1]);
+    omp_set_num_threads(p);
 
     float *A, *B, *C;
     int m, n, k, i, j;
@@ -72,7 +73,7 @@ int main(int argc, char* argv[])  {
     snprintf(fname, sizeof(fname), "results_sq");
     FILE *fp;
     fp = fopen(fname, "a");
-    fprintf(fp, "armpl,%d,%d,%f\n",p,M,diff_t);
+    fprintf(fp, "armpl,%d,%d,%f\n",p,m,diff_t);
     fclose(fp);
 
 
