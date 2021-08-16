@@ -1,6 +1,44 @@
 #include "cake.h"
 
 
+void matmul_OB(float** A_p, float* B_p, float** C_p, 
+				int M, int N, int K, 
+				int m_c, int k_c, int n_c,
+				int m1, int k1, int n1, 
+				int m_cx, int n_c1, int k_c1, 
+				int p, int p_l, int p_use, int core, cake_cntx_t* cake_cntx);
+
+
+
+void matmul_OB(float** A_p, float* B_p, float** C_p, 
+				int M, int N, int K, 
+				int m_c, int k_c, int n_c,
+				int m1, int k1, int n1, 
+				int m_cx, int n_c1, int k_c1, 
+				int p, int p_l, int p_use, int core, cake_cntx_t* cake_cntx) {
+
+	int rsc, csc, n_reg, m_reg;
+	int m_r = cake_cntx->mr;
+	int n_r = cake_cntx->nr;
+	int k_pad = (K % k_c) ? 1 : 0; 
+	float alpha = 1.0;
+	float beta  = 1.0;
+	rsc = n_r; csc = 1;
+					// printf("HEYY man\n");
+
+	for(n_reg = 0; n_reg < (n_c1 / n_r); n_reg++) {
+		for(m_reg = 0; m_reg < (m_cx / m_r); m_reg++) {												
+			bli_sgemm_ukernel(k_c1, &alpha, 
+	   		&A_p[m1*p*(K/k_c + k_pad) + k1*p_use + core ][m_reg*m_r*k_c1], 
+	   		&B_p[n1*K*n_c + k1*k_c*n_c1 + n_reg*k_c1*n_r], &beta, 
+	   		&C_p[core + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
+	   		rsc, csc, NULL, cake_cntx->blis_cntx);
+		}
+	}
+}
+				
+
+
 void cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_cntx_t* cake_cntx) {
 	// contiguous row-storage (i.e. cs_c = 1) or contiguous column-storage (i.e. rs_c = 1). 
 	// This preference comes from how the microkernel is most efficiently able to load/store 
@@ -8,14 +46,14 @@ void cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_c
 	// contiguous columns (or column segments) of C11
 	int m_c, k_c, n_c, m_r, n_r;	
 	double alpha_n;
-	float alpha, beta;
+	// float alpha, beta;
 	struct timeval start, end;
 	double diff_t;
 	float** A_p; 
 	float** C_p;
 	float* B_p;
-	inc_t rsc, csc;
-	cntx_t* blis_cntx;
+	// inc_t rsc, csc;
+	// cntx_t* blis_cntx;
 	// inc_t rsa, csa;
 	// inc_t rsb, csb;
 
@@ -28,7 +66,7 @@ void cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_c
 	m_r = cake_cntx->mr;
 	n_r = cake_cntx->nr;
 	alpha_n = cake_cntx->alpha;
-    blis_cntx = cake_cntx->blis_cntx;		
+    // blis_cntx = cake_cntx->blis_cntx;		
 
     if(DEBUG) printf("M = %d, N = %d, K = %d\n", M, N, K);
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", m_r, n_r);
@@ -41,7 +79,7 @@ void cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_c
 	if(DEBUG) printf("cntx time: %f \n", diff_t); 
 
 
-   //m_c = 48;
+   //m_c = 144;
     k_c = m_c;
     // m_c = 12;
     // k_c = 6;
@@ -108,10 +146,10 @@ void cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_c
 	if(DEBUG) printf("C pack time: %f \n", diff_t); 
 
 	// Set the scalars to use.
-	alpha = 1.0;
-	beta  = 1.0;
+	// alpha = 1.0;
+	// beta  = 1.0;
     // rsc = 1; csc = m_r;
-    rsc = n_r; csc = 1;
+    // rsc = n_r; csc = 1;
     // rsa = 1; csa = m_r;
     // rsb = n_r; csb = 1;
 
@@ -121,7 +159,8 @@ void cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_c
 	//rsb = 1; csb = k;
 
 	gettimeofday (&start, NULL);
-	int n_reg, m_reg, m, k1, m1, n1;
+	// int n_reg, m_reg, m, k1, m1, n1;
+	int m, k1, m1, n1;
 
 	int m_c1 = mr_per_core * m_r;
 	int m_c1_last_core = (mr_per_core - (p_l*mr_per_core - mr_rem)) * m_r;
@@ -129,6 +168,8 @@ void cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_c
 	int k1_n = K / k_c;
 	int k_c1 = K % k_c;
 
+
+	printf("p = %d\n", p);
 
 	// void (*blis_kernel)(dim_t, float*, float*, float*, 
 	// 					float*, float*, inc_t, inc_t, 
@@ -139,32 +180,22 @@ void cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_c
 	for(n1 = 0; n1 < (N / n_c); n1++) {
 		for(m1 = 0; m1 < (M / (p*m_c)); m1++) {
 			// pragma omp here (i_c loop)
-			#pragma omp parallel for private(n_reg,m_reg,m,k1)
+			#pragma omp parallel for private(m,k1)
 			for(m = 0; m < p; m++) {
 				for(k1 = 0; k1 < (K / k_c); k1++) {
+					// printf("k1 = %d\n", k1);
 					// pragma omp also here possible (j_r loop)
-					for(n_reg = 0; n_reg < (n_c / n_r); n_reg++) {
-						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {												
-							bli_sgemm_ukernel(k_c, &alpha, 
-					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p + m ][m_reg*m_r*k_c], 
-					   		&B_p[n1*K*n_c + k1*k_c*n_c + n_reg*k_c*n_r], &beta, 
-					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, blis_cntx);
-						}
-					}
+					matmul_OB(A_p, B_p, C_p, M, N, K, m_c, k_c, n_c,
+							m1, k1, n1, m_c, n_c, k_c, 
+							p, p_l, p, m, cake_cntx);
 				}
 
 				if(k_c1) {
+
 					int k1_n = K / k_c;
-					for(n_reg = 0; n_reg < (n_c / n_r); n_reg++) {
-						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {
-							bli_sgemm_ukernel( k_c1, &alpha, 
-					   		&A_p[m1*p*(K/k_c + k_pad) + k1_n*p + m ][m_reg*m_r*k_c1], 
-					   		&B_p[n1*K*n_c + k1_n*k_c*n_c + n_reg*k_c1*n_r], &beta, 
-					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, blis_cntx);
-						}
-					}
+					matmul_OB(A_p, B_p, C_p, M, N, K, m_c, k_c, n_c,
+							m1, k1_n, n1, m_c, n_c, k_c1, 
+							p, p_l, p, m, cake_cntx);
 				}
 			}
 		}
@@ -174,34 +205,22 @@ void cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_c
 
 			m1 = (M / (p*m_c));
 
-			#pragma omp parallel for private(n_reg,m_reg,m,k1)
+			#pragma omp parallel for private(m,k1)
 			for(m = 0; m < p_l; m++) {
 
 				int m_cx = (m == (p_l - 1) ? m_c1_last_core : m_c1);
 
 				for(k1 = 0; k1 < (K / k_c); k1++) {
-					for(n_reg = 0; n_reg < (n_c / n_r); n_reg++) {
-						for(m_reg = 0; m_reg < (m_cx / m_r); m_reg++) {		
-							bli_sgemm_ukernel(k_c, &alpha, 
-					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p_l + m ][m_reg*m_r*k_c], 
-					   		&B_p[n1*K*n_c + k1*k_c*n_c + n_reg*k_c*n_r], &beta, 
-					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, blis_cntx);
-						}
-					}
+					matmul_OB(A_p, B_p, C_p, M, N, K, m_c, k_c, n_c,
+							m1, k1, n1, m_cx, n_c, k_c, 
+							p, p_l, p_l, m, cake_cntx);
+	
 				}
 
 				if(k_c1) {
-				
-					for(n_reg = 0; n_reg < (n_c / n_r); n_reg++) {
-						for(m_reg = 0; m_reg < (m_cx / m_r); m_reg++) {
-							bli_sgemm_ukernel( k_c1, &alpha, 
-					   		&A_p[m1*p*(K/k_c + k_pad) + k1_n*p_l + m ][m_reg*m_r*k_c1], 
-					   		&B_p[n1*K*n_c + k1_n*k_c*n_c + n_reg*k_c1*n_r], &beta, 
-					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, blis_cntx);
-						}
-					}
+					matmul_OB(A_p, B_p, C_p, M, N, K, m_c, k_c, n_c,
+							m1, k1_n, n1, m_cx, n_c, k_c1, 
+							p, p_l, p_l, m, cake_cntx);
 				}
 			}
 		}
@@ -214,32 +233,21 @@ void cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_c
 	if(n_c1) {	
 		for(m1 = 0; m1 < (M / (p*m_c)); m1++) {
 			// pragma omp here (i_c loop)
-			#pragma omp parallel for private(n_reg,m_reg,m,k1)
+			#pragma omp parallel for private(m,k1)
 			for(m = 0; m < p; m++) {
 				for(k1 = 0; k1 < (K / k_c); k1++) {
 					// pragma omp also here possible (j_r loop)
 					// #pragma omp parallel num_threads(p)
-					for(n_reg = 0; n_reg < (n_c1 / n_r); n_reg++) {
-						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {
-							bli_sgemm_ukernel(k_c, &alpha, 
-					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p + m ][m_reg*m_r*k_c], 
-					   		&B_p[n1*K*n_c + k1*k_c*n_c1 + n_reg*k_c*n_r], &beta, 
-					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, blis_cntx);
-						}
-					}
+					matmul_OB(A_p, B_p, C_p, M, N, K, m_c, k_c, n_c,
+							m1, k1, n1, m_c, n_c1, k_c, 
+							p, p_l, p, m, cake_cntx);
+
 				}
 
 				if(k_c1) {
-					for(n_reg = 0; n_reg < (n_c1 / n_r); n_reg++) {
-						for(m_reg = 0; m_reg < (m_c / m_r); m_reg++) {
-							bli_sgemm_ukernel( k_c1, &alpha, 
-					   		&A_p[m1*p*(K/k_c + k_pad) + k1_n*p + m ][m_reg*m_r*k_c1], 
-					   		&B_p[n1*K*n_c + k1_n*k_c*n_c1 + n_reg*k_c1*n_r], &beta, 
-					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_c*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, blis_cntx);
-						}
-					}
+					matmul_OB(A_p, B_p, C_p, M, N, K, m_c, k_c, n_c,
+							m1, k1_n, n1, m_c, n_c1, k_c1, 
+							p, p_l, p, m, cake_cntx);
 				}
 			}
 		}
@@ -249,39 +257,28 @@ void cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_c
 
 			m1 = (M / (p*m_c));
 
-			#pragma omp parallel for private(n_reg,m_reg,m,k1)
+			#pragma omp parallel for private(m,k1)
 			for(m = 0; m < p_l; m++) {
 
 				int m_cx = (m == (p_l - 1) ? m_c1_last_core : m_c1);
 
 				for(k1 = 0; k1 < (K / k_c); k1++) {
-					for(n_reg = 0; n_reg < (n_c1 / n_r); n_reg++) {
-						for(m_reg = 0; m_reg < (m_cx / m_r); m_reg++) {						
-							bli_sgemm_ukernel(k_c, &alpha, 
-					   		&A_p[m1*p*(K/k_c + k_pad) + k1*p_l + m ][m_reg*m_r*k_c], 
-					   		&B_p[n1*K*n_c + k1*k_c*n_c1 + n_reg*k_c*n_r], &beta, 
-					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, blis_cntx);
-						}
-					}
+					matmul_OB(A_p, B_p, C_p, M, N, K, m_c, k_c, n_c,
+							m1, k1, n1, m_cx, n_c1, k_c, 
+							p, p_l, p_l, m, cake_cntx);
+
 				}
 				
 				if(k_c1) {
-				
-					for(n_reg = 0; n_reg < (n_c1 / n_r); n_reg++) {
-						for(m_reg = 0; m_reg < (m_cx / m_r); m_reg++) {
-							bli_sgemm_ukernel( k_c1, &alpha, 
-					   		&A_p[m1*p*(K/k_c + k_pad) + k1_n*p_l + m ][m_reg*m_r*k_c1], 
-					   		&B_p[n1*K*n_c + k1_n*k_c*n_c1 + n_reg*k_c1*n_r], &beta, 
-					   		&C_p[m + m1*p + n1*((M / (p*m_c))*p + p_l)][n_reg*m_cx*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, blis_cntx);
-						}
-					}
+					matmul_OB(A_p, B_p, C_p, M, N, K, m_c, k_c, n_c,
+							m1, k1_n, n1, m_cx, n_c1, k_c1, 
+							p, p_l, p_l, m, cake_cntx);
 				}
 			}
 		}
 	}
 	
+	printf("MANN\n");
 
 	gettimeofday (&end, NULL);
 	diff_t = (((end.tv_sec - start.tv_sec)*1000000L

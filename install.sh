@@ -13,9 +13,9 @@ if [[ $(dpkg --print-architecture) = arm64 ]]
 then
 	# use auto for ARM
 	# ./configure --enable-threading=openmp auto
-	./configure --enable-threading=openmp armv8a
+	./configure --enable-threading=openmp cortexa53
 else
-	# for AMD zen2/3 CPUs, configure with haswell
+	# for intel and AMD zen2/3 CPUs, configure with haswell
 	./configure --enable-threading=openmp haswell
 fi
 
