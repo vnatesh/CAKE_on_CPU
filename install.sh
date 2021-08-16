@@ -7,6 +7,7 @@
 # Download BLIS kernels
 git clone https://github.com/flame/blis.git
 cd blis
+git reset --hard fab5c86
 
 # configire BLIS with openmp
 if [[ $(dpkg --print-architecture) = arm64 ]] 
