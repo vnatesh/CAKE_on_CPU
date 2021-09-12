@@ -1,125 +1,82 @@
 #include "cake.h"
 
 
-void pack_A(float* A, float** A_p, int M, int K, int m_c, int k_c, int m_r, int p) {
+void pack_A(float* A, float* A_p, int M, int K, int m_c, int k_c, int m_r, int p) {
 
-	int ind1 = 0;
-	int m1, k1, m2, p_l;
-	int k_c1 = (K % k_c);
-	int mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
-	int mr_per_core = (int) ceil( ((double) mr_rem) / p );
-	int m_c1 = mr_per_core * m_r;
+   int k_pad = (K % k_c) ? 1 : 0; 
+   int m_pad = (M % (p*m_c)) ? 1 : 0; 
+   int Mb = (M / (p*m_c)) + m_pad;
+   int Kb = (K / k_c) + k_pad;
 
-	if(mr_per_core) 
-		p_l = (int) ceil( ((double) mr_rem) / mr_per_core);
-	else
-		p_l = 0;
+   int mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
+   int mr_per_core = (int) ceil( ((double) mr_rem) / p );
+   int p_l;
 
-	int m_c1_last_core = (mr_per_core - (p_l*mr_per_core - mr_rem)) * m_r;
+   if(mr_per_core) 
+      p_l = (int) ceil( ((double) mr_rem) / mr_per_core);
+   else
+      p_l = 0;
 
-	// main portion of A that evenly fits into CBS blocks each with p m_cxk_c OBs
-	for(m1 = 0; m1 < (M - (M % (p*m_c))); m1 += p*m_c) {
-		for(k1 = 0; k1 < (K - (K%k_c)); k1 += k_c) {
+   int m_c1 = mr_per_core * m_r;
+   int m_c1_last_core = (mr_per_core - (p_l*mr_per_core - mr_rem)) * m_r;
+   int k_c1 = K % k_c;
 
-			#pragma omp parallel for private(m2)
-			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
-				// printf("hey %d\n", ind1 + m2/m_c);
-				if(posix_memalign((void**) &A_p[ind1 + m2/m_c], 64, m_c * k_c * sizeof(float))) {
-					printf("posix memalign error\n");
-					exit(1);
-				}
+   int m, k, A_offset = 0, A_p_offset = 0;
+   int m_cb, k_c_t, p_used, core;
 
-				pack_ob_A(A, A_p[ind1 + m2/m_c], M, K, m1, k1, m2, m_c, k_c, m_r, 0);
 
-				if(ARR_PRINT) print_array(A_p[ind1 + m2/m_c], k_c * m_c);
-			}
+   for(m = 0; m < Mb; m++) {
 
-			ind1 += p;
-		}
-		// right-most column of CBS blocks each with p m_c x k_c1 OBs
-		if(k_c1) {
-			k1 = K - (K%k_c);
-			#pragma omp parallel for private(m2)
-			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
+      if((m == Mb - 1) && m_pad) {
+         p_used = p_l;
+         m_cb = m_r*mr_rem ; //M % (p*m_c);
+      } else {
+         p_used = p;
+         m_cb = p_used*m_c;
+      }
 
-				if(posix_memalign((void**) &A_p[ind1 + m2/m_c], 64, k_c1 * m_c * sizeof(float))) {
-					printf("posix memalign error\n");
-					exit(1);
-				}
+      for(k = 0; k < Kb; k++) {
+         
+         k_c_t = k_c; 
+         if((k == Kb - 1) && k_pad) {
+            k_c_t = k_c1;
+         }
 
-				pack_ob_A(A, A_p[ind1 + m2/m_c], M, K, m1, k1, m2, m_c, k_c1, m_r, 0);
-				if(ARR_PRINT) print_array(A_p[ind1 + m2/m_c], k_c1 * m_c);
-			}
-			ind1 += p;
-		}
-	}
+         A_offset = m*p*m_c*K + k*k_c;
 
-	// Process bottom-most rows of CBS blocks and perform M-dim padding
-	if(M % (p*m_c)) {	
+         #pragma omp parallel for private(core)
+         for(core = 0; core < p_used; core++) {
 
-		m1 = (M - (M % (p*m_c)));
+            int m_c_t, m_c_x;
+            bool pad;
 
-		for(k1 = 0; k1 < (K - (K%k_c)); k1 += k_c) {
-			#pragma omp parallel for private(m2)
-			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
-				
-				if(posix_memalign((void**) &A_p[ind1 + m2/m_c1], 64, k_c * m_c1 * sizeof(float))) {
-					printf("posix memalign error\n");
-					exit(1);
-				}
+            if((m == Mb - 1) && m_pad) {
+               m_c_t = (core == (p_l - 1) ? m_c1_last_core : m_c1);
+               m_c_x = m_c1;
+               pad = (core == (p_l - 1) ? 1 : 0);
+            } else {
+               m_c_t = m_c;
+               m_c_x = m_c;
+               pad = 0;
+            }
 
-				pack_ob_A(A, A_p[ind1 + m2/m_c1], M, K, m1, k1, m2, m_c1, k_c, m_r, 0);
-				if(ARR_PRINT) print_array(A_p[ind1 + m2/m_c1], k_c * m_c1);
-				// ind1++;
-			}
-			ind1 += (p_l-1);
+            // pack_ob_A(A, A_p[A_p_offset + core*m_c_x*k_c_t], M, K, m1, k1, m2, m_c, k_c, m_r, pad);
+            pack_ob_A(&A[A_offset + core*m_c_x*K], &A_p[A_p_offset + core*m_c_x*k_c_t], 
+               M, K, m*p*m_c, core*m_c_x, m_c_t, k_c_t, m_r, pad);
 
-			// final row of CBS blocks each with m_c1_last_core x k_c
-			m2 = (p_l-1) * m_c1;
-			if(posix_memalign((void**) &A_p[ind1], 64, k_c * m_c1_last_core * sizeof(float))) {
-				printf("posix memalign error\n");
-				exit(1);
-			}
+            // for(int i = 0; i < m_c_t; i++) {
+            //    for(int j = 0; j < k_c_t; j++) {
+            //       A_p[A_p_offset + core*m_c_x*k_c_t + i*k_c_t + j] = 
+            //       A[m*p*m_c*K + k*k_c + core*m_c_x*K + i*K + j];
+            //    }
+            // }
+         }
 
-			pack_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1_last_core, k_c, m_r, 1);
-			if(ARR_PRINT) print_array(A_p[ind1], k_c * m_c1_last_core);
-			ind1++;
-		}
-
-		// Final CBS block (with p_l-1 m_c1 x k_c1 OBs and 1 m_c1_last_core x k_c1 OB) 
-		// present in the lower right hand corner of A 
-		if(k_c1) {
-
-			k1 = K - (K%k_c);
-			#pragma omp parallel for private(m2)
-			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
-
-				if(posix_memalign((void**) &A_p[ind1 + m2/m_c1], 64, k_c1 * m_c1 * sizeof(float))) {
-					printf("posix memalign error\n");
-					exit(1);
-				}
-
-				pack_ob_A(A, A_p[ind1 + m2/m_c1], M, K, m1, k1, m2, m_c1, k_c1, m_r, 0);
-				if(ARR_PRINT) print_array(A_p[ind1 + m2/m_c1], k_c1 * m_c1);
-				// ind1++;
-			}
-			ind1 += (p_l-1);
-
-			// last OB of A has shape m_c1_last_core x k_c1 
-			m2 = (p_l-1) * m_c1;
-			
-			if(posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c1_last_core * sizeof(float))) {
-				printf("posix memalign error\n");
-				exit(1);
-			}
-
-			pack_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1_last_core, k_c1, m_r, 1);
-			if(ARR_PRINT) print_array(A_p[ind1], k_c1 * m_c1_last_core);
-			ind1++;
-		}
-	}
+         A_p_offset += m_cb*k_c_t;
+      }
+   }
 }
- 
+
 
 
 void pack_B(float* B, float* B_p, int K, int N, int k_c, int n_c, int n_r, int alpha_n, int m_c) {
@@ -344,39 +301,41 @@ void pack_C(float* C, float** C_p, int M, int N, int m_c, int n_c, int m_r, int 
 
 
 
-// initialize an operation block of matrix A
-void pack_ob_A(float* A, float* A_p, int M, int K, int m1, int k1, int m2, int m_c, int k_c, int m_r, bool pad) {
+// // initialize an operation block of matrix A
 
-	int	ind2 = 0;
-	
-	if(pad) {
-		for(int m3 = 0; m3 < m_c; m3 += m_r) {
-			for(int i = 0; i < k_c; i++) {
-				for(int j = 0; j < m_r; j++) {
+void pack_ob_A(float* A, float* A_p, int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad) {
 
-					if((m1 + m2 + m3 + j) >=  M) {
-						A_p[ind2] = 0.0;
-					} else {
-						A_p[ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
-					}
+   int ind2 = 0;
 
-					ind2++;
-				}
-			}
-		}		
-	} 
+   if(pad) {
+      for(int m3 = 0; m3 < m_c; m3 += m_r) {
+         for(int i = 0; i < k_c; i++) {
+            for(int j = 0; j < m_r; j++) {
 
-	else {
-		for(int m3 = 0; m3 < m_c; m3 += m_r) {
-			for(int i = 0; i < k_c; i++) {
-				for(int j = 0; j < m_r; j++) {
-					A_p[ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
-					ind2++;
-				}
-			}
-		}
-	}
+               if((m1 + m2 + m3 + j) >=  M) {
+                  A_p[ind2] = 0.0;
+               } else {
+                  A_p[ind2] = A[m3*K + i + j*K];
+               }
+
+               ind2++;
+            }
+         }
+      }     
+   } 
+
+   else {
+      for(int m3 = 0; m3 < m_c; m3 += m_r) {
+         for(int i = 0; i < k_c; i++) {
+            for(int j = 0; j < m_r; j++) {
+               A_p[ind2] = A[m3*K + i + j*K];
+               ind2++;
+            }
+         }
+      }     
+   }
 }
+
 
 
 void pack_ob_C(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
@@ -391,7 +350,7 @@ void pack_ob_C(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
 				for(int i = 0; i < m_r; i++) {
 					for(int j = 0; j < n_r; j++) {
 						if((n1 + n2 + j) >= N  ||  (m1 + m2 + m3 + i) >=  M) {
-							C_p[ind2] = 0.0;
+							C_p[ind2] = 0.0; // padding
 						} else {
 							C_p[ind2] = C[n1 + m1*N + m2*N + n2 + m3*N + i*N + j];
 						}
