@@ -1,7 +1,144 @@
 #include "cake.h"
 
 
-void pack_A(float* A, float* A_p, int M, int K, int m_c, int k_c, int m_r, int p) {
+// pack each operation block (OB) of matrix A into a cache-aligned buffer
+double pack_A(float* A, float** A_p, int M, int K, int m_c, int k_c, int m_r, int p) {
+	struct timespec start, end;
+	double diff_t;
+	clock_gettime(CLOCK_REALTIME, &start);
+
+	int ind1 = 0;
+	int m1, k1, m2, p_l;
+	int k_c1 = (K % k_c);
+	int mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
+	int mr_per_core = (int) ceil( ((double) mr_rem) / p );
+	int m_c1 = mr_per_core * m_r;
+
+	if(mr_per_core) 
+		p_l = (int) ceil( ((double) mr_rem) / mr_per_core);
+	else
+		p_l = 0;
+
+	int m_c1_last_core = (mr_per_core - (p_l*mr_per_core - mr_rem)) * m_r;
+
+	// main portion of A that evenly fits into CBS blocks each with p m_cxk_c OBs
+	for(m1 = 0; m1 < (M - (M % (p*m_c))); m1 += p*m_c) {
+		for(k1 = 0; k1 < (K - (K%k_c)); k1 += k_c) {
+
+			#pragma omp parallel for private(m2)
+			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
+				// printf("hey %d\n", ind1 + m2/m_c);
+				if(posix_memalign((void**) &A_p[ind1 + m2/m_c], 64, m_c * k_c * sizeof(float))) {
+					printf("posix memalign error\n");
+					exit(1);
+				}
+
+				pack_ob_A(A, A_p[ind1 + m2/m_c], M, K, m1, k1, m2, m_c, k_c, m_r, 0);
+
+				if(ARR_PRINT) print_array(A_p[ind1 + m2/m_c], k_c * m_c);
+			}
+
+			ind1 += p;
+		}
+		// right-most column of CBS blocks each with p m_c x k_c1 OBs
+		if(k_c1) {
+			k1 = K - (K%k_c);
+			#pragma omp parallel for private(m2)
+			for(m2 = 0; m2 < p*m_c; m2 += m_c) {
+
+				if(posix_memalign((void**) &A_p[ind1 + m2/m_c], 64, k_c1 * m_c * sizeof(float))) {
+					printf("posix memalign error\n");
+					exit(1);
+				}
+
+				pack_ob_A(A, A_p[ind1 + m2/m_c], M, K, m1, k1, m2, m_c, k_c1, m_r, 0);
+				if(ARR_PRINT) print_array(A_p[ind1 + m2/m_c], k_c1 * m_c);
+			}
+			ind1 += p;
+		}
+	}
+
+	// Process bottom-most rows of CBS blocks and perform M-dim padding
+	if(M % (p*m_c)) {	
+
+		m1 = (M - (M % (p*m_c)));
+
+		for(k1 = 0; k1 < (K - (K%k_c)); k1 += k_c) {
+			#pragma omp parallel for private(m2)
+			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
+				
+				if(posix_memalign((void**) &A_p[ind1 + m2/m_c1], 64, k_c * m_c1 * sizeof(float))) {
+					printf("posix memalign error\n");
+					exit(1);
+				}
+
+				pack_ob_A(A, A_p[ind1 + m2/m_c1], M, K, m1, k1, m2, m_c1, k_c, m_r, 0);
+				if(ARR_PRINT) print_array(A_p[ind1 + m2/m_c1], k_c * m_c1);
+				// ind1++;
+			}
+			ind1 += (p_l-1);
+
+			// final row of CBS blocks each with m_c1_last_core x k_c
+			m2 = (p_l-1) * m_c1;
+			if(posix_memalign((void**) &A_p[ind1], 64, k_c * m_c1_last_core * sizeof(float))) {
+				printf("posix memalign error\n");
+				exit(1);
+			}
+
+			pack_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1_last_core, k_c, m_r, 1);
+			if(ARR_PRINT) print_array(A_p[ind1], k_c * m_c1_last_core);
+			ind1++;
+		}
+
+		// Final CBS block (with p_l-1 m_c1 x k_c1 OBs and 1 m_c1_last_core x k_c1 OB) 
+		// present in the lower right hand corner of A 
+		if(k_c1) {
+
+			k1 = K - (K%k_c);
+			#pragma omp parallel for private(m2)
+			for(m2 = 0; m2 < (p_l-1)*m_c1; m2 += m_c1) {
+
+				if(posix_memalign((void**) &A_p[ind1 + m2/m_c1], 64, k_c1 * m_c1 * sizeof(float))) {
+					printf("posix memalign error\n");
+					exit(1);
+				}
+
+				pack_ob_A(A, A_p[ind1 + m2/m_c1], M, K, m1, k1, m2, m_c1, k_c1, m_r, 0);
+				if(ARR_PRINT) print_array(A_p[ind1 + m2/m_c1], k_c1 * m_c1);
+				// ind1++;
+			}
+			ind1 += (p_l-1);
+
+			// last OB of A has shape m_c1_last_core x k_c1 
+			m2 = (p_l-1) * m_c1;
+			
+			if(posix_memalign((void**) &A_p[ind1], 64, k_c1 * m_c1_last_core * sizeof(float))) {
+				printf("posix memalign error\n");
+				exit(1);
+			}
+
+			pack_ob_A(A, A_p[ind1], M, K, m1, k1, m2, m_c1_last_core, k_c1, m_r, 1);
+			if(ARR_PRINT) print_array(A_p[ind1], k_c1 * m_c1_last_core);
+			ind1++;
+		}
+	}
+
+	clock_gettime(CLOCK_REALTIME, &end);
+	long seconds = end.tv_sec - start.tv_sec;
+	long nanoseconds = end.tv_nsec - start.tv_nsec;
+	diff_t = seconds + nanoseconds*1e-9;
+
+     return diff_t;
+
+}
+
+
+// pack the entire matrix A into a single cache-aligned buffer
+double pack_A_single_buf(float* A, float* A_p, int M, int K, int m_c, int k_c, int m_r, int p) {
+	
+	struct timespec start, end;
+	double diff_t;
+	clock_gettime(CLOCK_REALTIME, &start);
 
    int k_pad = (K % k_c) ? 1 : 0; 
    int m_pad = (M % (p*m_c)) ? 1 : 0; 
@@ -29,7 +166,7 @@ void pack_A(float* A, float* A_p, int M, int K, int m_c, int k_c, int m_r, int p
 
       if((m == Mb - 1) && m_pad) {
          p_used = p_l;
-         m_cb = m_r*mr_rem ; //M % (p*m_c);
+         m_cb = m_r*mr_rem ; 
       } else {
          p_used = p;
          m_cb = p_used*m_c;
@@ -60,21 +197,22 @@ void pack_A(float* A, float* A_p, int M, int K, int m_c, int k_c, int m_r, int p
                pad = 0;
             }
 
-            // pack_ob_A(A, A_p[A_p_offset + core*m_c_x*k_c_t], M, K, m1, k1, m2, m_c, k_c, m_r, pad);
-            pack_ob_A(&A[A_offset + core*m_c_x*K], &A_p[A_p_offset + core*m_c_x*k_c_t], 
+            pack_ob_A_single_buf(&A[A_offset + core*m_c_x*K], &A_p[A_p_offset + core*m_c_x*k_c_t], 
                M, K, m*p*m_c, core*m_c_x, m_c_t, k_c_t, m_r, pad);
-
-            // for(int i = 0; i < m_c_t; i++) {
-            //    for(int j = 0; j < k_c_t; j++) {
-            //       A_p[A_p_offset + core*m_c_x*k_c_t + i*k_c_t + j] = 
-            //       A[m*p*m_c*K + k*k_c + core*m_c_x*K + i*K + j];
-            //    }
-            // }
          }
 
          A_p_offset += m_cb*k_c_t;
       }
    }
+
+     clock_gettime(CLOCK_REALTIME, &end);
+     long seconds = end.tv_sec - start.tv_sec;
+     long nanoseconds = end.tv_nsec - start.tv_nsec;
+     diff_t = seconds + nanoseconds*1e-9;
+
+     return diff_t;
+
+
 }
 
 
@@ -302,8 +440,42 @@ void pack_C(float* C, float** C_p, int M, int N, int m_c, int n_c, int m_r, int 
 
 
 // // initialize an operation block of matrix A
+// initialize an operation block of matrix A
+void pack_ob_A(float* A, float* A_p, int M, int K, int m1, int k1, int m2, int m_c, int k_c, int m_r, bool pad) {
 
-void pack_ob_A(float* A, float* A_p, int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad) {
+	int	ind2 = 0;
+	
+	if(pad) {
+		for(int m3 = 0; m3 < m_c; m3 += m_r) {
+			for(int i = 0; i < k_c; i++) {
+				for(int j = 0; j < m_r; j++) {
+
+					if((m1 + m2 + m3 + j) >=  M) {
+						A_p[ind2] = 0.0;
+					} else {
+						A_p[ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
+					}
+
+					ind2++;
+				}
+			}
+		}		
+	} 
+
+	else {
+		for(int m3 = 0; m3 < m_c; m3 += m_r) {
+			for(int i = 0; i < k_c; i++) {
+				for(int j = 0; j < m_r; j++) {
+					A_p[ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
+					ind2++;
+				}
+			}
+		}
+	}
+}
+
+
+void pack_ob_A_single_buf(float* A, float* A_p, int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad) {
 
    int ind2 = 0;
 

@@ -1,6 +1,7 @@
 #include "cake.h"
 
 
+
 double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake_cntx_t* cake_cntx) {
 	// contiguous row-storage (i.e. cs_c = 1) or contiguous column-storage (i.e. rs_c = 1). 
 	// This preference comes from how the microkernel is most efficiently able to load/store 
@@ -12,7 +13,6 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake
 	struct timespec start, end;
 	long seconds, nanoseconds;
 	double diff_t;
-	float* A_p; 
 	float** C_p;
 	float* B_p;
 	inc_t rsc, csc;
@@ -74,13 +74,44 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake
 	int N_b = (N - (N%n_c)) + n_c1;
 
 
+	// double time_new=0, time_old=0;
+	// int cnt = 100;
+	// for(int i = 0; i < cnt; i++) {
+
+	// 	float** A_p1;
+	// 	float* A_p2;
+	// 	float* A = (float*) malloc(M * K * sizeof( float ));
+	//     srand(time(NULL));
+	// 	rand_init(A, M, K);
+
+	// 	A_p1 = (float**) malloc( (K/k_c + k_pad) * (((M / (p*m_c))*p) + p_l) * sizeof( float* ));
+		
+	// 	if(posix_memalign((void**) &A_p2, 64, (m_r*mr_rem + (M /(p*m_c))*p*m_c) * K * sizeof(float))) {
+	// 		printf("posix memalign error\n");
+	// 		exit(1);
+	// 	}
+
+	// 	time_old += pack_A(A, A_p1, M, K, m_c, k_c, m_r, p);
+	// 	time_new += pack_A_single_buf(A, A_p2, M, K, m_c, k_c, m_r, p);
+	// }
+
+	// printf("new = %f, old = %f\n", time_new / cnt, time_old / cnt );
+
+	// exit(1);
+
+
 	// pack A
 	clock_gettime(CLOCK_REALTIME, &start);
 
-	// A_p = (float**) malloc( (K/k_c + k_pad) * (((M / (p*m_c))*p) + p_l) * sizeof( float* ));
-	A_p = (float*) malloc( (m_r*mr_rem + (M /(p*m_c))*p*m_c) * K * sizeof( float ));
-	pack_A(A, A_p, M, K, m_c, k_c, m_r, p);
-	// exit(1);
+	float* A_p; 
+	if(posix_memalign((void**) &A_p, 64, (m_r*mr_rem + (M /(p*m_c))*p*m_c) * K * sizeof(float))) {
+		printf("posix memalign error\n");
+		exit(1);
+	}
+	pack_A_single_buf(A, A_p, M, K, m_c, k_c, m_r, p);
+
+	// float** A_p = (float**) malloc( (K/k_c + k_pad) * (((M / (p*m_c))*p) + p_l) * sizeof( float* ));
+	// pack_A(A, A_p, M, K, m_c, k_c, m_r, p);
 
     clock_gettime(CLOCK_REALTIME, &end);
     seconds = end.tv_sec - start.tv_sec;
@@ -227,12 +258,18 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake
 					}
 
 					int a_ind = m*p*m_c*K + k*m_cb*k_c + core*m_c_x*k_c_t;
+					// int a_ind = m*p*Kb + k*p_used + core;
 					int b_ind = n*K*n_c + k*k_c*n_c_t;
 					int c_ind = core + m*p + n*((M / (p*m_c))*p + p_l);
 
 					for(n_reg = 0; n_reg < (n_c_t / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_c_t / m_r); m_reg++) {							
-							bli_sgemm_ukernel(k_c_t, &alpha, 
+							// bli_sgemm_haswell_asm_6x16(k_c_t, &alpha, 
+					  //  		&A_p[a_ind][m_reg*m_r*k_c_t], 
+					  //  		&B_p[b_ind + n_reg*k_c_t*n_r], &beta, 
+					  //  		&C_p[c_ind][n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
+					  //  		rsc, csc, NULL, cake_cntx->blis_cntx);
+							bli_sgemm_haswell_asm_6x16(k_c_t, &alpha, 
 					   		&A_p[a_ind + m_reg*m_r*k_c_t], 
 					   		&B_p[b_ind + n_reg*k_c_t*n_r], &beta, 
 					   		&C_p[c_ind][n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
@@ -271,6 +308,7 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake
 	// 	free(A_p[i]);
 	// }
 
+
 	for(int i = 0; i < (((M / (p*m_c))*p) + p_l) * (N/n_c + n_pad); i++) {
 		free(C_p[i]);
 	}
@@ -281,5 +319,3 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, cake
 
 	return times;
 }
-
-
