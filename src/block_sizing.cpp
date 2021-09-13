@@ -4,7 +4,7 @@
 cake_cntx_t* cake_query_cntx_torch(int L2, int L3) {
 
     cake_cntx_t* ret = (cake_cntx_t*) malloc(sizeof(cake_cntx_t));
-    double alpha = 1;
+    double alpha = 1.0;
 
     // query block size for the microkernel
     cntx_t* blis_cntx = bli_gks_query_cntx();
@@ -21,7 +21,7 @@ cake_cntx_t* cake_query_cntx_torch(int L2, int L3) {
 cake_cntx_t* cake_query_cntx() {
 
     cake_cntx_t* ret = (cake_cntx_t*) malloc(sizeof(cake_cntx_t));
-    double alpha = 1;
+    double alpha = 1.0;
 
     // query block size for the microkernel
     cntx_t* blis_cntx = bli_gks_query_cntx();
@@ -92,7 +92,7 @@ int get_cache_size(int level) {
 }
 
 
-int get_block_dim(cake_cntx_t* cake_cntx, int M, int p) {
+blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int K, int N, int p) {
 
 	int mc_L2 = 0, mc_L3 = 0;
 	int max_threads = omp_get_max_threads() / 2; // 2-way hyperthreaded
@@ -114,23 +114,29 @@ int get_block_dim(cake_cntx_t* cake_cntx, int M, int p) {
 	mc_L2 -= (mc_L2 % mn_lcm);
 
 	int mc = mc_L3 < mc_L2 ? mc_L3 : mc_L2;
-	int a;
+	int mc_ret, a;
 
+
+	mc_ret = mc;
 	if(M < p*cake_cntx->mr) {
-		return mn_lcm;
+		mc_ret = mn_lcm;
 	} else if(M < p*mc) {
 		
 		a = (M / p);
 		if(a < mn_lcm) {
-			return mn_lcm;
+			mc_ret = mn_lcm;
+		} else {
+			a -= (a % mn_lcm);
+			mc_ret = a;
 		}
-
-		a -= (a % mn_lcm);
-		return a;
 	}
 
-	// return min of possible L2 and L3 cache block sizes
-	return mc;
+    blk_dims_t* blk_ret = (blk_dims_t*) malloc(sizeof(blk_dims_t));
+    blk_ret->m_c = mc_ret;
+    blk_ret->k_c = mc_ret;
+    blk_ret->n_c = (int) cake_cntx->alpha*p*mc_ret;
+
+	return blk_ret;
 }
 
 

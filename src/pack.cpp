@@ -133,12 +133,18 @@ double pack_A(float* A, float** A_p, int M, int K, int m_c, int k_c, int m_r, in
 }
 
 
+
 // pack the entire matrix A into a single cache-aligned buffer
-double pack_A_single_buf(float* A, float* A_p, int M, int K, int m_c, int k_c, int m_r, int p) {
+double pack_A_single_buf(float* A, float* A_p, int M, int K, int p, cake_cntx_t* cake_cntx, blk_dims_t* blk_dims) {
 	
 	struct timespec start, end;
 	double diff_t;
 	clock_gettime(CLOCK_REALTIME, &start);
+
+	int m_c = blk_dims->m_c;
+	int k_c = blk_dims->k_c;
+	int m_r = cake_cntx->mr;
+
 
    int k_pad = (K % k_c) ? 1 : 0; 
    int m_pad = (M % (p*m_c)) ? 1 : 0; 
@@ -217,12 +223,15 @@ double pack_A_single_buf(float* A, float* A_p, int M, int K, int m_c, int k_c, i
 
 
 
-void pack_B(float* B, float* B_p, int K, int N, int k_c, int n_c, int n_r, int alpha_n, int m_c) {
+void pack_B(float* B, float* B_p, int K, int N, cake_cntx_t* cake_cntx, blk_dims_t* blk_dims) {
 
 	int k1, k_c1, n1, n2, n_c1, nr_rem;
 	int ind1 = 0;
 
 	int local_ind;
+	int k_c = blk_dims->k_c;
+	int n_c = blk_dims->n_c;
+	int n_r = cake_cntx->nr;
 
 	// main portion of B that evenly fits into CBS blocks of size k_c x n_c 
 	for(n1 = 0; n1 < (N - (N%n_c)); n1 += n_c) {
@@ -545,5 +554,25 @@ void pack_ob_C(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
 			}
 		}
 	}
+}
+
+
+
+int cake_sgemm_packed_A_size(int M, int K, int p, cake_cntx_t* cake_cntx, blk_dims_t* blk_dims) {
+
+	int mr_rem = (int) ceil( ((double) (M % (p*blk_dims->m_c))) / cake_cntx->mr) ;
+
+	return ((cake_cntx->mr*mr_rem + (M /(p*blk_dims->m_c))*p*blk_dims->m_c) * K) * sizeof(float);
+}
+
+
+
+int cake_sgemm_packed_B_size(int K, int N, int p, cake_cntx_t* cake_cntx, blk_dims_t* blk_dims) {
+	
+	int nr_rem = (int) ceil( ((double) (N % blk_dims->n_c) / cake_cntx->nr)) ;
+	int n_c1 = nr_rem * cake_cntx->nr;
+	int N_padded = (N - (N%blk_dims->n_c)) + n_c1;
+
+	return (K * N_padded) * sizeof(float);
 }
 
