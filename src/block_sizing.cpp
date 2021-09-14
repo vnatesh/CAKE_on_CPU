@@ -92,7 +92,7 @@ int get_cache_size(int level) {
 }
 
 
-blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int K, int N, int p) {
+blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p) {
 
 	int mc_L2 = 0, mc_L3 = 0;
 	int max_threads = omp_get_max_threads() / 2; // 2-way hyperthreaded

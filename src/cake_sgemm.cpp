@@ -31,7 +31,7 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	n_r = cake_cntx->nr;
 	alpha_n = cake_cntx->alpha;
 
-	blk_dims_t* blk_dims = get_block_dims(cake_cntx, M, K, N, p);
+	blk_dims_t* blk_dims = get_block_dims(cake_cntx, M, p);
     m_c = blk_dims->m_c;
 	k_c = blk_dims->k_c;
     n_c = blk_dims->n_c;
@@ -92,9 +92,6 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	// printf("new = %f, old = %f\n", time_new / cnt, time_old / cnt );
 
 	// exit(1);
-
-
-	// pack A
 
 
 	if(packedA) {

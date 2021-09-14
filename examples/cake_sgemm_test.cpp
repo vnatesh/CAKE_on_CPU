@@ -9,6 +9,8 @@ int main( int argc, char** argv ) {
     }
 
 	int M, K, N, p;
+	struct timespec start, end;
+	double diff_t;
 
 	M = atoi(argv[1]);
 	K = atoi(argv[2]);

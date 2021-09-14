@@ -67,7 +67,7 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	cake_cntx_t* cake_cntx, bool packedA = 0, bool packedB = 0);
 
 
-blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int K, int N, int p);
+blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p);
 
 int get_cache_size(int level);
 
