@@ -4,12 +4,12 @@
 cake_cntx_t* cake_query_cntx_torch(int L2, int L3) {
 
     cake_cntx_t* ret = (cake_cntx_t*) malloc(sizeof(cake_cntx_t));
-    double alpha = 1.0;
+    double alpha_n = 1.0;
 
     // query block size for the microkernel
     cntx_t* blis_cntx = bli_gks_query_cntx();
     ret->blis_cntx = blis_cntx;
-    ret->alpha = alpha;
+    ret->alpha_n = alpha_n;
     ret->mr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, blis_cntx);
     ret->nr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, blis_cntx);
 	ret->L2 = L2;
@@ -21,12 +21,12 @@ cake_cntx_t* cake_query_cntx_torch(int L2, int L3) {
 cake_cntx_t* cake_query_cntx() {
 
     cake_cntx_t* ret = (cake_cntx_t*) malloc(sizeof(cake_cntx_t));
-    double alpha = 1.0;
+    double alpha_n = 1.0;
 
     // query block size for the microkernel
     cntx_t* blis_cntx = bli_gks_query_cntx();
     ret->blis_cntx = blis_cntx;
-    ret->alpha = alpha;
+    ret->alpha_n = alpha_n;
     ret->mr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, blis_cntx);
     ret->nr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, blis_cntx);
 	ret->L2 = get_cache_size(2);
@@ -104,7 +104,7 @@ blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p) {
 	// We only use ~ half of the each cache to prevent our working blocks from being evicted
 	// and to allow for double buffering of partial results in L3
 	mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (2*sizeof(float)))  
-			/ (max_threads * (1 + cake_cntx->alpha + cake_cntx->alpha*max_threads)));
+			/ (max_threads * (1 + cake_cntx->alpha_n + cake_cntx->alpha_n*max_threads)));
 	mc_L3 -= (mc_L3 % mn_lcm);
 
 	// solves for optimal mc,kc based on L2 size
@@ -134,7 +134,7 @@ blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p) {
     blk_dims_t* blk_ret = (blk_dims_t*) malloc(sizeof(blk_dims_t));
     blk_ret->m_c = mc_ret;
     blk_ret->k_c = mc_ret;
-    blk_ret->n_c = (int) cake_cntx->alpha*p*mc_ret;
+    blk_ret->n_c = (int) cake_cntx->alpha_n*p*mc_ret;
 
 	return blk_ret;
 }

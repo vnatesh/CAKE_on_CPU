@@ -94,10 +94,8 @@ bool cake_sgemm_checker(float* A, float* B, float* C, int N, int M, int K) {
 		printf("CORRECT!\n");
 		return 0;
 	} else {
-		if(CHECK_PRINT) {
 			printf("WRONG!\n");
 			printf("%d\n", cnt);
-		}	
 		return 1;
 	}
 
