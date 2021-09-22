@@ -1,6 +1,15 @@
 #include "cake.h"
 
 
+// launching CAKE sgemm on asynchronous thread
+void* cake_sgemm_launch(void* inputs) {
+	
+    struct gemm_input* inp = (struct gemm_input*) inputs;    
+    double ans = cake_sgemm(inp->A, inp->B, inp->C, inp->M, inp->N, inp->K, inp->p, 
+    	inp->cake_cntx, inp->packedA, inp->packedB, inp->alpha, inp->beta);
+	pthread_exit(NULL);
+}
+
 
 double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, bool packedA , bool packedB, float alpha, float beta) {
@@ -126,7 +135,7 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	}
 
 
-	// C = alpha*AB + beta*C. If beta is !=0, we must explicitly pack C, 
+	// C = alpha*A*B + beta*C. If beta is !=0, we must explicitly pack C, 
 	// otherwise just allocate an empty C_p buffer
 	if(beta != 0) {
 		clock_gettime(CLOCK_REALTIME, &start);

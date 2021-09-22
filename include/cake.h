@@ -1,7 +1,9 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <sys/time.h> 
 #include <time.h> 
 #include <omp.h>
+#include <pthread.h>
 #include "blis.h"
  
 
@@ -26,6 +28,22 @@ typedef struct blk_dims_t{
 	int n_c;
 } blk_dims_t;
 
+
+
+struct gemm_input {
+	float* A; 
+	float* B;
+	float* C;
+	float alpha;
+	float beta;
+	int M;
+	int N;
+	int K; 
+	int p;
+	cake_cntx_t* cake_cntx;
+	bool packedA;
+	bool packedB;
+};
 
 
 cake_cntx_t* cake_query_cntx();
@@ -73,6 +91,7 @@ int cake_sgemm_packed_C_size(int M, int N, int p, cake_cntx_t* cake_cntx, blk_di
 double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, bool packedA = 0, bool packedB = 0, float alpha = 1, float beta = 0);
 
+void* cake_sgemm_launch(void* inputs);
 
 blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p);
 
