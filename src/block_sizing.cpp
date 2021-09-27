@@ -38,10 +38,54 @@ cake_cntx_t* cake_query_cntx() {
 // find cache size at levels L1d,L1i,L2,and L3 using lscpu
 int get_cache_size(int level) {
 
-	int len, size = 0;
+	int model_id, len, size = 0;
 	FILE *fp;
 	char ret[16];
 	char command[128];
+
+	sprintf(command, "lscpu | grep Model \
+					| head -1 \
+					| tr -dc '0-9'");
+	fp = popen(command, "r");
+
+	if (fp == NULL) {
+		printf("Failed to run command\n" );
+		exit(1);
+	}
+
+	if(fgets(ret, sizeof(ret), fp) == NULL) {
+		printf("lscpu error\n");
+	}
+
+	pclose(fp);
+	model_id = atoi(ret);
+
+	if(level == 2) {
+		switch(model_id) {
+			case 3:
+				return (32 * (1 << 10));
+			case 69:
+				return (256 * (1 << 10));
+			case 165:
+				return (256 * (1 << 10));
+			default:
+				break;
+		}
+	}
+
+	if(level == 3) {
+		switch(model_id) {
+			case 3:
+				return (1 * (1 << 20));
+			case 69:
+				return (4 * (1 << 20));
+			case 165:
+				return (20 * (1 << 20));
+			default:
+				break;
+		}
+	}
+
 
 	if(level < 3) {
 		sprintf(command, "lscpu --caches=NAME,ONE-SIZE \
@@ -71,8 +115,6 @@ int get_cache_size(int level) {
 			return (512 * (1 << 10));
 		}
 	}
-
-	pclose(fp);
 
 	len = strlen(ret) - 1;
 

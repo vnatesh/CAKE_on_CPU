@@ -1,8 +1,6 @@
 #include "cake.h"
 
 
-
-
 // pack the entire matrix A into a single cache-aligned buffer
 double pack_A_single_buf(float* A, float* A_p, int M, int K, int p, cake_cntx_t* cake_cntx, blk_dims_t* blk_dims) {
 	

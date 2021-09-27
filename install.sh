@@ -16,7 +16,7 @@ then
 	./configure --enable-threading=openmp auto
 	# ./configure --enable-threading=openmp cortexa53
 else
-	# for intel and AMD zen2/3 CPUs, configure with haswell
+	# for intel i9, i7, and AMD zen2/3 CPUs, configure with haswell
 	./configure --enable-threading=openmp haswell
 fi
 
