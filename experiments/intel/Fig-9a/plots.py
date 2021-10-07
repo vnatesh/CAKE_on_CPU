@@ -30,16 +30,17 @@ def plot_cake_vs_mkl_shape(fname = 'cake_vs_mkl_shape'):
 			a = df1[(df1['algo'] == 'cake') & (df1['size'] == j) & (df1['p'] == p)]['time'].mean()
 			speedup_cake.append(single_core_cake / a)
 		#
-		plt.plot(NUM_CPUs, speedup_mkl, label = "%d (mkl)" % j, color = colors[int(j/1000) - 1],linestyle='dashed',)
-		plt.plot(NUM_CPUs, speedup_cake, label = "%d (cake)" % j, color = colors[int(j/1000) - 1])
+		plt.plot(NUM_CPUs, speedup_mkl, label = "%d (mkl)" % j, color = colors[j//1000 - 1],linestyle='dashed',)
+		plt.plot(NUM_CPUs, speedup_cake, label = "%d (cake)" % j, color = colors[j//1000 - 1])
 	#
 	plt.title('(a) Speedup For Square Matrices in CAKE vs MKL')
 	plt.xlabel("Number of Cores (M=N=K)", fontsize = 18)
-	plt.xticks(NUM_CPUs)
+	plt.xticks(NUM_CPUs, fontsize = 14)
+	plt.yticks(fontsize = 14)
 	plt.ylabel("Speedup", fontsize = 18)
-	plt.legend(title="M=N=K", loc = "upper left", prop={'size': 10})
+	plt.legend(title="M=N=K", loc = "upper left", prop={'size': 10}, fontsize = 16)
 	plt.savefig("%s.pdf" % fname, bbox_inches='tight')
-	# plt.show()
+	plt.show()
 	plt.clf()
 	plt.close('all')
 
