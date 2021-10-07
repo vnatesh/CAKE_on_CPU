@@ -27,8 +27,10 @@ make check
 # install BLIS
 sudo make install
 make distclean
-export BLIS_INSTALL_PATH=/usr/local
 cd ..
+
+source ./env.sh
+make build
 
 # # build CAKE pytorch extension 
 # cd python
