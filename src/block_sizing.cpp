@@ -68,6 +68,8 @@ int get_cache_size(int level) {
 				return (256 * (1 << 10));
 			case 165:
 				return (256 * (1 << 10));
+			case 142:
+				return (256 * (1 << 10));
 			default:
 				break;
 		}
@@ -81,6 +83,9 @@ int get_cache_size(int level) {
 				return (4 * (1 << 20));
 			case 165:
 				return (20 * (1 << 20));
+			case 142:
+				return (8 * (1 << 20));
+
 			default:
 				break;
 		}
