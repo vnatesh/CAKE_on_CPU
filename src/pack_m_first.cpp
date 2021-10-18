@@ -4,13 +4,13 @@
 // pack the entire matrix A into a single cache-aligned buffer
 double pack_A_single_buf_m_first(float* A, float* A_p, int M, int K, int p, cake_cntx_t* cake_cntx, blk_dims_t* blk_dims) {
 
-	struct timespec start, end;
-	double diff_t;
-	clock_gettime(CLOCK_REALTIME, &start);
+   struct timespec start, end;
+   double diff_t;
+   clock_gettime(CLOCK_REALTIME, &start);
 
-	int m_c = blk_dims->m_c;
-	int k_c = blk_dims->k_c;
-	int m_r = cake_cntx->mr;
+   int m_c = blk_dims->m_c;
+   int k_c = blk_dims->k_c;
+   int m_r = cake_cntx->mr;
 
    int k_pad = (K % (p*k_c)) ? 1 : 0; 
    int m_pad = (M % m_c) ? 1 : 0; 
@@ -34,7 +34,7 @@ double pack_A_single_buf_m_first(float* A, float* A_p, int M, int K, int p, cake
    int k_cb, m_c_t, p_used, core;
 
 
-   for(k = 0; k < Mb; k++) {
+   for(k = 0; k < Kb; k++) {
 
       if((k == Kb - 1) && k_pad) {
          p_used = p_l;
@@ -43,6 +43,7 @@ double pack_A_single_buf_m_first(float* A, float* A_p, int M, int K, int p, cake
          p_used = p;
          k_cb = p_used*k_c;
       }
+      // printf("noooo\n");
 
       for(m = 0; m < Mb; m++) {
          
@@ -88,7 +89,7 @@ double pack_A_single_buf_m_first(float* A, float* A_p, int M, int K, int p, cake
 
 
 
-void pack_B_m_first(float* B, float* B_p, int K, int N, cake_cntx_t* cake_cntx, blk_dims_t* blk_dims) {
+void pack_B_m_first(float* B, float* B_p, int K, int N, int p, cake_cntx_t* cake_cntx, blk_dims_t* blk_dims) {
 
    int k_c = blk_dims->k_c;
    int n_c = blk_dims->n_c;
@@ -159,42 +160,10 @@ void pack_B_m_first(float* B, float* B_p, int K, int N, cake_cntx_t* cake_cntx, 
             }
 
             pack_ob_B_single_buf(&B[B_offset + core*k_c_x*N], &B_p[B_p_offset + core*k_c_x*n_c_t], 
-               K, N, k_c_t, n_c_t, n_r, pad);
+               K, N, n1, k_c_t, n_c_t, n_r, pad);
          }
 
          B_p_offset += k_cb*n_c_t;
-      }
-   }
-}
-
-
-
-void pack_ob_B_single_buf(float* B, float* B_p, int K, int N,
-            int k_c, int n_c, int n_r, bool pad_n) {
-
-   int ind_ob = 0;
-
-   if(pad_n) {
-      for(int n2 = 0; n2 < n_c; n2 += n_r) {
-         for(int i = 0; i < k_c; i++) {
-            for(int j = 0; j < n_r; j++) {
-               if((n1 + n2 + j) <  N) {
-                  // B_p[ind1 + local_ind + (k1/k_c)*k_c*n_c1] = B[n1 + k1*N + n2 + i*N + j];
-                  B_p[ind_ob] = B[n2 + i*N + j];
-               }
-               ind_ob++;
-            }
-         }
-      }
-   }
-   else {
-      for(int n2 = 0; n2 < n_c; n2 += n_r) {
-         for(int i = 0; i < k_c; i++) {
-            for(int j = 0; j < n_r; j++) {
-               B_p[ind_ob] = B[n2 + i*N + j];
-               ind_ob++;
-            }
-         }
       }
    }
 }
@@ -223,7 +192,7 @@ void pack_C_single_buf_m_first(float* C, float* C_p, int M, int N, int p, cake_c
    int nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
    int n_c1 = nr_rem * n_r;
 
-   int m, n, n_c_t, n1 C_offset = 0, C_p_offset = 0;
+   int m, n, n_c_t, n1, C_offset = 0, C_p_offset = 0;
    bool pad_n;
 
    int M_padded = (M / m_c)*m_c + m_c1;
@@ -269,69 +238,3 @@ void pack_C_single_buf_m_first(float* C, float* C_p, int M, int N, int p, cake_c
 
 
 
-void pack_ob_C_single_buf_m_first(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
-            int m_c, int n_c, int m_r, int n_r, bool pad_m, bool pad_n) {
-
-   int ind_ob = 0;
-
-   if(pad_m || pad_n) {
-
-      for(int n2 = 0; n2 < n_c; n2 += n_r) {
-         for(int m3 = 0; m3 < m_c; m3 += m_r) {
-            for(int i = 0; i < m_r; i++) {
-               for(int j = 0; j < n_r; j++) {
-                  if((n1 + n2 + j) < N  ||  (m1 + m2 + m3 + i) <  M) {
-                     C_p[ind_ob] = C[n2 + m3*N + i*N + j];
-                  }
-                  ind_ob++;
-               }
-            }
-         }
-      }
-
-   } else {
-
-      for(int n2 = 0; n2 < n_c; n2 += n_r) {
-         for(int m3 = 0; m3 < m_c; m3 += m_r) {
-            for(int i = 0; i < m_r; i++) {
-               for(int j = 0; j < n_r; j++) {
-                  C_p[ind_ob] = C[n2 + m3*N + i*N + j];
-                  ind_ob++;
-               }
-            }
-         }
-      }
-   }
-}
-
-
-
-void pack_ob_A_single_buf(float* A, float* A_p, int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad) {
-
-   int ind_ob = 0;
-
-   if(pad) {
-      for(int m3 = 0; m3 < m_c; m3 += m_r) {
-         for(int i = 0; i < k_c; i++) {
-            for(int j = 0; j < m_r; j++) {
-               if((m1 + m2 + m3 + j) <  M) {
-                  A_p[ind_ob] = A[m3*K + i + j*K];
-               }
-
-               ind_ob++;
-            }
-         }
-      }     
-   } 
-
-   else {
-      for(int m3 = 0; m3 < m_c; m3 += m_r) {
-         for(int i = 0; i < k_c; i++) {
-            for(int j = 0; j < m_r; j++) {
-               A_p[ind_ob] = A[m3*K + i + j*K];
-               ind_ob++;
-            }
-         }
-      }     
-   }
-}
