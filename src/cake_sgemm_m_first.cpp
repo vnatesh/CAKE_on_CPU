@@ -16,6 +16,8 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 	float *A_p, *B_p, *C_p;
 	inc_t rsc, csc;
 
+	printf("M first\n");
+
 
 	if(cake_cntx == NULL) {
 		cake_cntx = cake_query_cntx();
@@ -128,7 +130,6 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 	}
 
 
-
 	// Set the scalars to use during each GEMM kernel call.
 	alpha_blis = 1.0;
 	beta_blis  = 1.0;
@@ -164,34 +165,21 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 
 	int M_padded = (M / m_c)*m_c + m_c1;
 
-
-	float** C_p_loc = (float**) malloc(p * sizeof(float*));
-
-	for(int i = 0; i < p; i++) {
-		C_p_loc[i] = (float*) calloc(m_c*n_c, sizeof(float));
-	}
-
-
-
-	k_start = 0;
-	k_end = Kb;
-	k_inc = 1;
-
 	m_start = 0;
 	m_end = Mb;
 	m_inc = 1;
 
 	for(n = 0; n < Nb; n++) {
 
-		// if(n % 2) {
-		// 	k_start = Kb - 1;
-		// 	k_end = -1;
-		// 	k_inc = -1;
-		// } else {
-			// k_start = 0;
-			// k_end = Kb;
-			// k_inc = 1;
-		// }
+		if(n % 2) {
+			k_start = Kb - 1;
+			k_end = -1;
+			k_inc = -1;
+		} else {
+			k_start = 0;
+			k_end = Kb;
+			k_inc = 1;
+		}
 
 		n_c_t = n_c;
 		if((n == Nb - 1) && n_pad) {
@@ -273,125 +261,7 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 						}
 					}
 
-					// let only 1 thread write to C at a time
-					// #pragma omp critical
-					// {
-					// 	int c_ind = n*M_padded*n_c + m*m_c*n_c_t;
-					// 	int c_len = m_c_t*n_c_t;
-					// 	int n_per_core = c_len / p;
-
-					// 	// #pragma omp parallel for schedule(static, n_per_core)
-					// 	// #pragma omp parallel for
-					// 	// for(int i = 0; i < c_len; i++) {
-					// 	for(int i = 0; i < c_len; i+=64) {
-
-					// 		#pragma omp simd 
-					// 		for(int j = 0; j < 64; j++) {
-					// 			C_p[c_ind + i + j] += C_p_loc[core][i + j];
-					// 		}
-					// 		// C_p[c_ind + i] += C_p_loc[core][i];							
-					// 	}
-					// }
-
-					// bli_saddv(BLIS_NO_CONJUGATE, m_c_t*n_c_t, C_p_loc[core], 1, &C_p[c_ind], 1);
-					
-					// free(C_p_loc[core]);
 				}
-
-				// // accumulate C's
-
-				// clock_gettime(CLOCK_REALTIME, &start);
-
-				// int c_ind = n*M_padded*n_c + m*m_c*n_c_t;
-				// int c_len = m_c_t*n_c_t;
-				// int n_per_core = c_len / p;
-
-				// // #pragma omp parallel for schedule(static)
-				// #pragma omp parallel for
-				// for(int i = 0; i < c_len; i++) {
-				// // for(int i = 0; i < c_len; i+=64) {
-
-				// 	for(int c = 0; c < p_used; c++) {
-				// 		// #pragma omp simd 
-				// 		// for(int j = 0; j < 64; j++) {
-				// 		// 	C_p[c_ind + i + j] += C_p_loc[c][i + j];
-				// 		// }
-				// 		C_p[c_ind + i] += C_p_loc[c][i];
-				// 	}
-				// }
-
-			 //    clock_gettime(CLOCK_REALTIME, &end);
-			 //    seconds = end.tv_sec - start.tv_sec;
-			 //    nanoseconds = end.tv_nsec - start.tv_nsec;
-			 //    diff_t = seconds + nanoseconds*1e-9;
-				// if(DEBUG) printf("omp add time: %f \n", diff_t); 	
-
-
-
-				// clock_gettime(CLOCK_REALTIME, &start);
-
-				// int c_ind = n*M_padded*n_c + m*m_c*n_c_t;
-				// int c_len = m_c_t*n_c_t;
-				// int n_per_core = c_len / p;
-
-				// #pragma omp parallel for schedule(static, n_per_core)
-				// for(int i = 0; i < c_len; i+=8) {
-
-				// 	for(int c = 0; c < p_used; c++) {
-				// 		#pragma omp simd 
-				// 		for(int j = 0; j < 8; j++) {
-				// 			C_p[c_ind + i + j] += C_p_loc[c][i + j];
-				// 		}
-				// 	}
-				// }
-
-			 //    clock_gettime(CLOCK_REALTIME, &end);
-			 //    seconds = end.tv_sec - start.tv_sec;
-			 //    nanoseconds = end.tv_nsec - start.tv_nsec;
-			 //    diff_t = seconds + nanoseconds*1e-9;
-				// if(DEBUG) printf("omp simd add time: %f \n", diff_t); 	
-
-
-
-
-
-				// // clock_gettime(CLOCK_REALTIME, &start);
-
-				// int c_ind = n*M_padded*n_c + m*m_c*n_c_t;
-				// int c_len = m_c_t*n_c_t;
-				// int acc = (int) ceil( ((double) c_len) / p);
-				// int p_used_acc;
-				// if(acc > 1) 
-				// 	p_used_acc = (int) ceil( ((double) c_len) / acc);
-				// else
-				// 	p_used_acc = 1;
-
-				// int acc_last = c_len - acc*(p_used_acc-1);
-
-				// #pragma omp parallel for private(core)
-				// for(core = 0; core < p_used_acc; core++) {
-
-				// 	int acc_loc;
-
-				// 	if(core == (p_used_acc - 1)) {
-				// 		acc_loc = acc_last;
-				// 	} else {
-				// 		acc_loc = acc;
-				// 	}
-
-				// 	for(int c = 0; c < p_used; c++) {
-				// 		bli_saddv(BLIS_NO_CONJUGATE, acc_loc, 
-				// 			&C_p_loc[c][core*acc], 1, &C_p[c_ind + core*acc], 1);
-				// 	}
-				// }
-
-			 //    clock_gettime(CLOCK_REALTIME, &end);
-			 //    seconds = end.tv_sec - start.tv_sec;
-			 //    nanoseconds = end.tv_nsec - start.tv_nsec;
-			 //    diff_t = seconds + nanoseconds*1e-9;
-				// if(DEBUG) printf("blis add time: %f \n", diff_t); 	
-
-
 			}
 		}
 	}
@@ -419,18 +289,6 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 	if(DEBUG) printf("unpacking time: %f \n", diff_t); 	// exit(1);
 
 // cake_sgemm_checker(A, B, C, N, M, K);
-
-	// for(int i = 0; i < (K/k_c + k_pad) * (((M / (p*m_c))*p) + p_l); i++) {
-	// 	free(A_p[i]);
-	// }
-	for(int i = 0; i < p; i++) {
-		free(C_p_loc[i]);
-	}
-
-	free(C_p_loc);
-	// for(int i = 0; i < (((M / (p*m_c))*p) + p_l) * (N/n_c + n_pad); i++) {
-	// 	free(C_p[i]);
-	// }
 
 	if(!packedA) free(A_p);
 	if(!packedB) free(B_p);
