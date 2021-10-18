@@ -39,7 +39,7 @@ int main( int argc, char** argv ) {
     diff_t = seconds + nanoseconds*1e-9;
 	printf("sgemm time: %f \n", diff_t); 
 
-	// cake_sgemm_checker(A, B, C, N, M, K);
+	cake_sgemm_checker(A, B, C, N, M, K);
 	
 	free(A);
 	free(B);
