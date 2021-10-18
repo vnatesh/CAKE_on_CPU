@@ -56,7 +56,7 @@ int get_cache_size(int level) {
 	if(fgets(ret, sizeof(ret), fp) == NULL) {
 		printf("lscpu error\n");
 	}
-
+	
 	pclose(fp);
 	model_id = atoi(ret);
 
@@ -67,8 +67,6 @@ int get_cache_size(int level) {
 			case 69:
 				return (256 * (1 << 10));
 			case 165:
-				return (256 * (1 << 10));
-			case 142:
 				return (256 * (1 << 10));
 			default:
 				break;
@@ -83,9 +81,6 @@ int get_cache_size(int level) {
 				return (4 * (1 << 20));
 			case 165:
 				return (20 * (1 << 20));
-			case 142:
-				return (8 * (1 << 20));
-
 			default:
 				break;
 		}
@@ -139,14 +134,20 @@ int get_cache_size(int level) {
 }
 
 
-blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p) {
+blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch) {
 
-	int mc_L2 = 0, mc_L3 = 0;
+	int mc, mc_ret, nc_ret, a, mc_L2 = 0, mc_L3 = 0;
 	int max_threads = omp_get_max_threads() / 2; // 2-way hyperthreaded
 	int mn_lcm = lcm(cake_cntx->mr, cake_cntx->nr);
 	// int mn_lcm = m_r;
 
-	// computes the optimal block size m_c and k_c based on the L3 size
+	// solve for optimal mc,kc based on L2 size
+	// L2_size >= 2*(mc*kc + kc*nr) + 2*(mc*nr)     (solve for x = m_c = k_c) 
+	int b = 2*cake_cntx->nr;
+	mc_L2 = (int)  (-b + sqrt(b*b + 4*(((double) cake_cntx->L2) / (2*sizeof(float))))) / 2 ;
+	mc_L2 -= (mc_L2 % mn_lcm);
+
+	// solve for the optimal block size m_c and k_c based on the L3 size
 	// L3_size >= 2*(p*mc*kc + alpha*p*mc*kc) + 2*(p*mc*alpha*p*mc)     (solve for x = m_c = k_c) 
 	// We only use ~ half of the each cache to prevent our working blocks from being evicted
 	// and to allow for double buffering of partial results in L3
@@ -154,15 +155,7 @@ blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p) {
 			/ (max_threads * (1 + cake_cntx->alpha_n + cake_cntx->alpha_n*max_threads)));
 	mc_L3 -= (mc_L3 % mn_lcm);
 
-	// solves for optimal mc,kc based on L2 size
-	// L2_size >= 2*(mc*kc + kc*nr) + 2*(mc*nr)     (solve for x = m_c = k_c) 
-	int b = 2*cake_cntx->nr;
-	mc_L2 = (int)  (-b + sqrt(b*b + 4*(((double) cake_cntx->L2) / (2*sizeof(float))))) / 2 ;
-	mc_L2 -= (mc_L2 % mn_lcm);
-
-	int mc = mc_L3 < mc_L2 ? mc_L3 : mc_L2;
-	int mc_ret, a;
-
+	mc = mc_L3 < mc_L2 ? mc_L3 : mc_L2;
 
 	mc_ret = mc;
 	if(M < p*cake_cntx->mr) {
@@ -179,9 +172,23 @@ blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p) {
 	}
 
     blk_dims_t* blk_ret = (blk_dims_t*) malloc(sizeof(blk_dims_t));
-    blk_ret->m_c = mc_ret;
-    blk_ret->k_c = mc_ret;
-    blk_ret->n_c = (int) cake_cntx->alpha_n*p*mc_ret;
+
+	switch(sch) {
+		case KMN: {
+			nc_ret = (int) cake_cntx->alpha_n*p*mc_ret;
+		}
+		case MKN: {
+			nc_ret = (int) cake_cntx->alpha_n*p*mc_ret;
+		}
+		case NKM: {
+			nc_ret = (int) cake_cntx->alpha_n*mc_ret;
+		}
+	}
+
+	blk_ret->m_c = mc_ret;
+	blk_ret->k_c = mc_ret;
+	blk_ret->n_c = nc_ret;
+
 
 	return blk_ret;
 }
@@ -199,4 +206,5 @@ int lcm(int n1, int n2) {
 	}
 	return max;
 }
+
 
