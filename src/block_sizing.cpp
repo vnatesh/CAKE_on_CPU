@@ -176,19 +176,21 @@ blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch)
 	switch(sch) {
 		case KMN: {
 			nc_ret = (int) cake_cntx->alpha_n*p*mc_ret;
+			break;
 		}
 		case MKN: {
 			nc_ret = (int) cake_cntx->alpha_n*p*mc_ret;
+			break;
 		}
 		case NKM: {
 			nc_ret = (int) cake_cntx->alpha_n*mc_ret;
+			break;
 		}
 	}
 
 	blk_ret->m_c = mc_ret;
 	blk_ret->k_c = mc_ret;
 	blk_ret->n_c = nc_ret;
-
 
 	return blk_ret;
 }
