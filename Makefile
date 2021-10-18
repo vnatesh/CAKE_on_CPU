@@ -142,7 +142,10 @@ endif
 
 build: $(wildcard *.h) $(wildcard *.c) 
 	g++ $(CFLAGS) $(CAKE_SRC)/block_sizing.cpp \
-	$(CAKE_SRC)/cake_sgemm.cpp $(CAKE_SRC)/pack.cpp src/util.cpp $(CAKE_SRC)/unpack.cpp \
+	$(CAKE_SRC)/cake_sgemm.cpp $(CAKE_SRC)/cake_sgemm_k_first.cpp $(CAKE_SRC)/cake_sgemm_m_first.cpp \
+	$(CAKE_SRC)/pack_helper.cpp $(CAKE_SRC)/pack_ob.cpp $(CAKE_SRC)/util.cpp \
+	$(CAKE_SRC)/pack_m_first.cpp $(CAKE_SRC)/pack_k_first.cpp \
+	$(CAKE_SRC)/unpack_m_first.cpp $(CAKE_SRC)/unpack_k_first.cpp \
 	$(LIBS) $(LDFLAGS) -shared -o $(LIBCAKE)
 
 
