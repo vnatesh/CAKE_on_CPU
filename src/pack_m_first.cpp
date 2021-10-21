@@ -2,34 +2,13 @@
 
 
 // pack the entire matrix A into a single cache-aligned buffer
-double pack_A_single_buf_m_first(float* A, float* A_p, int M, int K, int p, cake_cntx_t* cake_cntx, blk_dims_t* blk_dims) {
+double pack_A_single_buf_m_first(float* A, float* A_p, int M, int K, int p, cake_cntx_t* cake_cntx) {
 
    struct timespec start, end;
    double diff_t;
    clock_gettime(CLOCK_REALTIME, &start);
 
-   int m_c = blk_dims->m_c;
-   int k_c = blk_dims->k_c;
    int m_r = cake_cntx->mr;
-
-   int k_pad = (K % (p*k_c)) ? 1 : 0; 
-   int m_pad = (M % m_c) ? 1 : 0; 
-   int Mb = (M / m_c) + m_pad;
-   int Kb = (K / (p*k_c)) + k_pad;
-
-   int k_rem = K % (p*k_c);
-   int k_c1 = (int) ceil( ((double) k_rem) / p);
-   int p_l;
-
-   if(k_c1) 
-      p_l = (int) ceil( ((double) k_rem) / k_c1);
-   else
-      p_l = 0;
-
-   int k_c1_last_core = k_rem - k_c1*(p_l-1);
-   int mr_rem = (int) ceil( ((double) (M % m_c)) / m_r);
-   int m_c1 = mr_rem * m_r;
-
    int m, k, A_offset = 0, A_p_offset = 0;
    int k_cb, m_c_t, p_used, core;
 
@@ -43,7 +22,6 @@ double pack_A_single_buf_m_first(float* A, float* A_p, int M, int K, int p, cake
          p_used = p;
          k_cb = p_used*k_c;
       }
-      // printf("noooo\n");
 
       for(m = 0; m < Mb; m++) {
          
@@ -89,34 +67,13 @@ double pack_A_single_buf_m_first(float* A, float* A_p, int M, int K, int p, cake
 
 
 
-void pack_B_m_first(float* B, float* B_p, int K, int N, int p, cake_cntx_t* cake_cntx, blk_dims_t* blk_dims) {
-
-   int k_c = blk_dims->k_c;
-   int n_c = blk_dims->n_c;
-   int n_r = cake_cntx->nr;
-
-   int k_pad = (K % (p*k_c)) ? 1 : 0; 
-   int n_pad = (N % n_c) ? 1 : 0;
-   int Kb = (K / (p*k_c)) + k_pad;
-   int Nb = (N / n_c) + n_pad;
-
-   int k_rem = K % (p*k_c);
-   int k_c1 = (int) ceil( ((double) k_rem) / p);
-   int p_l;
-
-   if(k_c1) 
-      p_l = (int) ceil( ((double) k_rem) / k_c1);
-   else
-      p_l = 0;
-
-   int k_c1_last_core = k_rem - k_c1*(p_l-1);
-   int nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
-   int n_c1 = nr_rem * n_r;
+void pack_B_m_first(float* B, float* B_p, int K, int N, int p, cake_cntx_t* cake_cntx) {
 
    int n, n1, k, B_offset = 0, B_p_offset = 0;
    int k_cb, n_c_t, p_used, core;
    bool pad_n;
 
+   int n_r = cake_cntx->nr;
    int ind1 = 0;
 
    for(n = 0; n < Nb; n++) {
@@ -170,32 +127,17 @@ void pack_B_m_first(float* B, float* B_p, int K, int N, int p, cake_cntx_t* cake
 
 
 
-void pack_C_single_buf_m_first(float* C, float* C_p, int M, int N, int p, cake_cntx_t* cake_cntx, blk_dims_t* blk_dims) {
+void pack_C_single_buf_m_first(float* C, float* C_p, int M, int N, int p, cake_cntx_t* cake_cntx) {
 
    struct timespec start, end;
    double diff_t;
    clock_gettime(CLOCK_REALTIME, &start);
 
-   int m_c = blk_dims->m_c;
-   int n_c = blk_dims->n_c;
    int m_r = cake_cntx->mr;
    int n_r = cake_cntx->nr;
 
-   int m_pad = (M % m_c) ? 1 : 0; 
-   int n_pad = (N % n_c) ? 1 : 0;
-   int Mb = (M / m_c) + m_pad;
-   int Nb = (N / n_c) + n_pad;
-
-   int mr_rem = (int) ceil( ((double) (M % m_c)) / m_r);
-   int m_c1 = mr_rem * m_r;
-
-   int nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
-   int n_c1 = nr_rem * n_r;
-
    int m, n, n_c_t, n1, C_offset = 0, C_p_offset = 0;
    bool pad_n;
-
-   int M_padded = (M / m_c)*m_c + m_c1;
 
    for(n = 0; n < Nb; n++) {
 

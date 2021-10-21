@@ -9,8 +9,8 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 	// elements of C11 from/to memory. Most microkernels use vector instructions to access 
 	// contiguous columns (or column segments) of C11
 	
+	int m_r, n_r, A_sz, B_sz, C_sz;	
 
-	int m_c, k_c, n_c, m_r, n_r, A_sz, B_sz, C_sz;	
 	double alpha_n;
 	struct timespec start, end;
 	long seconds, nanoseconds;
@@ -28,209 +28,12 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 	n_r = cake_cntx->nr;
 	alpha_n = cake_cntx->alpha_n;
 
-	blk_dims_t* blk_dims = get_block_dims(cake_cntx, M, p, KMN);
-
-    m_c = blk_dims->m_c;
-	k_c = blk_dims->k_c;
-    n_c = blk_dims->n_c;
+	init_block_dims(M, N, K, p, cake_cntx, KMN);
 	omp_set_num_threads(p);
 
     if(DEBUG) printf("M = %d, N = %d, K = %d\n", M, N, K);
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", m_r, n_r);
     if(DEBUG) printf("mc = %d, kc = %d, nc = %d\n", m_c, k_c, n_c);
-
-	int k_pad = (K % k_c) ? 1 : 0; 
-	int n_pad = (N % n_c) ? 1 : 0; 
-	int m_pad = (M % (p*m_c)) ? 1 : 0; 
-
-	int mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
-	int mr_per_core = (int) ceil( ((double) mr_rem) / p );
-	int p_l;
-	if(mr_per_core) 
-		p_l = (int) ceil( ((double) mr_rem) / mr_per_core);
-	else
-		p_l = 0;
-
-	int nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
-	int n_c1 = nr_rem * n_r;
-
-	// float** A_p = (float**) malloc( (K/k_c + k_pad) * (((M / (p*m_c))*p) + p_l) * sizeof( float* ));
-	// pack_A(A, A_p, M, K, m_c, k_c, m_r, p);
-
-	// double time_new=0, time_old=0;
-	// int cnt = 100;
-	// for(int i = 0; i < cnt; i++) {
-
-	// 	float** A_p1;
-	// 	float* A_p2;
-	// 	float* A = (float*) malloc(M * K * sizeof( float ));
-	//     srand(time(NULL));
-	// 	rand_init(A, M, K);
-
-	// 	A_p1 = (float**) malloc( (K/k_c + k_pad) * (((M / (p*m_c))*p) + p_l) * sizeof( float* ));
-		
-	// 	if(posix_memalign((void**) &A_p2, 64, (m_r*mr_rem + (M /(p*m_c))*p*m_c) * K * sizeof(float))) {
-	// 		printf("posix memalign error\n");
-	// 		exit(1);
-	// 	}
-
-	// 	time_old += pack_A(A, A_p1, M, K, m_c, k_c, m_r, p);
-	// 	time_new += pack_A_single_buf(A, A_p2, M, K, m_c, k_c, m_r, p);
-	// }
-
-	// printf("new = %f, old = %f\n", time_new / cnt, time_old / cnt );
-
-	// exit(1);
-
-
-	// pack A
-
-
-
-	// {
-	// 	omp_set_num_threads(10);
-	// 	int m_c_t = 96;
-	// 	int n_c_t = 960;
-	// 	int c_ind = 0;
-	// 	int core;
-
-	// 	float** C_p_loc = (float**) malloc(p * sizeof(float*));
-	// 	for(int i = 0; i < p; i++) {
-	// 		C_p_loc[i] = (float*) calloc(m_c_t*n_c_t, sizeof(float));
-	// 		rand_init(C_p_loc[i], m_c_t, n_c_t);
-	// 	}
-
-	// 	float* C_p = (float*) calloc(m_c_t*n_c_t, sizeof(float));
-
-	// 	int p_used = p;
-	// 	int c_len = m_c_t*n_c_t;
-	// 	int acc = (int) ceil( ((double) c_len) / p);
-	// 	int p_used_acc;
-	// 	if(acc > 1) 
-	// 		p_used_acc = (int) ceil( ((double) c_len) / acc);
-	// 	else
-	// 		p_used_acc = 1;
-
-	// 	int acc_last = c_len - acc*(p_used_acc-1);
-
-	// 	printf("%d %d %d %d \n",c_len,acc,acc_last,p_used_acc );
-
-	// 	// rntm_t rntm;
-	// 	// bli_rntm_init( &rntm );
-	// 	// bli_rntm_set_num_threads(10, &rntm );
-
-	// 	clock_gettime(CLOCK_REALTIME, &start);
-
-	// 	#pragma omp parallel for private(core)
-	// 	for(core = 0; core < p_used_acc; core++) {
-
-	// 		int acc_loc;
-
-	// 		if(core == (p_used_acc - 1)) {
-	// 			acc_loc = acc_last;
-	// 		} else {
-	// 			acc_loc = acc;
-	// 		}
-
-	// 		for(int c = 0; c < p_used; c++) {
-	// 			// bli_saddm( 0, BLIS_NONUNIT_DIAG, BLIS_DENSE, BLIS_NO_TRANSPOSE,
-	// 			//            m_c_t, n_c_t, &C_p_loc[c][core*acc], 
-	// 			//            1, m_c_t, &C_p[c_ind + core*acc], 1, m_c_t );
-	// 			// for(int i = 0; i < acc_loc; i++) {
-	// 			// 	C_p[c_ind + core*acc+ i] += C_p_loc[c][core*acc + i];
-	// 			// }
-	// 			// bli_saddv_ex(BLIS_NO_CONJUGATE, acc_loc, 
-	// 			// 	&C_p_loc[c][core*acc], 1, &C_p[c_ind + core*acc], 1, NULL, &rntm);
-	// 			bli_saddv(BLIS_NO_CONJUGATE, acc_loc, 
-	// 				&C_p_loc[c][core*acc], 1, &C_p[c_ind + core*acc], 1);
-	// 		}
-	// 	}
-
-	// 	clock_gettime(CLOCK_REALTIME, &end);
-	// 	seconds = end.tv_sec - start.tv_sec;
-	// 	nanoseconds = end.tv_nsec - start.tv_nsec;
-	// 	diff_t = seconds + nanoseconds*1e-9;
-	// 	printf("blis add time: %f \n", diff_t ); 
-
-
-
-	// 	add_checker(C_p_loc, C_p, m_c_t, n_c_t, p);
-
-	// 	// for(int i = 0 ; i < m_c_t*n_c_t; i++) {
-	// 	// 	printf("%f ", C_p[i]);
-	// 	// }
-
-	// 	for(int i = 0; i < p; i++) {
-	// 		free(C_p_loc[i]);
-	// 	}
-
-	// 	// exit(1);
-	// }
-
-
-
-
-
-	// {
-	// 	// omp_set_num_threads(10);
-	// 	int m_c_t = 96;
-	// 	int n_c_t = 960;
-	// 	int c_ind = 0;
-	// 	int core;
-	// 	int c_len = m_c_t*n_c_t;
-	// 	int p_used = 10;
-
-	// 	float** C_p_loc = (float**) malloc(p_used * sizeof(float*));
-	// 	for(int i = 0; i < p_used; i++) {
-	// 		C_p_loc[i] = (float*) calloc(c_len, sizeof(float));
-	// 		rand_init(C_p_loc[i], m_c_t, n_c_t);
-	// 	}
-
-	// 	float* C_p = (float*) calloc(c_len, sizeof(float));
-
-
-
-	// 	clock_gettime(CLOCK_REALTIME, &start);
-
-	// 	int n_per_thread = c_len / p;
-
-	// 	#pragma omp parallel for schedule(static, n_per_thread)
-	// 	for(int i = 0; i < c_len; i++) {
-	// 		for(int c = 0; c < p_used; c++) {
-	// 			C_p[c_ind + i] += C_p_loc[c][i];
-	// 		}
-	// 	}
-
-	// 	clock_gettime(CLOCK_REALTIME, &end);
-	// 	seconds = end.tv_sec - start.tv_sec;
-	// 	nanoseconds = end.tv_nsec - start.tv_nsec;
-	// 	diff_t = seconds + nanoseconds*1e-9;
-	// 	printf("omp add time: %f \n", diff_t ); 
-
-
-
-	// 	add_checker(C_p_loc, C_p, m_c_t, n_c_t, p_used);
-
-	// 	// for(int i = 0 ; i < m_c_t*n_c_t; i++) {
-	// 	// 	printf("%f ", C_p[i]);
-	// 	// }
-
-	// 	for(int i = 0; i < p_used; i++) {
-	// 		free(C_p_loc[i]);
-	// 	}
-
-	// 	exit(1);
-	// }
-
-
-
-
-
-
-
-
-
-
 
 
 	if(packedA) {
@@ -239,14 +42,14 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 
 		clock_gettime(CLOCK_REALTIME, &start);
 
-		A_sz = cake_sgemm_packed_A_size(M, K, p, cake_cntx, blk_dims);
+		A_sz = cake_sgemm_packed_A_size(M, K, p, cake_cntx);
 		if(posix_memalign((void**) &A_p, 64, A_sz)) {
 			printf("posix memalign error\n");
 			exit(1);
 		}
-		// A_sz = cake_sgemm_packed_A_size(M, K, p, cake_cntx, blk_dims) / sizeof(float);
+		// A_sz = cake_sgemm_packed_A_size(M, K, p, cake_cntx) / sizeof(float);
 	 //    A_p = (float*) calloc(A_sz, sizeof(float));
-		pack_A_single_buf(A, A_p, M, K, p, cake_cntx, blk_dims);
+		pack_A_single_buf(A, A_p, M, K, p, cake_cntx);
 
 		clock_gettime(CLOCK_REALTIME, &end);
 		seconds = end.tv_sec - start.tv_sec;
@@ -262,14 +65,14 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 
 		clock_gettime(CLOCK_REALTIME, &start);
 
-	    B_sz = cake_sgemm_packed_B_size(K, N, p, cake_cntx, blk_dims);
+	    B_sz = cake_sgemm_packed_B_size(K, N, p, cake_cntx);
 		if(posix_memalign((void**) &B_p, 64, B_sz)) {
 			printf("posix memalign error\n");
 			exit(1);
 		}
-	    // B_sz = cake_sgemm_packed_B_size(K, N, p, cake_cntx, blk_dims) / sizeof(float);
+	    // B_sz = cake_sgemm_packed_B_size(K, N, p, cake_cntx) / sizeof(float);
 	    // B_p = (float*) calloc(B_sz, sizeof(float));
-		pack_B(B, B_p, K, N, cake_cntx, blk_dims);
+		pack_B(B, B_p, K, N, cake_cntx);
 
 	    clock_gettime(CLOCK_REALTIME, &end);
 	    seconds = end.tv_sec - start.tv_sec;
@@ -283,14 +86,14 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 	// otherwise just allocate an empty C_p buffer
 	if(beta != 0) {
 		clock_gettime(CLOCK_REALTIME, &start);
-	    C_sz = cake_sgemm_packed_C_size(M, N, p, cake_cntx, blk_dims);
+	    C_sz = cake_sgemm_packed_C_size(M, N, p, cake_cntx);
 		if(posix_memalign((void**) &C_p, 64, C_sz)) {
 			printf("posix memalign error\n");
 			exit(1);
 		}
-	    // C_sz = cake_sgemm_packed_C_size(M, N, p, cake_cntx, blk_dims) / sizeof(float);
+	    // C_sz = cake_sgemm_packed_C_size(M, N, p, cake_cntx) / sizeof(float);
 	    // C_p = (float*) calloc(C_sz, sizeof(float));
-		pack_C_single_buf(C, C_p, M, N, p, cake_cntx, blk_dims);
+		pack_C_single_buf(C, C_p, M, N, p, cake_cntx);
 
 		// C_p = (float**) malloc((((M / (p*m_c))*p) + p_l) * (N/n_c + n_pad) * sizeof( float* ));
 		// pack_C(C, C_p, M, N, m_c, n_c, m_r, n_r, p, alpha_n);
@@ -302,7 +105,7 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 		if(DEBUG) printf("C pack time: %f \n", diff_t ); 
 
 	} else {
-	    C_sz = cake_sgemm_packed_C_size(M, N, p, cake_cntx, blk_dims) / sizeof(float);
+	    C_sz = cake_sgemm_packed_C_size(M, N, p, cake_cntx) / sizeof(float);
 	    C_p = (float*) calloc(C_sz, sizeof(float));
 	}
 
@@ -327,20 +130,9 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 
 	clock_gettime(CLOCK_REALTIME, &start);
 
-	int m_c1 = mr_per_core * m_r;
-	int m_c1_last_core = (mr_per_core - (p_l*mr_per_core - mr_rem)) * m_r;
-	int k_c1 = K % k_c;
 
 	int m, k, n, m_start, m_end, m_inc, k_start, k_end, k_inc;
 	int m_cb, n_c_t, p_used, core;
-
-	// number of CB blocks in the M, N, and K dims
-	int Mb = (M / (p*m_c)) + m_pad;
-	int Nb = (N / n_c) + n_pad;
-	int Kb = (K / k_c) + k_pad;
-
-	int M_padded = (m_r*mr_rem + (M /(p*m_c))*p*m_c);
-
 
 
 	for(n = 0; n < Nb; n++) {
@@ -457,7 +249,7 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 	clock_gettime(CLOCK_REALTIME, &start);
 
 	// unpack_C_rsc(C, C_p, M, N, m_c, n_c, n_r, m_r, p, alpha_n); 
-	unpack_C_single_buf(C, C_p, M, N, p, cake_cntx, blk_dims); 
+	unpack_C_single_buf(C, C_p, M, N, p, cake_cntx); 
 
     clock_gettime(CLOCK_REALTIME, &end);
     seconds = end.tv_sec - start.tv_sec;

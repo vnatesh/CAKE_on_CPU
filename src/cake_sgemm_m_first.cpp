@@ -7,7 +7,7 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 	// This preference comes from how the microkernel is most efficiently able to load/store 
 	// elements of C11 from/to memory. Most microkernels use vector instructions to access 
 	// contiguous columns (or column segments) of C11
-	int m_c, k_c, n_c, m_r, n_r, A_sz, B_sz, C_sz;	
+	int m_r, n_r, A_sz, B_sz, C_sz;	
 	double alpha_n;
 	struct timespec start, end;
 	long seconds, nanoseconds;
@@ -16,7 +16,7 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 	float *A_p, *B_p, *C_p;
 	inc_t rsc, csc;
 
-	printf("M first\n");
+	// printf("M first\n");
 
 
 	if(cake_cntx == NULL) {
@@ -27,32 +27,12 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 	n_r = cake_cntx->nr;
 	alpha_n = cake_cntx->alpha_n;
 
-	blk_dims_t* blk_dims = get_block_dims(cake_cntx, M, p, MKN);
-
-    m_c = blk_dims->m_c;
-	k_c = blk_dims->k_c;
-    n_c = blk_dims->n_c;
+	init_block_dims(M, N, K, p, cake_cntx, MKN);
 	omp_set_num_threads(p);
 
     if(DEBUG) printf("M = %d, N = %d, K = %d\n", M, N, K);
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", m_r, n_r);
     if(DEBUG) printf("mc = %d, kc = %d, nc = %d\n", m_c, k_c, n_c);
-
-
-	int k_pad = (K % (p*k_c)) ? 1 : 0; 
-	int m_pad = (M % m_c) ? 1 : 0; 
-	int n_pad = (N % n_c) ? 1 : 0;
-
-	int k_rem = K % (p*k_c);
-	int k_c1 = (int) ceil( ((double) k_rem) / p);
-	int p_l;
-	if(k_c1) 
-		p_l = (int) ceil( ((double) k_rem) / k_c1);
-	else
-		p_l = 0;
-
-	int nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
-	int n_c1 = nr_rem * n_r;
 
 
 
@@ -62,14 +42,14 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 
 		clock_gettime(CLOCK_REALTIME, &start);
 
-		A_sz = cake_sgemm_packed_A_size(M, K, 1, cake_cntx, blk_dims);
+		A_sz = cake_sgemm_packed_A_size(M, K, 1, cake_cntx);
 		if(posix_memalign((void**) &A_p, 64, A_sz)) {
 			printf("posix memalign error\n");
 			exit(1);
 		}
-		// A_sz = cake_sgemm_packed_A_size(M, K, 1, cake_cntx, blk_dims) / sizeof(float);
+		// A_sz = cake_sgemm_packed_A_size(M, K, 1, cake_cntx) / sizeof(float);
 	 //    A_p = (float*) calloc(A_sz, sizeof(float));
-		pack_A_single_buf_m_first(A, A_p, M, K, p, cake_cntx, blk_dims);
+		pack_A_single_buf_m_first(A, A_p, M, K, p, cake_cntx);
 
 		clock_gettime(CLOCK_REALTIME, &end);
 		seconds = end.tv_sec - start.tv_sec;
@@ -85,14 +65,14 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 
 		clock_gettime(CLOCK_REALTIME, &start);
 
-	    B_sz = cake_sgemm_packed_B_size(K, N, p, cake_cntx, blk_dims);
+	    B_sz = cake_sgemm_packed_B_size(K, N, p, cake_cntx);
 		if(posix_memalign((void**) &B_p, 64, B_sz)) {
 			printf("posix memalign error\n");
 			exit(1);
 		}
-	    // B_sz = cake_sgemm_packed_B_size(K, N, p, cake_cntx, blk_dims) / sizeof(float);
+	    // B_sz = cake_sgemm_packed_B_size(K, N, p, cake_cntx) / sizeof(float);
 	    // B_p = (float*) calloc(B_sz, sizeof(float));
-		pack_B_m_first(B, B_p, K, N, p, cake_cntx, blk_dims);
+		pack_B_m_first(B, B_p, K, N, p, cake_cntx);
 
 	    clock_gettime(CLOCK_REALTIME, &end);
 	    seconds = end.tv_sec - start.tv_sec;
@@ -106,14 +86,14 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 	// otherwise just allocate an empty C_p buffer
 	if(beta != 0) {
 		clock_gettime(CLOCK_REALTIME, &start);
-	    C_sz = cake_sgemm_packed_C_size(M, N, 1, cake_cntx, blk_dims);
+	    C_sz = cake_sgemm_packed_C_size(M, N, 1, cake_cntx);
 		if(posix_memalign((void**) &C_p, 64, C_sz)) {
 			printf("posix memalign error\n");
 			exit(1);
 		}
-	    // C_sz = cake_sgemm_packed_C_size(M, N, 1, cake_cntx, blk_dims) / sizeof(float);
+	    // C_sz = cake_sgemm_packed_C_size(M, N, 1, cake_cntx) / sizeof(float);
 	    // C_p = (float*) calloc(C_sz, sizeof(float));
-		pack_C_single_buf_m_first(C, C_p, M, N, p, cake_cntx, blk_dims);
+		pack_C_single_buf_m_first(C, C_p, M, N, p, cake_cntx);
 
 		// C_p = (float**) malloc((((M / (p*m_c))*p) + p_l) * (N/n_c + n_pad) * sizeof( float* ));
 		// pack_C(C, C_p, M, N, m_c, n_c, m_r, n_r, p, alpha_n);
@@ -125,7 +105,7 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 		if(DEBUG) printf("C pack time: %f \n", diff_t ); 
 
 	} else {
-	    C_sz = cake_sgemm_packed_C_size(M, N, 1, cake_cntx, blk_dims) / sizeof(float);
+	    C_sz = cake_sgemm_packed_C_size(M, N, 1, cake_cntx) / sizeof(float);
 	    C_p = (float*) calloc(C_sz, sizeof(float));
 	}
 
@@ -150,20 +130,8 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 
 	clock_gettime(CLOCK_REALTIME, &start);
 
-
-	int k_c1_last_core = k_rem - k_c1*(p_l-1);
-	int mr_rem = (int) ceil( ((double) (M % m_c)) / m_r);
-	int m_c1 = mr_rem * m_r;
-
 	int m, k, n, m_start, m_end, m_inc, k_start, k_end, k_inc;
 	int k_cb, n_c_t, m_c_t, p_used, core, C_offset = 0;
-
-	// number of CB blocks in the M, N, and K dims
-	int Mb = (M / m_c) + m_pad;
-	int Kb = (K / (p*k_c)) + k_pad;
-	int Nb = (N / n_c) + n_pad;
-
-	int M_padded = (M / m_c)*m_c + m_c1;
 
 	m_start = 0;
 	m_end = Mb;
@@ -280,7 +248,7 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 	clock_gettime(CLOCK_REALTIME, &start);
 
 	// unpack_C_rsc(C, C_p, M, N, m_c, n_c, n_r, m_r, p, alpha_n); 
-	unpack_C_single_buf_m_first(C, C_p, M, N, p, cake_cntx, blk_dims); 
+	unpack_C_single_buf_m_first(C, C_p, M, N, p, cake_cntx); 
 
     clock_gettime(CLOCK_REALTIME, &end);
     seconds = end.tv_sec - start.tv_sec;

@@ -1,5 +1,25 @@
 #include "cake.h"
 
+int m_c;
+int k_c;
+int n_c;
+int m_c1;
+int k_c1;
+int n_c1;
+int m_c1_last_core;
+int k_c1_last_core;
+int mr_rem;
+int nr_rem;
+int k_rem;
+int p_l;
+int m_pad;
+int k_pad;
+int n_pad;
+int Mb;
+int Kb;
+int Nb;
+int M_padded;
+int N_padded;
 
 cake_cntx_t* cake_query_cntx_torch(int L2, int L3) {
 
@@ -199,6 +219,95 @@ blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch)
 
 	return blk_ret;
 }
+
+
+
+
+void init_block_dims(int M, int N, int K, int p, cake_cntx_t* cake_cntx, enum sched sch) {
+
+	int m_r = cake_cntx->mr;
+	int n_r = cake_cntx->nr;
+	blk_dims_t* blk_dims = get_block_dims(cake_cntx, M, p, sch);
+    m_c = blk_dims->m_c;
+	k_c = blk_dims->k_c;
+    n_c = blk_dims->n_c;
+
+	switch(sch) {
+
+		case KMN: {
+
+			k_pad = (K % k_c) ? 1 : 0; 
+			n_pad = (N % n_c) ? 1 : 0; 
+			m_pad = (M % (p*m_c)) ? 1 : 0; 
+
+			mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
+			int mr_per_core = (int) ceil( ((double) mr_rem) / p );
+			
+			if(mr_per_core) 
+				p_l = (int) ceil( ((double) mr_rem) / mr_per_core);
+			else
+				p_l = 0;
+
+			nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
+			n_c1 = nr_rem * n_r;
+
+			m_c1 = mr_per_core * m_r;
+			m_c1_last_core = (mr_per_core - (p_l*mr_per_core - mr_rem)) * m_r;
+			k_c1 = K % k_c;
+
+			//number of CB blocks in the M, N, and K dims
+			Mb = (M / (p*m_c)) + m_pad;
+			Nb = (N / n_c) + n_pad;
+			Kb = (K / k_c) + k_pad;
+
+			M_padded = (m_r*mr_rem + (M /(p*m_c))*p*m_c);
+			N_padded = (N - (N%n_c)) + n_c1;
+
+			break;
+		}
+
+
+		case MKN: {
+
+			k_pad = (K % (p*k_c)) ? 1 : 0; 
+			m_pad = (M % m_c) ? 1 : 0; 
+			n_pad = (N % n_c) ? 1 : 0;
+
+			k_rem = K % (p*k_c);
+			k_c1 = (int) ceil( ((double) k_rem) / p);
+
+			if(k_c1) 
+				p_l = (int) ceil( ((double) k_rem) / k_c1);
+			else
+				p_l = 0;
+
+			nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
+			n_c1 = nr_rem * n_r;
+
+			k_c1_last_core = k_rem - k_c1*(p_l-1);
+			mr_rem = (int) ceil( ((double) (M % m_c)) / m_r);
+			m_c1 = mr_rem * m_r;
+
+			// number of CB blocks in the M, N, and K dims
+			Mb = (M / m_c) + m_pad;
+			Kb = (K / (p*k_c)) + k_pad;
+			Nb = (N / n_c) + n_pad;
+
+			M_padded = (M / m_c)*m_c + m_c1;
+			N_padded = (N - (N%n_c)) + n_c1;
+
+
+			break;
+		}
+
+		default: {
+			printf("unknown schedule\n");
+			exit(1);
+		}
+	}
+
+}
+
 
 
 

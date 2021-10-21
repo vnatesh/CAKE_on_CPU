@@ -37,8 +37,7 @@ void unpack_C_single_buf(float* C, float* C_p, int M, int N, int p, cake_cntx_t*
    int m, n, C_offset = 0, C_p_offset = 0;
    int m_cb, n_c_t, p_used, core;
 
-   int m1 = (M - (M % (p*m_c)));
-   int n1 = (N - (N % n_c));
+   int m1, n1;
    bool pad_n;
 
    for(n = 0; n < Nb; n++) {

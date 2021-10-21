@@ -418,7 +418,7 @@ void pack_C_single_buf(float* C, float* C_p, int M, int N, int p, cake_cntx_t* c
 void pack_ob_C_single_buf(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
             int m_c, int n_c, int m_r, int n_r, bool pad_m, bool pad_n) {
 
-   int ind2 = 0;
+   int ind_ob = 0;
 
 	if(pad_m || pad_n) {
 
@@ -427,11 +427,11 @@ void pack_ob_C_single_buf(float* C, float* C_p, int M, int N, int m1, int n1, in
             for(int i = 0; i < m_r; i++) {
                for(int j = 0; j < n_r; j++) {
                   if((n1 + n2 + j) >= N  ||  (m1 + m2 + m3 + i) >=  M) {
-                     C_p[ind2] = 0.0; // padding
+                     C_p[ind_ob] = 0.0; // padding
                   } else {
-                     C_p[ind2] = C[n2 + m3*N + i*N + j];
+                     C_p[ind_ob] = C[n2 + m3*N + i*N + j];
                   }
-                  ind2++;
+                  ind_ob++;
                }
             }
          }
@@ -443,8 +443,8 @@ void pack_ob_C_single_buf(float* C, float* C_p, int M, int N, int m1, int n1, in
          for(int m3 = 0; m3 < m_c; m3 += m_r) {
             for(int i = 0; i < m_r; i++) {
                for(int j = 0; j < n_r; j++) {
-                  C_p[ind2] = C[n2 + m3*N + i*N + j];
-                  ind2++;
+                  C_p[ind_ob] = C[n2 + m3*N + i*N + j];
+                  ind_ob++;
                }
             }
          }
@@ -583,7 +583,7 @@ void pack_C_multiple_buf(float* C, float** C_p, int M, int N, int m_c, int n_c, 
 // initialize an operation block of matrix A
 void pack_ob_A_multiple_buf(float* A, float* A_p, int M, int K, int m1, int k1, int m2, int m_c, int k_c, int m_r, bool pad) {
 
-	int	ind2 = 0;
+	int	ind_ob = 0;
 	
 	if(pad) {
 		for(int m3 = 0; m3 < m_c; m3 += m_r) {
@@ -591,12 +591,12 @@ void pack_ob_A_multiple_buf(float* A, float* A_p, int M, int K, int m1, int k1, 
 				for(int j = 0; j < m_r; j++) {
 
 					if((m1 + m2 + m3 + j) >=  M) {
-						A_p[ind2] = 0.0;
+						A_p[ind_ob] = 0.0;
 					} else {
-						A_p[ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
+						A_p[ind_ob] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
 					}
 
-					ind2++;
+					ind_ob++;
 				}
 			}
 		}		
@@ -606,8 +606,8 @@ void pack_ob_A_multiple_buf(float* A, float* A_p, int M, int K, int m1, int k1, 
 		for(int m3 = 0; m3 < m_c; m3 += m_r) {
 			for(int i = 0; i < k_c; i++) {
 				for(int j = 0; j < m_r; j++) {
-					A_p[ind2] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
-					ind2++;
+					A_p[ind_ob] = A[m1*K + k1 + m2*K + m3*K + i + j*K];
+					ind_ob++;
 				}
 			}
 		}
@@ -617,7 +617,7 @@ void pack_ob_A_multiple_buf(float* A, float* A_p, int M, int K, int m1, int k1, 
 
 void pack_ob_A_single_buf(float* A, float* A_p, int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad) {
 
-   int ind2 = 0;
+   int ind_ob = 0;
 
    if(pad) {
       for(int m3 = 0; m3 < m_c; m3 += m_r) {
@@ -625,12 +625,12 @@ void pack_ob_A_single_buf(float* A, float* A_p, int M, int K, int m1, int m2, in
             for(int j = 0; j < m_r; j++) {
 
                if((m1 + m2 + m3 + j) >=  M) {
-                  A_p[ind2] = 0.0;
+                  A_p[ind_ob] = 0.0;
                } else {
-                  A_p[ind2] = A[m3*K + i + j*K];
+                  A_p[ind_ob] = A[m3*K + i + j*K];
                }
 
-               ind2++;
+               ind_ob++;
             }
          }
       }     
@@ -640,8 +640,8 @@ void pack_ob_A_single_buf(float* A, float* A_p, int M, int K, int m1, int m2, in
       for(int m3 = 0; m3 < m_c; m3 += m_r) {
          for(int i = 0; i < k_c; i++) {
             for(int j = 0; j < m_r; j++) {
-               A_p[ind2] = A[m3*K + i + j*K];
-               ind2++;
+               A_p[ind_ob] = A[m3*K + i + j*K];
+               ind_ob++;
             }
          }
       }     
@@ -653,7 +653,7 @@ void pack_ob_A_single_buf(float* A, float* A_p, int M, int K, int m1, int m2, in
 void pack_ob_C_multiple_buf(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
 				int m_c, int n_c, int m_r, int n_r, bool pad) {
 
-	int	ind2 = 0;
+	int	ind_ob = 0;
 
 	if(pad) {
 
@@ -662,11 +662,11 @@ void pack_ob_C_multiple_buf(float* C, float* C_p, int M, int N, int m1, int n1, 
 				for(int i = 0; i < m_r; i++) {
 					for(int j = 0; j < n_r; j++) {
 						if((n1 + n2 + j) >= N  ||  (m1 + m2 + m3 + i) >=  M) {
-							C_p[ind2] = 0.0; // padding
+							C_p[ind_ob] = 0.0; // padding
 						} else {
-							C_p[ind2] = C[n1 + m1*N + m2*N + n2 + m3*N + i*N + j];
+							C_p[ind_ob] = C[n1 + m1*N + m2*N + n2 + m3*N + i*N + j];
 						}
-						ind2++;
+						ind_ob++;
 					}
 				}
 			}
@@ -678,8 +678,8 @@ void pack_ob_C_multiple_buf(float* C, float* C_p, int M, int N, int m1, int n1, 
 			for(int m3 = 0; m3 < m_c; m3 += m_r) {
 				for(int i = 0; i < m_r; i++) {
 					for(int j = 0; j < n_r; j++) {
-						C_p[ind2] = C[n1 + m1*N + m2*N + n2 + m3*N + i*N + j];
-						ind2++;
+						C_p[ind_ob] = C[n1 + m1*N + m2*N + n2 + m3*N + i*N + j];
+						ind_ob++;
 					}
 				}
 			}

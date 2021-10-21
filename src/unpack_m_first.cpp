@@ -2,32 +2,18 @@
   
 
 
-void unpack_C_single_buf_m_first(float* C, float* C_p, int M, int N, int p, cake_cntx_t* cake_cntx, blk_dims_t* blk_dims) {
+void unpack_C_single_buf_m_first(float* C, float* C_p, int M, int N, int p, cake_cntx_t* cake_cntx) {
 
    struct timespec start, end;
    double diff_t;
    clock_gettime(CLOCK_REALTIME, &start);
 
-   int m_c = blk_dims->m_c;
-   int n_c = blk_dims->n_c;
    int m_r = cake_cntx->mr;
    int n_r = cake_cntx->nr;
-
-   int m_pad = (M % m_c) ? 1 : 0; 
-   int n_pad = (N % n_c) ? 1 : 0;
-   int Mb = (M / m_c) + m_pad;
-   int Nb = (N / n_c) + n_pad;
-
-   int mr_rem = (int) ceil( ((double) (M % m_c)) / m_r);
-   int m_c1 = mr_rem * m_r;
-
-   int nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
-   int n_c1 = nr_rem * n_r;
 
    int m, n, n_c_t, n1, C_offset = 0, C_p_offset = 0;
    bool pad_n;
 
-   int M_padded = (M / m_c)*m_c + m_c1;
 
    for(n = 0; n < Nb; n++) {
 

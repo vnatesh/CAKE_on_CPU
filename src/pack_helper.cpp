@@ -2,35 +2,35 @@
 
 
 
-int cake_sgemm_packed_A_size(int M, int K, int p, cake_cntx_t* cake_cntx, blk_dims_t* blk_dims) {
+int cake_sgemm_packed_A_size(int M, int K, int p, cake_cntx_t* cake_cntx) {
 
-	int mr_rem = (int) ceil( ((double) (M % (p*blk_dims->m_c))) / cake_cntx->mr) ;
-	int M_padded = (cake_cntx->mr*mr_rem + (M /(p*blk_dims->m_c))*p*blk_dims->m_c);
+	// int mr_rem = (int) ceil( ((double) (M % (p*blk_dims->m_c))) / cake_cntx->mr) ;
+	// int M_padded = (cake_cntx->mr*mr_rem + (M /(p*blk_dims->m_c))*p*blk_dims->m_c);
 
 	return (M_padded * K) * sizeof(float);
 }
 
 
 
-int cake_sgemm_packed_B_size(int K, int N, int p, cake_cntx_t* cake_cntx, blk_dims_t* blk_dims) {
+int cake_sgemm_packed_B_size(int K, int N, int p, cake_cntx_t* cake_cntx) {
 	
-	int nr_rem = (int) ceil( ((double) (N % blk_dims->n_c) / cake_cntx->nr)) ;
-	int n_c1 = nr_rem * cake_cntx->nr;
-	int N_padded = (N - (N%blk_dims->n_c)) + n_c1;
+	// int nr_rem = (int) ceil( ((double) (N % blk_dims->n_c) / cake_cntx->nr)) ;
+	// int n_c1 = nr_rem * cake_cntx->nr;
+	// int N_padded = (N - (N%n_c)) + n_c1;
 
 	return (K * N_padded) * sizeof(float);
 }
 
 
 
-int cake_sgemm_packed_C_size(int M, int N, int p, cake_cntx_t* cake_cntx, blk_dims_t* blk_dims) {
+int cake_sgemm_packed_C_size(int M, int N, int p, cake_cntx_t* cake_cntx) {
 
-	int mr_rem = (int) ceil( ((double) (M % (p*blk_dims->m_c))) / cake_cntx->mr) ;
-	int M_padded = (cake_cntx->mr*mr_rem + (M /(p*blk_dims->m_c))*p*blk_dims->m_c);
+	// int mr_rem = (int) ceil( ((double) (M % (p*blk_dims->m_c))) / cake_cntx->mr) ;
+	// int M_padded = (cake_cntx->mr*mr_rem + (M /(p*blk_dims->m_c))*p*blk_dims->m_c);
 
-	int nr_rem = (int) ceil( ((double) (N % blk_dims->n_c) / cake_cntx->nr)) ;
-	int n_c1 = nr_rem * cake_cntx->nr;
-	int N_padded = (N - (N%blk_dims->n_c)) + n_c1;
+	// int nr_rem = (int) ceil( ((double) (N % blk_dims->n_c) / cake_cntx->nr)) ;
+	// int n_c1 = nr_rem * cake_cntx->nr;
+	// int N_padded = (N - (N%blk_dims->n_c)) + n_c1;
 
 	return (M_padded * N_padded) * sizeof(float);
 }
@@ -45,18 +45,7 @@ double pack_A_multiple_buf(float* A, float** A_p, int M, int K, int m_c, int k_c
 	clock_gettime(CLOCK_REALTIME, &start);
 
 	int ind1 = 0;
-	int m1, k1, m2, p_l;
-	int k_c1 = (K % k_c);
-	int mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
-	int mr_per_core = (int) ceil( ((double) mr_rem) / p );
-	int m_c1 = mr_per_core * m_r;
-
-	if(mr_per_core) 
-		p_l = (int) ceil( ((double) mr_rem) / mr_per_core);
-	else
-		p_l = 0;
-
-	int m_c1_last_core = (mr_per_core - (p_l*mr_per_core - mr_rem)) * m_r;
+	int m1, k1, m2;
 
 	// main portion of A that evenly fits into CBS blocks each with p m_cxk_c OBs
 	for(m1 = 0; m1 < (M - (M % (p*m_c))); m1 += p*m_c) {
@@ -173,23 +162,7 @@ double pack_A_multiple_buf(float* A, float** A_p, int M, int K, int m_c, int k_c
 
 void pack_C_multiple_buf(float* C, float** C_p, int M, int N, int m_c, int n_c, int m_r, int n_r, int p, int alpha_n) {
 
-	int n1, m1, m2, p_l;
-
-	int mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
-	int mr_per_core = (int) ceil( ((double) mr_rem) / p );
-	int m_c1 = mr_per_core * m_r;
-
-	if(mr_per_core) 
-		p_l = (int) ceil( ((double) mr_rem) / mr_per_core);
-	else
-		p_l = 0;
-
-
-	int m_c1_last_core = (mr_per_core - (p_l*mr_per_core - mr_rem)) * m_r;
-
-	int nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
-	int n_c1 = nr_rem * n_r;
-
+	int n1, m1, m2;
 	int ind1 = 0;
 
 	// main portion of C that evenly fits into CBS blocks each with p m_cxn_c OBs

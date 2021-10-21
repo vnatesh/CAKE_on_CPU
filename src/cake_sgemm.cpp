@@ -1,7 +1,6 @@
 #include "cake.h"
 
 
-// launching CAKE sgemm on asynchronous thread
 
 double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, bool packedA, bool packedB, float alpha, float beta) {
@@ -15,6 +14,8 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	}
 }
 
+
+// launching CAKE sgemm on asynchronous thread
 
 void* cake_sgemm_launch(void* inputs) {
 	
