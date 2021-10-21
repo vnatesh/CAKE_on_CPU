@@ -3,11 +3,7 @@
 
 
 
-void unpack_C_single_buf(float* C, float* C_p, int M, int N, int p, cake_cntx_t* cake_cntx) {
-
-   struct timespec start, end;
-   double diff_t;
-   clock_gettime(CLOCK_REALTIME, &start);
+void unpack_C_single_buf_k_first(float* C, float* C_p, int M, int N, int p, cake_cntx_t* cake_cntx) {
 
    int m_r = cake_cntx->mr;
    int n_r = cake_cntx->nr;
@@ -78,7 +74,6 @@ void unpack_C_rsc_multiple_buf(float* C, float** C_p, int M, int N, int m_c, int
 
 	int m1, m2, n1;
 	int ind1 = 0;
-
 
 	for(n1 = 0; n1 < (N - (N%n_c)); n1 += n_c) {
 		for(m1 = 0; m1 < (M - (M % (p*m_c))); m1 += p*m_c) {

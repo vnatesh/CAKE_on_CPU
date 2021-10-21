@@ -4,7 +4,7 @@
 
 
 // pack the entire matrix A into a single cache-aligned buffer
-double pack_A_single_buf(float* A, float* A_p, int M, int K, int p, cake_cntx_t* cake_cntx) {
+double pack_A_single_buf_k_first(float* A, float* A_p, int M, int K, int p, cake_cntx_t* cake_cntx) {
    
    struct timespec start, end;
    double diff_t;
@@ -70,7 +70,7 @@ double pack_A_single_buf(float* A, float* A_p, int M, int K, int p, cake_cntx_t*
 
 
 
-void pack_B(float* B, float* B_p, int K, int N, cake_cntx_t* cake_cntx) {
+void pack_B_k_first(float* B, float* B_p, int K, int N, cake_cntx_t* cake_cntx) {
 
    int k1, n1, n2;
    int ind1 = 0;
@@ -167,11 +167,7 @@ void pack_B(float* B, float* B_p, int K, int N, cake_cntx_t* cake_cntx) {
 
 
 
-void pack_C_single_buf(float* C, float* C_p, int M, int N, int p, cake_cntx_t* cake_cntx) {
-
-   struct timespec start, end;
-   double diff_t;
-   clock_gettime(CLOCK_REALTIME, &start);
+void pack_C_single_buf_k_first(float* C, float* C_p, int M, int N, int p, cake_cntx_t* cake_cntx) {
 
    int m_r = cake_cntx->mr;
    int n_r = cake_cntx->nr;

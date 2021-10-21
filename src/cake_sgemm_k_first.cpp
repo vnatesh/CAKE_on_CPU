@@ -49,7 +49,7 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 		}
 		// A_sz = cake_sgemm_packed_A_size(M, K, p, cake_cntx) / sizeof(float);
 	 //    A_p = (float*) calloc(A_sz, sizeof(float));
-		pack_A_single_buf(A, A_p, M, K, p, cake_cntx);
+		pack_A_single_buf_k_first(A, A_p, M, K, p, cake_cntx);
 
 		clock_gettime(CLOCK_REALTIME, &end);
 		seconds = end.tv_sec - start.tv_sec;
@@ -72,7 +72,7 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 		}
 	    // B_sz = cake_sgemm_packed_B_size(K, N, p, cake_cntx) / sizeof(float);
 	    // B_p = (float*) calloc(B_sz, sizeof(float));
-		pack_B(B, B_p, K, N, cake_cntx);
+		pack_B_k_first(B, B_p, K, N, cake_cntx);
 
 	    clock_gettime(CLOCK_REALTIME, &end);
 	    seconds = end.tv_sec - start.tv_sec;
@@ -93,7 +93,7 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 		}
 	    // C_sz = cake_sgemm_packed_C_size(M, N, p, cake_cntx) / sizeof(float);
 	    // C_p = (float*) calloc(C_sz, sizeof(float));
-		pack_C_single_buf(C, C_p, M, N, p, cake_cntx);
+		pack_C_single_buf_k_first(C, C_p, M, N, p, cake_cntx);
 
 		// C_p = (float**) malloc((((M / (p*m_c))*p) + p_l) * (N/n_c + n_pad) * sizeof( float* ));
 		// pack_C(C, C_p, M, N, m_c, n_c, m_r, n_r, p, alpha_n);
@@ -249,7 +249,7 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 	clock_gettime(CLOCK_REALTIME, &start);
 
 	// unpack_C_rsc(C, C_p, M, N, m_c, n_c, n_r, m_r, p, alpha_n); 
-	unpack_C_single_buf(C, C_p, M, N, p, cake_cntx); 
+	unpack_C_single_buf_k_first(C, C_p, M, N, p, cake_cntx); 
 
     clock_gettime(CLOCK_REALTIME, &end);
     seconds = end.tv_sec - start.tv_sec;
