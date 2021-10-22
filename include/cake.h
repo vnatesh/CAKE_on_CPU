@@ -9,7 +9,7 @@
 #include "blis.h"
  
 
-#define DEBUG 0
+#define DEBUG 1
 #define ARR_PRINT 0
 #define CHECK_PRINT 0
 
@@ -46,6 +46,7 @@ typedef struct cake_cntx_t{
 	int nr;
 	int L2;
 	int L3;
+	int ncores;
 } cake_cntx_t;
 
 
@@ -142,6 +143,9 @@ void init_block_dims(int M, int N, int K, int p, cake_cntx_t* cake_cntx, enum sc
 int get_cache_size(int level);
 
 int lcm(int n1, int n2);
+
+int get_num_physical_cores();
+
 
 
 // Util functions

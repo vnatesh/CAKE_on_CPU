@@ -257,16 +257,6 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
     diff_t = seconds + nanoseconds*1e-9;
 	if(DEBUG) printf("unpacking time: %f \n", diff_t); 	// exit(1);
 
-// cake_sgemm_checker(A, B, C, N, M, K);
-
-	// for(int i = 0; i < (K/k_c + k_pad) * (((M / (p*m_c))*p) + p_l); i++) {
-	// 	free(A_p[i]);
-	// }
-
-
-	// for(int i = 0; i < (((M / (p*m_c))*p) + p_l) * (N/n_c + n_pad); i++) {
-	// 	free(C_p[i]);
-	// }
 
 	if(!packedA) free(A_p);
 	if(!packedB) free(B_p);

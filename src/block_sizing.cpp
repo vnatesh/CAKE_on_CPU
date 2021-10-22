@@ -51,8 +51,50 @@ cake_cntx_t* cake_query_cntx() {
     ret->nr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, blis_cntx);
 	ret->L2 = get_cache_size(2);
 	ret->L3 = get_cache_size(3);
+	ret->ncores = get_num_physical_cores();
 	return ret;
 }
+
+
+int get_num_physical_cores() {
+
+	FILE *fp;
+	char ret1[16];
+	char command1[128];
+
+	sprintf(command1, "grep -c ^processor /proc/cpuinfo");
+	fp = popen(command1, "r");
+
+	if (fp == NULL) {
+		printf("Failed to run command\n" );
+		exit(1);
+	}
+
+	if(fgets(ret1, sizeof(ret1), fp) == NULL) {
+		printf("cpuinfo error\n");
+	}
+	
+
+	char ret2[16];
+	char command2[128];
+
+	sprintf(command2, "lscpu | grep Thread | tr -dc '0-9'");
+	fp = popen(command2, "r");
+
+	if (fp == NULL) {
+		printf("Failed to run command\n" );
+		exit(1);
+	}
+
+	if(fgets(ret2, sizeof(ret2), fp) == NULL) {
+		printf("lscpu error\n");
+	}
+	
+
+	pclose(fp);
+	return atoi(ret1) / atoi(ret2);
+}
+
 
 
 // find cache size at levels L1d,L1i,L2,and L3 using lscpu
@@ -74,7 +116,6 @@ int get_cache_size(int level) {
 	}
 
 	if(fgets(ret, sizeof(ret), fp) == NULL) {
-		printf("regregertgerge\n");
 		printf("lscpu error\n");
 	}
 	
@@ -162,7 +203,7 @@ int get_cache_size(int level) {
 blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch) {
 
 	int mc, mc_ret, nc_ret, a, mc_L2 = 0, mc_L3 = 0;
-	int max_threads = omp_get_max_threads() / 2; // 2-way hyperthreaded
+	int max_threads = cake_cntx->ncores; // 2-way hyperthreaded
 	int mn_lcm = lcm(cake_cntx->mr, cake_cntx->nr);
 	// int mn_lcm = m_r;
 
@@ -195,6 +236,7 @@ blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch)
 			mc_ret = a;
 		}
 	}
+
 
     blk_dims_t* blk_ret = (blk_dims_t*) malloc(sizeof(blk_dims_t));
 
