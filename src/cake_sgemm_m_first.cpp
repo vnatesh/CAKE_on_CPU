@@ -156,27 +156,27 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 
 		for(k = k_start; k != k_end; k += k_inc) {
 
-			// if(n % 2) {
-			// 	if(k % 2) {
-					// m_start = 0;
-					// m_end = Mb;
-					// m_inc = 1;
-			// 	} else {
-			// 		m_start = Mb - 1;
-			// 		m_end = -1;
-			// 		m_inc = -1;
-			// 	}
-			// } else {
-			// 	if(k % 2) {
-			// 		m_start = Mb - 1;
-			// 		m_end = -1;
-			// 		m_inc = -1;
-			// 	} else {
-			// 		m_start = 0;
-			// 		m_end = Mb;
-			// 		m_inc = 1;
-			// 	}
-			// }
+			if(n % 2) {
+				if(k % 2) {
+					m_start = 0;
+					m_end = Mb;
+					m_inc = 1;
+				} else {
+					m_start = Mb - 1;
+					m_end = -1;
+					m_inc = -1;
+				}
+			} else {
+				if(k % 2) {
+					m_start = Mb - 1;
+					m_end = -1;
+					m_inc = -1;
+				} else {
+					m_start = 0;
+					m_end = Mb;
+					m_inc = 1;
+				}
+			}
 
 			if((k == Kb - 1) && k_pad) {
 				p_used = p_l;
@@ -187,7 +187,10 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 			}
 
 			#pragma omp parallel for private(m, m_c_t, core)
-			for(m = 0; m < Mb; m++) {
+			for(int m_ind = 0; m_ind < Mb; m_ind++) {
+			// for(m = 0; m < Mb; m++) {
+
+				m = m_start + m_ind*m_inc;
 
 				m_c_t = m_c; 
 				if((m == Mb - 1) && m_pad) {
@@ -208,7 +211,6 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 						k_c_t = k_c;
 						k_c_x = k_c;
 					}
-
 
 					int a_ind = k*M_padded*p*k_c + m*m_c*k_cb + core*m_c_t*k_c_x;
 					int b_ind = n*K*n_c + k*p*k_c*n_c_t + core*k_c_x*n_c_t;
