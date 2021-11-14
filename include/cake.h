@@ -9,34 +9,36 @@
 #include "blis.h"
  
 
-#define DEBUG 1
+#define DEBUG 0
 #define ARR_PRINT 0
 #define CHECK_PRINT 0
 
 
-extern int m_c;
-extern int k_c;
-extern int n_c;
-extern int m_c1;
-extern int k_c1;
-extern int n_c1;
-extern int m_c1_last_core;
-extern int k_c1_last_core;
-extern int mr_rem;
-extern int nr_rem;
-extern int k_rem;
-extern int p_l;
-extern int m_pad;
-extern int k_pad;
-extern int n_pad;
-extern int Mb;
-extern int Kb;
-extern int Nb;
-extern int M_padded;
-extern int N_padded;
-
-
 enum sched {KMN, MKN, NKM};
+
+
+typedef struct blk_dims_t {
+	int m_c;
+	int k_c;
+	int n_c;
+	int m_c1;
+	int k_c1;
+	int n_c1;
+	int m_c1_last_core;
+	int k_c1_last_core;
+	int mr_rem;
+	int nr_rem;
+	int k_rem;
+	int p_l;
+	int m_pad;
+	int k_pad;
+	int n_pad;
+	int Mb;
+	int Kb;
+	int Nb;
+	int M_padded;
+	int N_padded;
+} blk_dims_t;
 
 
 typedef struct cake_cntx_t{
@@ -50,11 +52,11 @@ typedef struct cake_cntx_t{
 } cake_cntx_t;
 
 
-typedef struct blk_dims_t{
+typedef struct cache_dims_t{
 	int m_c;
 	int k_c;
 	int n_c;
-} blk_dims_t;
+} cache_dims_t;
 
 
 
@@ -81,20 +83,20 @@ cake_cntx_t* cake_query_cntx_torch(int L2, int L3);
 Pack 
 
 */
-double pack_A_single_buf_k_first(float* A, float* A_p, int M, int K, int p, cake_cntx_t* cake_cntx);
-void pack_B_k_first(float* B, float* B_p, int K, int N, cake_cntx_t* cake_cntx);
-void pack_C_single_buf_k_first(float* C, float* C_p, int M, int N, int p, cake_cntx_t* cake_cntx);
+double pack_A_single_buf_k_first(float* A, float* A_p, int M, int K, int p, blk_dims_t* x, cake_cntx_t* cake_cntx);
+void pack_B_k_first(float* B, float* B_p, int K, int N, blk_dims_t* x, cake_cntx_t* cake_cntx);
+void pack_C_single_buf_k_first(float* C, float* C_p, int M, int N, int p, blk_dims_t* x, cake_cntx_t* cake_cntx);
 
-double pack_A_single_buf_m_first(float* A, float* A_p, int M, int K, int p, cake_cntx_t* cake_cntx);
-void pack_B_m_first(float* B, float* B_p, int K, int N, int p, cake_cntx_t* cake_cntx);
-void pack_C_single_buf_m_first(float* C, float* C_p, int M, int N, int p, cake_cntx_t* cake_cntx);
+double pack_A_single_buf_m_first(float* A, float* A_p, int M, int K, int p, blk_dims_t* x, cake_cntx_t* cake_cntx);
+void pack_B_m_first(float* B, float* B_p, int K, int N, int p, blk_dims_t* x, cake_cntx_t* cake_cntx);
+void pack_C_single_buf_m_first(float* C, float* C_p, int M, int N, int p, blk_dims_t* x, cake_cntx_t* cake_cntx);
 
 // double pack_A_multiple_buf(float* A, float** A_p, int M, int K, int m_c, int k_c, int m_r, int p);
 // void pack_C_multiple_buf(float* C, float** C_p, int M, int N, int m_c, int n_c, int m_r, int n_r, int p, int alpha_n);
 
 
-void unpack_C_single_buf_k_first(float* C, float* C_p, int M, int N, int p, cake_cntx_t* cake_cntx);
-void unpack_C_single_buf_m_first(float* C, float* C_p, int M, int N, int p, cake_cntx_t* cake_cntx);
+void unpack_C_single_buf_k_first(float* C, float* C_p, int M, int N, int p, blk_dims_t* x, cake_cntx_t* cake_cntx);
+void unpack_C_single_buf_m_first(float* C, float* C_p, int M, int N, int p, blk_dims_t* x, cake_cntx_t* cake_cntx);
 void unpack_C_rsc(float* C, float** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p, int alpha_n);
 void unpack_C_old(float* C, float** C_p, int M, int N, int m_c, int n_c, int n_r, int m_r, int p);
 
@@ -119,9 +121,13 @@ void unpack_ob_C_multiple_buf(float* C, float* C_p, int M, int N, int m1, int n1
 				int m_c, int n_c, int m_r, int n_r);
 
 
-int cake_sgemm_packed_A_size(int M, int K, int p, cake_cntx_t* cake_cntx);
-int cake_sgemm_packed_B_size(int K, int N, int p, cake_cntx_t* cake_cntx);
-int cake_sgemm_packed_C_size(int M, int N, int p, cake_cntx_t* cake_cntx);
+
+
+int cake_sgemm_packed_A_size(int M, int K, int p, blk_dims_t* x, cake_cntx_t* cake_cntx);
+int cake_sgemm_packed_B_size(int K, int N, int p, blk_dims_t* x, cake_cntx_t* cake_cntx);
+int cake_sgemm_packed_C_size(int M, int N, int p, blk_dims_t* x, cake_cntx_t* cake_cntx);
+
+
 
 double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, bool packedA = 0, bool packedB = 0, float alpha = 1, float beta = 0);
@@ -135,10 +141,10 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 void* cake_sgemm_launch(void* inputs);
 
 
-// block sizing and system cache size querying
-blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch);
+// block sizing and system parameter querying
+cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch);
 
-void init_block_dims(int M, int N, int K, int p, cake_cntx_t* cake_cntx, enum sched sch) ;
+blk_dims_t* init_block_dims(int M, int N, int K, int p, cake_cntx_t* cake_cntx, enum sched sch);
 
 int get_cache_size(int level);
 

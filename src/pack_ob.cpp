@@ -79,7 +79,7 @@ void pack_ob_B_single_buf(float* B, float* B_p, int K, int N, int n1,
          for(int i = 0; i < k_c; i++) {
             for(int j = 0; j < n_r; j++) {
                if((n1 + n2 + j) >=  N) {
-	               	B_p[ind_ob] = 0.0;
+                     B_p[ind_ob] = 0.0;
                } else {
                   // B_p[ind1 + local_ind + (k1/k_c)*k_c*n_c1] = B[n1 + k1*N + n2 + i*N + j];
                   B_p[ind_ob] = B[n2 + i*N + j];
@@ -89,6 +89,7 @@ void pack_ob_B_single_buf(float* B, float* B_p, int K, int N, int n1,
          }
       }
    }
+   
    else {
       for(int n2 = 0; n2 < n_c; n2 += n_r) {
          for(int i = 0; i < k_c; i++) {
@@ -146,7 +147,7 @@ void pack_ob_C_single_buf(float* C, float* C_p, int M, int N, int m1, int n1, in
 
    int ind_ob = 0;
 
-	if(pad_m || pad_n) {
+   if(pad_m || pad_n) {
 
       for(int n2 = 0; n2 < n_c; n2 += n_r) {
          for(int m3 = 0; m3 < m_c; m3 += m_r) {
@@ -185,7 +186,7 @@ void pack_ob_C_single_buf(float* C, float* C_p, int M, int N, int m1, int n1, in
 // initialize an operation block of matrix A
 void pack_ob_A_multiple_buf(float* A, float* A_p, int M, int K, int m1, int k1, int m2, int m_c, int k_c, int m_r, bool pad) {
 
-   int   ind2 = 0;
+   int ind2 = 0;
    
    if(pad) {
       for(int m3 = 0; m3 < m_c; m3 += m_r) {
@@ -221,7 +222,7 @@ void pack_ob_A_multiple_buf(float* A, float* A_p, int M, int K, int m1, int k1, 
 void pack_ob_C_multiple_buf(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
             int m_c, int n_c, int m_r, int n_r, bool pad) {
 
-   int   ind2 = 0;
+   int ind2 = 0;
 
    if(pad) {
 
@@ -260,7 +261,7 @@ void pack_ob_C_multiple_buf(float* C, float* C_p, int M, int N, int m1, int n1, 
 void unpack_ob_C_multiple_buf(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
             int m_c, int n_c, int m_r, int n_r) {
 
-   int   ind2 = 0;
+   int ind2 = 0;
 
    for(int n2 = 0; n2 < n_c; n2 += n_r) {
       for(int m3 = 0; m3 < m_c; m3 += m_r) {

@@ -9,31 +9,23 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 	// elements of C11 from/to memory. Most microkernels use vector instructions to access 
 	// contiguous columns (or column segments) of C11
 	
-	int m_r, n_r, A_sz, B_sz, C_sz;	
-
-	double alpha_n;
+	int A_sz, B_sz, C_sz;	
 	struct timespec start, end;
 	long seconds, nanoseconds;
 	double diff_t, times;
-	float alpha_blis, beta_blis;
 	float *A_p, *B_p, *C_p;
-	inc_t rsc, csc;
 
 
 	if(cake_cntx == NULL) {
 		cake_cntx = cake_query_cntx();
 	}
 
-	m_r = cake_cntx->mr;
-	n_r = cake_cntx->nr;
-	alpha_n = cake_cntx->alpha_n;
-
-	init_block_dims(M, N, K, p, cake_cntx, KMN);
+	blk_dims_t* x = init_block_dims(M, N, K, p, cake_cntx, KMN);
 	omp_set_num_threads(p);
 
     if(DEBUG) printf("M = %d, N = %d, K = %d\n", M, N, K);
-    if(DEBUG) printf("m_r = %d, n_r = %d\n\n", m_r, n_r);
-    if(DEBUG) printf("mc = %d, kc = %d, nc = %d\n", m_c, k_c, n_c);
+    if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
+    if(DEBUG) printf("mc = %d, kc = %d, nc = %d\n", x->m_c, x->k_c, x->n_c);
 
 
 	if(packedA) {
@@ -42,14 +34,14 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 
 		clock_gettime(CLOCK_REALTIME, &start);
 
-		A_sz = cake_sgemm_packed_A_size(M, K, p, cake_cntx);
+		A_sz = cake_sgemm_packed_A_size(M, K, p, x, cake_cntx);
 		if(posix_memalign((void**) &A_p, 64, A_sz)) {
 			printf("posix memalign error\n");
 			exit(1);
 		}
 		// A_sz = cake_sgemm_packed_A_size(M, K, p, cake_cntx) / sizeof(float);
 	 //    A_p = (float*) calloc(A_sz, sizeof(float));
-		pack_A_single_buf_k_first(A, A_p, M, K, p, cake_cntx);
+		pack_A_single_buf_k_first(A, A_p, M, K, p, x, cake_cntx);
 
 		clock_gettime(CLOCK_REALTIME, &end);
 		seconds = end.tv_sec - start.tv_sec;
@@ -65,14 +57,14 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 
 		clock_gettime(CLOCK_REALTIME, &start);
 
-	    B_sz = cake_sgemm_packed_B_size(K, N, p, cake_cntx);
+	    B_sz = cake_sgemm_packed_B_size(K, N, p, x, cake_cntx);
 		if(posix_memalign((void**) &B_p, 64, B_sz)) {
 			printf("posix memalign error\n");
 			exit(1);
 		}
 	    // B_sz = cake_sgemm_packed_B_size(K, N, p, cake_cntx) / sizeof(float);
 	    // B_p = (float*) calloc(B_sz, sizeof(float));
-		pack_B_k_first(B, B_p, K, N, cake_cntx);
+		pack_B_k_first(B, B_p, K, N, x, cake_cntx);
 
 	    clock_gettime(CLOCK_REALTIME, &end);
 	    seconds = end.tv_sec - start.tv_sec;
@@ -86,14 +78,14 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 	// otherwise just allocate an empty C_p buffer
 	if(beta != 0) {
 		clock_gettime(CLOCK_REALTIME, &start);
-	    C_sz = cake_sgemm_packed_C_size(M, N, p, cake_cntx);
+	    C_sz = cake_sgemm_packed_C_size(M, N, p, x, cake_cntx);
 		if(posix_memalign((void**) &C_p, 64, C_sz)) {
 			printf("posix memalign error\n");
 			exit(1);
 		}
 	    // C_sz = cake_sgemm_packed_C_size(M, N, p, cake_cntx) / sizeof(float);
 	    // C_p = (float*) calloc(C_sz, sizeof(float));
-		pack_C_single_buf_k_first(C, C_p, M, N, p, cake_cntx);
+		pack_C_single_buf_k_first(C, C_p, M, N, p, x, cake_cntx);
 
 		// C_p = (float**) malloc((((M / (p*m_c))*p) + p_l) * (N/n_c + n_pad) * sizeof( float* ));
 		// pack_C(C, C_p, M, N, m_c, n_c, m_r, n_r, p, alpha_n);
@@ -105,14 +97,30 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 		if(DEBUG) printf("C pack time: %f \n", diff_t ); 
 
 	} else {
-	    C_sz = cake_sgemm_packed_C_size(M, N, p, cake_cntx) / sizeof(float);
+	    C_sz = cake_sgemm_packed_C_size(M, N, p, x, cake_cntx) / sizeof(float);
 	    C_p = (float*) calloc(C_sz, sizeof(float));
 	}
 
 
+
+	// copy over block dims to local vars to avoid readibility ussiues with x->
+	int m_r = cake_cntx->mr, n_r = cake_cntx->nr;
+
+	int m_c = x->m_c, k_c = x->k_c, n_c = x->n_c;
+	int m_c1 = x->m_c1, k_c1 = x->k_c1, n_c1 = x->n_c1;
+	int m_c1_last_core = x->m_c1_last_core;
+	int mr_rem = x->mr_rem;
+	int p_l = x->p_l, m_pad = x->m_pad, k_pad = x->k_pad, n_pad = x->n_pad;
+	int Mb = x->Mb, Kb = x->Kb, Nb = x->Nb;
+	int M_padded = x->M_padded;
+
+	int m, k, n, m_start, m_end, m_inc, k_start, k_end, k_inc;
+	int m_cb, n_c_t, p_used, core;
+	inc_t rsc, csc;
+
 	// Set the scalars to use during each GEMM kernel call.
-	alpha_blis = 1.0;
-	beta_blis  = 1.0;
+	float alpha_blis = 1.0;
+	float beta_blis  = 1.0;
     // rsc = 1; csc = m_r;
     rsc = n_r; csc = 1;
     // rsa = 1; csa = m_r;
@@ -127,13 +135,7 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 	// 					auxinfo_t*, cntx_t*);
 	// bli_sgemm_ukernel = bli_sgemm_haswell_asm_6x16;
 
-
 	clock_gettime(CLOCK_REALTIME, &start);
-
-
-	int m, k, n, m_start, m_end, m_inc, k_start, k_end, k_inc;
-	int m_cb, n_c_t, p_used, core;
-
 
 	for(n = 0; n < Nb; n++) {
 
@@ -236,7 +238,6 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 	}
 
 
-
     clock_gettime(CLOCK_REALTIME, &end);
     seconds = end.tv_sec - start.tv_sec;
     nanoseconds = end.tv_nsec - start.tv_nsec;
@@ -249,7 +250,7 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 	clock_gettime(CLOCK_REALTIME, &start);
 
 	// unpack_C_rsc(C, C_p, M, N, m_c, n_c, n_r, m_r, p, alpha_n); 
-	unpack_C_single_buf_k_first(C, C_p, M, N, p, cake_cntx); 
+	unpack_C_single_buf_k_first(C, C_p, M, N, p, x, cake_cntx); 
 
     clock_gettime(CLOCK_REALTIME, &end);
     seconds = end.tv_sec - start.tv_sec;

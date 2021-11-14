@@ -1,25 +1,6 @@
 #include "cake.h"
 
-int m_c;
-int k_c;
-int n_c;
-int m_c1;
-int k_c1;
-int n_c1;
-int m_c1_last_core;
-int k_c1_last_core;
-int mr_rem;
-int nr_rem;
-int k_rem;
-int p_l;
-int m_pad;
-int k_pad;
-int n_pad;
-int Mb;
-int Kb;
-int Nb;
-int M_padded;
-int N_padded;
+
 
 cake_cntx_t* cake_query_cntx_torch(int L2, int L3) {
 
@@ -200,7 +181,7 @@ int get_cache_size(int level) {
 }
 
 
-blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch) {
+cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch) {
 
 	int mc, mc_ret, nc_ret, a, mc_L2 = 0, mc_L3 = 0;
 	int max_threads = cake_cntx->ncores; // 2-way hyperthreaded
@@ -238,7 +219,7 @@ blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch)
 	}
 
 
-    blk_dims_t* blk_ret = (blk_dims_t*) malloc(sizeof(blk_dims_t));
+    cache_dims_t* blk_ret = (cache_dims_t*) malloc(sizeof(cache_dims_t));
 
 	switch(sch) {
 		case KMN: {
@@ -253,6 +234,10 @@ blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch)
 			nc_ret = (int) cake_cntx->alpha_n*mc_ret;
 			break;
 		}
+		default: {
+			printf("unknown schedule\n");
+			exit(1);
+		}	
 	}
 
 	blk_ret->m_c = mc_ret;
@@ -263,47 +248,48 @@ blk_dims_t* get_block_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch)
 }
 
 
+blk_dims_t* init_block_dims(int M, int N, int K, int p, cake_cntx_t* cake_cntx, enum sched sch) {
 
 
-void init_block_dims(int M, int N, int K, int p, cake_cntx_t* cake_cntx, enum sched sch) {
+	blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
 
 	int m_r = cake_cntx->mr;
 	int n_r = cake_cntx->nr;
-	blk_dims_t* blk_dims = get_block_dims(cake_cntx, M, p, sch);
-    m_c = blk_dims->m_c;
-	k_c = blk_dims->k_c;
-    n_c = blk_dims->n_c;
+	cache_dims_t* cache_dims = get_cache_dims(cake_cntx, M, p, sch);
+    x->m_c = cache_dims->m_c;
+	x->k_c = cache_dims->k_c;
+    x->n_c = cache_dims->n_c;
 
 	switch(sch) {
 
 		case KMN: {
 
-			k_pad = (K % k_c) ? 1 : 0; 
-			n_pad = (N % n_c) ? 1 : 0; 
-			m_pad = (M % (p*m_c)) ? 1 : 0; 
+			x->k_pad = (K % x->k_c) ? 1 : 0; 
+			x->n_pad = (N % x->n_c) ? 1 : 0; 
+			x->m_pad = (M % (p*x->m_c)) ? 1 : 0; 
 
-			mr_rem = (int) ceil( ((double) (M % (p*m_c))) / m_r) ;
-			int mr_per_core = (int) ceil( ((double) mr_rem) / p );
+			x->mr_rem = (int) ceil( ((double) (M % (p*x->m_c))) / m_r) ;
+			int mr_per_core = (int) ceil( ((double) x->mr_rem) / p );
 			
 			if(mr_per_core) 
-				p_l = (int) ceil( ((double) mr_rem) / mr_per_core);
+				x->p_l = (int) ceil( ((double) x->mr_rem) / mr_per_core);
 			else
-				p_l = 0;
+				x->p_l = 0;
 
-			nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
-			n_c1 = nr_rem * n_r;
+			x->nr_rem = (int) ceil( ((double) (N % x->n_c) / n_r)) ;
+			x->n_c1 = x->nr_rem * n_r;
 
-			m_c1 = mr_per_core * m_r;
-			m_c1_last_core = (mr_per_core - (p_l*mr_per_core - mr_rem)) * m_r;
-			k_c1 = K % k_c;
+			x->m_c1 = mr_per_core * m_r;
+			x->m_c1_last_core = (mr_per_core - (x->p_l*mr_per_core - x->mr_rem)) * m_r;
+			x->k_c1 = K % x->k_c;
 
 			//number of CB blocks in the M, N, and K dims
-			Mb = (M / (p*m_c)) + m_pad;
-			Nb = (N / n_c) + n_pad;
-			Kb = (K / k_c) + k_pad;
+			x->Mb = (M / (p*x->m_c)) + x->m_pad;
+			x->Nb = (N / x->n_c) + x->n_pad;
+			x->Kb = (K / x->k_c) + x->k_pad;
 
-			M_padded = (m_r*mr_rem + (M /(p*m_c))*p*m_c);
-			N_padded = (N - (N%n_c)) + n_c1;
+			x->M_padded = (m_r*x->mr_rem + (M /(p*x->m_c))*p*x->m_c);
+			x->N_padded = (N - (N%x->n_c)) + x->n_c1;
 
 			break;
 		}
@@ -311,32 +297,32 @@ void init_block_dims(int M, int N, int K, int p, cake_cntx_t* cake_cntx, enum sc
 
 		case MKN: {
 
-			k_pad = (K % (p*k_c)) ? 1 : 0; 
-			m_pad = (M % m_c) ? 1 : 0; 
-			n_pad = (N % n_c) ? 1 : 0;
+			x->k_pad = (K % (p*x->k_c)) ? 1 : 0; 
+			x->m_pad = (M % x->m_c) ? 1 : 0; 
+			x->n_pad = (N % x->n_c) ? 1 : 0;
 
-			k_rem = K % (p*k_c);
-			k_c1 = (int) ceil( ((double) k_rem) / p);
+			x->k_rem = K % (p*x->k_c);
+			x->k_c1 = (int) ceil( ((double) x->k_rem) / p);
 
-			if(k_c1) 
-				p_l = (int) ceil( ((double) k_rem) / k_c1);
+			if(x->k_c1) 
+				x->p_l = (int) ceil( ((double) x->k_rem) / x->k_c1);
 			else
-				p_l = 0;
+				x->p_l = 0;
 
-			nr_rem = (int) ceil( ((double) (N % n_c) / n_r)) ;
-			n_c1 = nr_rem * n_r;
+			x->nr_rem = (int) ceil( ((double) (N % x->n_c) / n_r)) ;
+			x->n_c1 = x->nr_rem * n_r;
 
-			k_c1_last_core = k_rem - k_c1*(p_l-1);
-			mr_rem = (int) ceil( ((double) (M % m_c)) / m_r);
-			m_c1 = mr_rem * m_r;
+			x->k_c1_last_core = x->k_rem - x->k_c1*(x->p_l-1);
+			x->mr_rem = (int) ceil( ((double) (M % x->m_c)) / m_r);
+			x->m_c1 = x->mr_rem * m_r;
 
 			// number of CB blocks in the M, N, and K dims
-			Mb = (M / m_c) + m_pad;
-			Kb = (K / (p*k_c)) + k_pad;
-			Nb = (N / n_c) + n_pad;
+			x->Mb = (M / x->m_c) + x->m_pad;
+			x->Kb = (K / (p*x->k_c)) + x->k_pad;
+			x->Nb = (N / x->n_c) + x->n_pad;
 
-			M_padded = (M / m_c)*m_c + m_c1;
-			N_padded = (N - (N%n_c)) + n_c1;
+			x->M_padded = (M / x->m_c)*x->m_c + x->m_c1;
+			x->N_padded = (N - (N%x->n_c)) + x->n_c1;
 
 
 			break;
@@ -348,6 +334,7 @@ void init_block_dims(int M, int N, int K, int p, cake_cntx_t* cake_cntx, enum sc
 		}
 	}
 
+	return x;
 }
 
 

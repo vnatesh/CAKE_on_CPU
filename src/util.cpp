@@ -4,12 +4,15 @@ int run_tests() {
 
 	// float *A, *B, *C;
 	int M, K, N, m, k, n, max_threads,p;
+	float *A, *B, *C;
 	max_threads = omp_get_max_threads() / 2;
 	int num_tests = 6;
 	int Ms[num_tests] = {1,10,96,111,960,2111};
 	int Ks[num_tests] = {1,10,96,111,960,2111};
 	int Ns[num_tests] = {1,10,96,111,960,2111};
 	int cnt = 0;
+
+	cake_cntx_t* cake_cntx = cake_query_cntx();
 
 	for(p = 2; p <= max_threads; p++)  {
 		for(m = 0; m < num_tests; m++) {
@@ -19,17 +22,37 @@ int run_tests() {
 					K = Ks[k];
 					N = Ns[n];
 
-					float* A = (float*) malloc(M * K * sizeof( float ));
-					float* B = (float*) malloc(K * N * sizeof( float ));
-					float* C = (float*) calloc(M * N , sizeof( float ));
+					A = (float*) malloc(M * K * sizeof( float ));
+					B = (float*) malloc(K * N * sizeof( float ));
+					C = (float*) calloc(M * N , sizeof( float ));
 				    srand(time(NULL));
 
 					rand_init(A, M, K);
 					rand_init(B, K, N);
 
-					cake_sgemm_k_first(A, B, C, M, N, K, p, NULL);
+					cake_sgemm_m_first(A, B, C, M, N, K, p, cake_cntx);
 					if(cake_sgemm_checker(A, B, C, N, M, K)) {
-						printf("TESTS FAILED on p=%d M=%d K=%d N=%d\n",p,M,K,N);
+						printf("TESTS FAILED on M-first p=%d M=%d K=%d N=%d\n",p,M,K,N);
+						cnt++;
+					}
+
+					free(A);
+					free(B);
+					free(C);
+
+
+					A = (float*) malloc(M * K * sizeof( float ));
+					B = (float*) malloc(K * N * sizeof( float ));
+					C = (float*) calloc(M * N , sizeof( float ));
+				    srand(time(NULL));
+
+					rand_init(A, M, K);
+					rand_init(B, K, N);
+
+					C = (float*) calloc(M * N , sizeof( float ));
+					cake_sgemm_k_first(A, B, C, M, N, K, p, cake_cntx);
+					if(cake_sgemm_checker(A, B, C, N, M, K)) {
+						printf("TESTS FAILED on K-first p=%d M=%d K=%d N=%d\n",p,M,K,N);
 						cnt++;
 					}
 
@@ -44,7 +67,7 @@ int run_tests() {
 	if(cnt) {
 		printf("FAILED\n");
 	} else {
-		printf("ALL TESTS PASSED m first!\n");
+		printf("ALL TESTS PASSED!\n");
 	}
 
 	return 0;

@@ -6,7 +6,7 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	cake_cntx_t* cake_cntx, bool packedA, bool packedB, float alpha, float beta) {
 
 	if(M > 2*K)  {
-		return cake_sgemm_k_first(A, B, C, M, N, K, p, cake_cntx, packedA, packedB, alpha, beta);
+		return cake_sgemm_m_first(A, B, C, M, N, K, p, cake_cntx, packedA, packedB, alpha, beta);
 	} else if(K >= M) {
 		return cake_sgemm_k_first(A, B, C, M, N, K, p, cake_cntx, packedA, packedB, alpha, beta);
 	} else {
