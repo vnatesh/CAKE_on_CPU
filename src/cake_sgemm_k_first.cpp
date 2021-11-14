@@ -23,7 +23,6 @@ double cake_sgemm_k_first(float* A, float* B, float* C, int M, int N, int K, int
 	blk_dims_t* x = init_block_dims(M, N, K, p, cake_cntx, KMN);
 	omp_set_num_threads(p);
 
-    if(DEBUG) printf("M = %d, N = %d, K = %d\n", M, N, K);
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
     if(DEBUG) printf("mc = %d, kc = %d, nc = %d\n", x->m_c, x->k_c, x->n_c);
 
