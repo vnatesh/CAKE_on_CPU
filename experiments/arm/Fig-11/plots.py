@@ -9,7 +9,7 @@ import sys
 
 
 def cake_cpu_DRAM_accesses(m,n,k,mc,kc,alpha,p):
-	return (((float(m*n*k)/(alpha*p*mc) + float(m*n*k)/(p*mc) + m*n) + 3*(m*n + m*k + k*n)) / float(10**9))*4	
+	return (((float(m*n*k)/(alpha*p*mc) + float(2*m*n*k)/(p*kc) + k*n) + 4*(m*n) + 2*(m*k + k*n)) / float(10**9))*4	
 
 
 def plot_cake_vs_armpl_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_armpl', ntrials=10):
@@ -54,10 +54,10 @@ def plot_cake_vs_armpl_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_armpl', ntrials=10
 	plt.xticks(NUM_CPUs)
 	plt.ylabel("Avg. DRAM Bw (GB/s)", fontsize = 18)
 	plt.legend(loc = "center right", prop={'size': 10})
-	plt.savefig("%s_dram.pdf" % fname, bbox_inches='tight')
-	# plt.show()
-	# plt.clf()
-	# plt.close('all')
+	# plt.savefig("%s_dram.pdf" % fname, bbox_inches='tight')
+	plt.show()
+	plt.clf()
+	plt.close('all')
 	#
 	plt.figure(figsize = (6,4))
 	x = np.array(list(range(3,9)))
@@ -79,7 +79,7 @@ def plot_cake_vs_armpl_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_armpl', ntrials=10
 	# plt.xticks(NUM_CPUs)
 	plt.ylabel("Throughput (GFLOP/s)", fontsize = 18)
 	plt.legend(loc = "upper left", prop={'size': 12})
-	plt.savefig("%s_perf.pdf" % fname, bbox_inches='tight')
+	# plt.savefig("%s_perf.pdf" % fname, bbox_inches='tight')
 	# plt.suptitle('Performance of CAKE vs ARMPL', fontsize = 18)
 	plt.show()
 	plt.clf()
