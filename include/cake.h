@@ -138,13 +138,10 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 	cake_cntx_t* cake_cntx, bool packedA = 0, bool packedB = 0, float alpha = 1, float beta = 0);
 
 
-void* cake_sgemm_launch(void* inputs);
-
-
 // block sizing and system parameter querying
 cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch);
 
-blk_dims_t* init_block_dims(int M, int N, int K, int p, cake_cntx_t* cake_cntx, enum sched sch);
+void init_block_dims(int M, int N, int K, int p, blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch);
 
 int get_cache_size(int level);
 

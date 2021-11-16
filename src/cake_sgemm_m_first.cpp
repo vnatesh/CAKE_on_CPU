@@ -20,7 +20,8 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 		cake_cntx = cake_query_cntx();
 	}
 
-	blk_dims_t* x = init_block_dims(M, N, K, p, cake_cntx, MKN);
+	blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
+	init_block_dims(M, N, K, p, x, cake_cntx, MKN);
 	omp_set_num_threads(p);
 
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);

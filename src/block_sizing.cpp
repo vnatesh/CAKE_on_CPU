@@ -248,10 +248,8 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sc
 }
 
 
-blk_dims_t* init_block_dims(int M, int N, int K, int p, cake_cntx_t* cake_cntx, enum sched sch) {
-
-
-	blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
+void init_block_dims(int M, int N, int K, int p, 
+	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch) {
 
 	int m_r = cake_cntx->mr;
 	int n_r = cake_cntx->nr;
@@ -333,8 +331,6 @@ blk_dims_t* init_block_dims(int M, int N, int K, int p, cake_cntx_t* cake_cntx, 
 			exit(1);
 		}
 	}
-
-	return x;
 }
 
 
