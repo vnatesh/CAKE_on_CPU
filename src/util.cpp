@@ -49,7 +49,6 @@ int run_tests() {
 					rand_init(A, M, K);
 					rand_init(B, K, N);
 
-					C = (float*) calloc(M * N , sizeof( float ));
 					cake_sgemm_k_first(A, B, C, M, N, K, p, cake_cntx);
 					if(cake_sgemm_checker(A, B, C, N, M, K)) {
 						printf("TESTS FAILED on K-first p=%d M=%d K=%d N=%d\n",p,M,K,N);

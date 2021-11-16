@@ -59,23 +59,6 @@ typedef struct cache_dims_t{
 } cache_dims_t;
 
 
-
-struct gemm_input {
-	float* A; 
-	float* B;
-	float* C;
-	float alpha;
-	float beta;
-	int M;
-	int N;
-	int K; 
-	int p;
-	cake_cntx_t* cake_cntx;
-	bool packedA;
-	bool packedB;
-};
-
-
 cake_cntx_t* cake_query_cntx();
 cake_cntx_t* cake_query_cntx_torch(int L2, int L3);
 /*
