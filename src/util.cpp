@@ -58,6 +58,25 @@ int run_tests() {
 					free(A);
 					free(B);
 					free(C);
+
+
+					A = (float*) malloc(M * K * sizeof( float ));
+					B = (float*) malloc(K * N * sizeof( float ));
+					C = (float*) calloc(M * N , sizeof( float ));
+				    srand(time(NULL));
+
+					rand_init(A, M, K);
+					rand_init(B, K, N);
+
+					cake_sgemm_n_first(A, B, C, M, N, K, p, cake_cntx);
+					if(cake_sgemm_checker(A, B, C, N, M, K)) {
+						printf("TESTS FAILED on N-first p=%d M=%d K=%d N=%d\n",p,M,K,N);
+						cnt++;
+					}
+
+					free(A);
+					free(B);
+					free(C);
 				}
 			}
 		}

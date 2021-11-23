@@ -231,7 +231,7 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sc
 			break;
 		}
 		case NKM: {
-			nc_ret = (int) cake_cntx->alpha_n*mc_ret;
+			nc_ret = (int) mc_ret;
 			break;
 		}
 		default: {
@@ -287,7 +287,7 @@ void init_block_dims(int M, int N, int K, int p,
 			x->Kb = (K / x->k_c) + x->k_pad;
 
 			x->M_padded = (m_r*x->mr_rem + (M /(p*x->m_c))*p*x->m_c);
-			x->N_padded = (N - (N%x->n_c)) + x->n_c1;
+			x->N_padded = (N - (N % x->n_c)) + x->n_c1;
 
 			break;
 		}
@@ -320,11 +320,48 @@ void init_block_dims(int M, int N, int K, int p,
 			x->Nb = (N / x->n_c) + x->n_pad;
 
 			x->M_padded = (M / x->m_c)*x->m_c + x->m_c1;
-			x->N_padded = (N - (N%x->n_c)) + x->n_c1;
+			x->N_padded = (N - (N % x->n_c)) + x->n_c1;
 
 
 			break;
 		}
+
+
+		case NKM: {
+
+			int m_c_tmp = (int) (cake_cntx->alpha_n*p*x->m_c);
+
+			x->k_pad = (K % (p*x->k_c)) ? 1 : 0; 
+			x->m_pad = (M % m_c_tmp) ? 1 : 0; 
+			x->n_pad = (N % x->n_c) ? 1 : 0;
+
+			x->k_rem = K % (p*x->k_c);
+			x->k_c1 = (int) ceil( ((double) x->k_rem) / p);
+
+			if(x->k_c1) 
+				x->p_l = (int) ceil( ((double) x->k_rem) / x->k_c1);
+			else
+				x->p_l = 0;
+
+			x->nr_rem = (int) ceil( ((double) (N % x->n_c) / n_r)) ;
+			x->n_c1 = x->nr_rem * n_r;
+
+			x->k_c1_last_core = x->k_rem - x->k_c1*(x->p_l-1);
+			x->mr_rem = (int) ceil( ((double) (M % m_c_tmp)) / m_r);
+			x->m_c1 = x->mr_rem * m_r;
+
+			// number of CB blocks in the M, N, and K dims
+			x->Mb = (M / m_c_tmp) + x->m_pad;
+			x->Kb = (K / (p*x->k_c)) + x->k_pad;
+			x->Nb = (N / x->n_c) + x->n_pad;
+
+			x->M_padded = (M / m_c_tmp)*m_c_tmp + x->m_c1;
+			x->N_padded = (N - (N % x->n_c)) + x->n_c1;
+
+			break;
+		}
+
+
 
 		default: {
 			printf("unknown schedule\n");
