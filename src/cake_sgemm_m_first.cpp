@@ -34,7 +34,7 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 
 		clock_gettime(CLOCK_REALTIME, &start);
 
-		A_sz = cake_sgemm_packed_A_size(M, K, 1, x, cake_cntx);
+		A_sz = cake_sgemm_packed_A_size(M, K, 1, x, cake_cntx, MKN);
 		if(posix_memalign((void**) &A_p, 64, A_sz)) {
 			printf("posix memalign error\n");
 			exit(1);
@@ -78,7 +78,7 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 	// otherwise just allocate an empty C_p buffer
 	if(beta != 0) {
 		clock_gettime(CLOCK_REALTIME, &start);
-	    C_sz = cake_sgemm_packed_C_size(M, N, 1, x, cake_cntx);
+	    C_sz = cake_sgemm_packed_C_size(M, N, 1, x, cake_cntx, MKN);
 		if(posix_memalign((void**) &C_p, 64, C_sz)) {
 			printf("posix memalign error\n");
 			exit(1);
@@ -97,7 +97,7 @@ double cake_sgemm_m_first(float* A, float* B, float* C, int M, int N, int K, int
 		if(DEBUG) printf("C pack time: %f \n", diff_t ); 
 
 	} else {
-	    C_sz = cake_sgemm_packed_C_size(M, N, 1, x, cake_cntx);
+	    C_sz = cake_sgemm_packed_C_size(M, N, 1, x, cake_cntx, MKN);
 	    C_p = (float*) calloc(C_sz / sizeof(float), sizeof(float));
 	}
 
