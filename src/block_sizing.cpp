@@ -200,7 +200,13 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sc
 	// and to allow for double buffering of partial results in L3
 	mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (2*sizeof(float)))  
 			/ (max_threads * (1 + cake_cntx->alpha_n + cake_cntx->alpha_n*max_threads)));
-	mc_L3 -= (mc_L3 % mn_lcm);
+	
+	// if mc_L3 is too small, used mn_lcm
+	if(mn_lcm > mc_L3) {
+		mc_L3 = mn_lcm;
+	} else {
+		mc_L3 -= (mc_L3 % mn_lcm);
+	}
 
 	mc = mc_L3 < mc_L2 ? mc_L3 : mc_L2;
 
