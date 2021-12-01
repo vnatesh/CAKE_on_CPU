@@ -90,3 +90,100 @@ int cake_sgemm_packed_C_size(int M, int N, int p, blk_dims_t* x, cake_cntx_t* ca
 
 
 
+
+void pack_C(float* C, float* C_p, int M, int N, int p, 
+	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch) {
+
+	switch(sch) {
+		case KMN: {
+			pack_C_single_buf_k_first(C, C_p, M, N, p, x, cake_cntx);
+			break;
+		}
+		case MKN: {
+			pack_C_single_buf_m_first(C, C_p, M, N, p, x, cake_cntx);
+			break;
+		}
+		case NKM: {
+			pack_C_single_buf_n_first(C, C_p, M, N, p, x, cake_cntx);
+			break;
+		}
+		default: {
+			printf("unknown schedule\n");
+			exit(1);
+		}	
+	}
+
+}
+
+
+void pack_B(float* B, float* B_p, int K, int N, int p, 
+	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch) {
+
+	switch(sch) {
+		case KMN: {
+			pack_B_k_first(B, B_p, K, N, x, cake_cntx);
+			break;
+		}
+		case MKN: {
+			pack_B_m_first(B, B_p, K, N, p, x, cake_cntx);
+			break;
+		}
+		case NKM: {
+			pack_B_n_first(B, B_p, K, N, p, x, cake_cntx);
+			break;
+		}
+		default: {
+			printf("unknown schedule\n");
+			exit(1);
+		}	
+	}
+}
+
+
+
+double pack_A(float* A, float* A_p, int M, int K, int p, 
+	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch) {
+
+	switch(sch) {
+		case KMN: {
+			return pack_A_single_buf_k_first(A, A_p, M, K, p, x, cake_cntx);
+		}
+		case MKN: {
+			return pack_A_single_buf_m_first(A, A_p, M, K, p, x, cake_cntx); 
+		}
+		case NKM: {
+			return pack_A_single_buf_n_first(A, A_p, M, K, p, x, cake_cntx);
+		}
+		default: {
+			printf("unknown schedule\n");
+			exit(1);
+		}	
+	}
+}
+
+
+
+void unpack_C(float* C, float* C_p, int M, int N, int p, 
+	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch) {
+
+	switch(sch) {
+		case KMN: {
+			unpack_C_single_buf_k_first(C, C_p, M, N, p, x, cake_cntx); 
+			break;
+		}
+		case MKN: {
+			unpack_C_single_buf_m_first(C, C_p, M, N, p, x, cake_cntx); 
+			break;
+		}
+		case NKM: {
+			unpack_C_single_buf_n_first(C, C_p, M, N, p, x, cake_cntx); 
+			break;
+		}
+		default: {
+			printf("unknown schedule\n");
+			exit(1);
+		}	
+	}
+}
+
+
