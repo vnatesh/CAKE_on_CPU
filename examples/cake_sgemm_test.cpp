@@ -2,6 +2,7 @@
 
  
 int main( int argc, char** argv ) {
+	// run_tests();
 
     if(argc < 3) {
         printf("Enter M, K, and N\n");
