@@ -90,7 +90,7 @@ def plot_cake_vs_arm_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_arm', ntrials=10):
 	x = np.array(list(range(3,9)))
 	y = [gflops_cpu_arr1[-2] + (gflops_cpu_arr1[-1] - gflops_cpu_arr1[-2])*i - 0.006*i*i for i in range(4)]
 	y += 2*[y[-1]]
-	plt.plot(x, y, color = colors[4], linestyle = 'dashed', label = labels[6])
+	plt.plot(x, y, color = colors[3], linestyle = 'dashed', label = labels[6])
 	#
 	plt.plot(list(range(1,9)), [gflops_cake_arr[0]+i*(gflops_cake_arr[0]) for i in range(8)], 
 		label = labels[3], linewidth = 2, linestyle = 'dashed', color = colors[5])
@@ -104,7 +104,7 @@ def plot_cake_vs_arm_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_arm', ntrials=10):
 	plt.title('(b) Computation Throughput of CAKE vs ARM')
 	plt.xlabel("Number of Cores", fontsize = 18)
 	plt.ylabel("Throughput (GFLOP/s)", fontsize = 18)
-	plt.legend(loc = "upper left", prop={'size': 12})
+	plt.legend(loc = "upper left", prop={'size': 10})
 	plt.savefig("%s_perf.pdf" % fname, bbox_inches='tight')
 	plt.show()
 	plt.clf()
