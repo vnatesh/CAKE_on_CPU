@@ -208,8 +208,9 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sc
 		mc_L3 -= (mc_L3 % mn_lcm);
 	}
 
-	mc = mc_L3 < mc_L2 ? mc_L3 : mc_L2;
-
+	// mc = mc_L3 < mc_L2 ? mc_L3 : mc_L2;
+	mc = mc_L3;
+	
 	mc_ret = mc;
 	if(M < p*cake_cntx->mr) {
 		mc_ret = mn_lcm;
