@@ -12,9 +12,9 @@ int main( int argc, char** argv ) {
 	}
 
 	int M, K, N, p;
-    M = strtol(argv[1]);
-    N = strtol(argv[2]);
-    K = strtol(argv[3]);
+    M = atoi(argv[1]);
+    N = atoi(argv[2]);
+    K = atoi(argv[3]);
     p = atoi(argv[4]);
 
 
