@@ -5,14 +5,14 @@ int run_tests() {
 	// float *A, *B, *C;
 	int M, K, N, m, k, n, max_threads,p;
 	float *A, *B, *C;
-	max_threads = omp_get_max_threads() / 2;
+	cake_cntx_t* cake_cntx = cake_query_cntx();
+	max_threads = cake_cntx->ncores;
 	int num_tests = 6;
 	int Ms[num_tests] = {1,10,96,111,960,2111};
 	int Ks[num_tests] = {1,10,96,111,960,2111};
 	int Ns[num_tests] = {1,10,96,111,960,2111};
 	int cnt = 0;
 
-	cake_cntx_t* cake_cntx = cake_query_cntx();
 
 	for(p = 2; p <= max_threads; p++)  {
 		for(m = 0; m < num_tests; m++) {

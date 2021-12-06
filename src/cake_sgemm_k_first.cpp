@@ -23,7 +23,8 @@ void schedule_KMN(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p
 	float alpha_blis = 1.0;
 	float beta_blis  = 1.0;
     // rsc = 1; csc = m_r;
-    rsc = n_r; csc = 1;
+	rsc = n_r; csc = 1;
+	auxinfo_t def_data;
     // rsa = 1; csa = m_r;
     // rsb = n_r; csb = 1;
 
@@ -129,7 +130,7 @@ void schedule_KMN(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p
 					   		&A_p[a_ind + m_reg*m_r*k_c_t], 
 					   		&B_p[b_ind + n_reg*k_c_t*n_r], &beta_blis, 
 					   		&C_p[c_ind + n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, NULL, cake_cntx->blis_cntx);
+					   		rsc, csc, &def_data, cake_cntx->blis_cntx);
 						}
 					}
 				}
