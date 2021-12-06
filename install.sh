@@ -10,7 +10,7 @@ BLIS_PATH=$PWD
 cd blis
 # ./configure CC=aarch64-linux-gnu-gcc --prefix=$BLIS_PATH --enable-threading=openmp cortexa53
 # install BLIS in curr dir and configire with openmp
-./configure --prefix=$BLIS_PATH --enable-threading=openmp generic
+./configure --prefix=$BLIS_PATH --enable-threading=openmp auto
 # ./configure --enable-threading=openmp haswell
 make -j4
 make check
