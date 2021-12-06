@@ -28,14 +28,18 @@ int main(int argc, char* argv[])  {
     }
 
     // mkl_set_num_threads(atoi(argv[1]));
-    int p = atoi(argv[1]);
+    int p = atoi(argv[4]);
     omp_set_num_threads(p);
 
     float *A, *B, *C;
     int m, n, k, i, j;
     float alpha, beta;
 
-    m = 3000, k = 3000, n = 3000;
+    m = atoi(argv[1]);
+    n = atoi(argv[2]);
+    k = atoi(argv[3]);
+
+
     alpha = 1.0; beta = 0.0;
 
     A = (float *) malloc(m * k * sizeof(float));

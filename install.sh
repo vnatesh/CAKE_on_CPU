@@ -8,16 +8,16 @@
 git clone https://github.com/flame/blis.git
 BLIS_PATH=$PWD
 cd blis
-
+# ./configure CC=aarch64-linux-gnu-gcc --prefix=$BLIS_PATH --enable-threading=openmp cortexa53
 # install BLIS in curr dir and configire with openmp
-./configure --prefix=$BLIS_PATH --enable-threading=openmp auto
+./configure --prefix=$BLIS_PATH --enable-threading=openmp generic
 # ./configure --enable-threading=openmp haswell
 make -j4
 make check
 
 # install BLIS
 make install
-make distclean
+#make distclean
 cd ..
 
 source ./env.sh

@@ -12,12 +12,11 @@ int main( int argc, char** argv ) {
 	}
 
 	int M, K, N, p;
+    M = strtol(argv[1]);
+    N = strtol(argv[2]);
+    K = strtol(argv[3]);
+    p = atoi(argv[4]);
 
-	M = 3000;
-	K = 3000;
-	N = 3000;
-
-	p = atoi(argv[1]);
 
 	printf("M = %d, K = %d, N = %d\n", M,K,N);
 

@@ -26,7 +26,7 @@ int main(int argc, char* argv[])  {
         exit(1);
     }
 
-     int p = atoi(argv[1]);
+    int p = atoi(argv[4]);
     // mkl_set_num_threads(atoi(argv[1]));
     // int p = 10;
     mkl_set_num_threads(p);
@@ -35,14 +35,14 @@ int main(int argc, char* argv[])  {
     int m, n, k, i, j;
     float alpha, beta;
 
-    // m = atoi(argv[1]), k = atoi(argv[2]), n = atoi(argv[3]);
+    m = atoi(argv[1]), k = atoi(argv[2]), n = atoi(argv[3]);
     //m = atoi(argv[2]);
     //k = m;
     //n = m;
 
     // m = 3000, k = 3000, n = 3000;  
     //  m = 25921, k = 25921, n = 25921;      
-    m = 23040, k = 23040, n = 23040;
+    // m = 23040, k = 23040, n = 23040;
     alpha = 1.0; beta = 0.0;
 
     A = (float *)mkl_malloc( m*k*sizeof( float ), 64 );
