@@ -7,10 +7,12 @@
 # Download BLIS kernels
 git clone https://github.com/flame/blis.git
 
-# reset to older blis version for now
-git reset --hard 961d9d5
 BLIS_PATH=$PWD
 cd blis
+
+# reset to older blis version for now
+git reset --hard 961d9d5
+
 # ./configure CC=aarch64-linux-gnu-gcc --prefix=$BLIS_PATH --enable-threading=openmp cortexa53
 # install BLIS in curr dir and configire with openmp
 ./configure --prefix=$BLIS_PATH --enable-threading=openmp auto
