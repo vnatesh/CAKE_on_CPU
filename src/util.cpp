@@ -211,6 +211,22 @@ void rand_init(float* mat, int r, int c) {
 
 
 
+
+// randomized sparse matrix with sparsity % of values that are zero
+void rand_sparse(float* mat, int r, int c, float sparsity) {
+
+	for(int i = 0; i < r*c; i++) {
+		int x = rand();
+		if(x <= RAND_MAX*sparsity) {
+			mat[i] = 0;
+		} else {
+			mat[i] =  (float) x / RAND_MAX*2.0 - 1.0;
+		}
+	}	
+}
+
+
+
 void print_array(float* arr, int len) {
 
 	for(int i = 0; i < len; i++) {

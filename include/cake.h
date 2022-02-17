@@ -159,6 +159,8 @@ bool add_checker(float** C_arr, float* C, int M, int N, int p);
 
 void rand_init(float* mat, int r, int c);
 
+void rand_sparse(float* mat, int r, int c, float sparsity);
+
 void print_array(float* arr, int len);
 
 

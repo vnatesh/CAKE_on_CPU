@@ -15,6 +15,7 @@ CFLAGS_tmp         := $(call get-user-cflags-for,$(CONFIG_NAME))
 # Add local header paths to CFLAGS
 CFLAGS_tmp        += -I$(CAKE_INC_PATH)
 CFLAGS_tmp		  += -I$(BLIS_INC_PATH)
+CFLAGS_tmp		  += -g -mavx -mfma
 CFLAGS 	:= $(filter-out -fopenmp -std=c99, $(CFLAGS_tmp))
 
 # cake shared library
