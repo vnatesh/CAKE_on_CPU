@@ -28,21 +28,6 @@ void schedule_KMN(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p
 	rsc = n_r; csc = 1;
 	auxinfo_t def_data;
 #endif
-    // rsa = 1; csa = m_r;
-    // rsb = n_r; csb = 1;
-
-	//rsc = 1; csc = m;
-	//rsa = 1; csa = m;
-	//rsb = 1; csb = k;
-
-	// void (*blis_kernel)(dim_t, float*, float*, float*, 
-	// 					float*, float*, inc_t, inc_t, 
-	// 					auxinfo_t*, cntx_t*);
-	// bli_sgemm_ukernel = bli_sgemm_haswell_asm_6x16;
-#ifdef USE_CAKE
-printf("caaaaaaa\n");
-#endif
-
 
 	for(n = 0; n < Nb; n++) {
 
@@ -131,7 +116,7 @@ printf("caaaaaaa\n");
 					   		&A_p[a_ind + m_reg*m_r*k_c_t], 
 					   		&B_p[b_ind + n_reg*k_c_t*n_r], &beta_blis, 
 					   		&C_p[c_ind + n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
-					   		rsc, csc, &def_data, cake_cntx->blis_cntx);
+					   		rsc, csc, &def_data, (cntx_t*) cake_cntx->blis_cntx);
 
 #elif USE_CAKE
 							cake_sgemm_haswell_6x16(&A_p[a_ind + m_reg*m_r*k_c_t], 

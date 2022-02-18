@@ -121,7 +121,7 @@ LIBS += $(BLIS_INSTALL_PATH)/lib/libblis.a
 
 # --- Primary targets ---
 
-all: blis 
+all: cake 
 
 install:
 	./install.sh
@@ -144,7 +144,7 @@ endif
 blis: $(wildcard *.h) $(wildcard *.c) 
 	g++ $(CFLAGS) $(CAKE_SRC)/block_sizing.cpp $(CAKE_SRC)/cake_sgemm.cpp \
 	$(CAKE_SRC)/cake_sgemm_k_first.cpp $(CAKE_SRC)/cake_sgemm_m_first.cpp $(CAKE_SRC)/cake_sgemm_n_first.cpp \
-	$(CAKE_SRC)/kernels.cpp $(CAKE_SRC)/pack_helper.cpp $(CAKE_SRC)/pack_ob.cpp $(CAKE_SRC)/util.cpp \
+	$(CAKE_SRC)/pack_helper.cpp $(CAKE_SRC)/pack_ob.cpp $(CAKE_SRC)/util.cpp \
 	$(CAKE_SRC)/pack_k_first.cpp $(CAKE_SRC)/pack_m_first.cpp $(CAKE_SRC)/pack_n_first.cpp \
 	$(CAKE_SRC)/unpack_k_first.cpp $(CAKE_SRC)/unpack_m_first.cpp $(CAKE_SRC)/unpack_n_first.cpp \
 	$(LIBS) $(LDFLAGS) -DUSE_BLIS -shared -o $(LIBCAKE)

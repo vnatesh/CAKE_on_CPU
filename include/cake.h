@@ -11,7 +11,7 @@
 #include <math.h>
 #include <string.h>
 
-#define DEBUG 1
+#define DEBUG 0
 #define ARR_PRINT 0
 #define CHECK_PRINT 0
 
@@ -20,9 +20,6 @@
 
 #elif USE_CAKE
 #include <immintrin.h>
-
-typedef struct cntx_t {
-} cntx_t;
 
 #endif
 
@@ -56,7 +53,7 @@ typedef struct blk_dims_t {
 
 
 typedef struct cake_cntx_t{
-	cntx_t* blis_cntx;
+	void* blis_cntx;
 	double alpha_n;
 	int mr;
 	int nr;
@@ -177,8 +174,6 @@ bool cake_sgemm_checker(float* A, float* B, float* C, int N, int M, int K);
 bool add_checker(float** C_arr, float* C, int M, int N, int p);
 
 void rand_init(float* mat, int r, int c);
-
-void rand_sparse(float* mat, int r, int c, float sparsity);
 
 void print_array(float* arr, int len);
 
