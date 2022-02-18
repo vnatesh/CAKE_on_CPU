@@ -14,9 +14,12 @@ CFLAGS_tmp         := $(call get-user-cflags-for,$(CONFIG_NAME))
 
 # Add local header paths to CFLAGS
 CFLAGS_tmp        += -I$(CAKE_INC_PATH)
-CFLAGS_tmp		  += -I$(BLIS_INC_PATH)
 CFLAGS_tmp		  += -g -mavx -mfma
 CFLAGS 	:= $(filter-out -fopenmp -std=c99, $(CFLAGS_tmp))
+
+CFLAGS_cake := $(CFLAGS)
+CFLAGS_blis := $(CFLAGS)
+CFLAGS_blis		  += -I$(BLIS_INC_PATH)
 
 # cake shared library
 LIBCAKE      := -L$(CAKE_HOME) -lcake
@@ -25,10 +28,13 @@ CAKE_SRC := $(CAKE_HOME)/src
 
 # --- Targets/rules ------------------------------------------------------------
 
-all: compile
+all: blis
 
-compile: $(wildcard *.h) $(wildcard *.c)
-	g++ $(CFLAGS) cake_sgemm_test.cpp $(LIBCAKE) -o cake_sgemm_test
+blis: $(wildcard *.h) $(wildcard *.c)
+	g++ $(CFLAGS_blis) cake_sgemm_test.cpp $(LIBCAKE) -o cake_sgemm_test
+
+cake: $(wildcard *.h) $(wildcard *.c)
+	g++ $(CFLAGS_cake) cake_sgemm_test.cpp $(LIBCAKE) -o cake_sgemm_test
 
 clean:
 	rm -rf *.o *.so

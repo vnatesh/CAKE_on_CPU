@@ -6,12 +6,26 @@
 #include <time.h> 
 #include <omp.h>
 #include <pthread.h>
-#include "blis.h"
  
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
 
-#define DEBUG 0
+#define DEBUG 1
 #define ARR_PRINT 0
 #define CHECK_PRINT 0
+
+#ifdef USE_BLIS
+#include "blis.h"
+
+#elif USE_CAKE
+#include <immintrin.h>
+
+typedef struct cntx_t {
+} cntx_t;
+
+#endif
+
 
 
 enum sched {KMN, MKN, NKM, NA};
@@ -135,6 +149,11 @@ void schedule_MKN(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p
 	cake_cntx_t* cake_cntx, blk_dims_t* x);
 void schedule_NKM(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, blk_dims_t* x);
+
+
+void cake_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k);
+void cake_sgemm_haswell_8x16(float* A, float* B, float* C, int m, int n, int k);
+void cake_sgemm_haswell_7x16(float* A, float* B, float* C, int m, int n, int k);
 
 
 // block sizing and system parameter querying

@@ -6,13 +6,21 @@ cake_cntx_t* cake_query_cntx_torch(int L2, int L3) {
 
     cake_cntx_t* ret = (cake_cntx_t*) malloc(sizeof(cake_cntx_t));
     double alpha_n = 1.0;
-
+    ret->alpha_n = alpha_n;
+ 
     // query block size for the microkernel
+#ifdef USE_BLIS
     cntx_t* blis_cntx = bli_gks_query_cntx();
     ret->blis_cntx = blis_cntx;
-    ret->alpha_n = alpha_n;
     ret->mr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, blis_cntx);
     ret->nr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, blis_cntx);
+
+#elif USE_CAKE
+    ret->blis_cntx = NULL;
+    ret->mr = 6;
+    ret->nr = 16;
+#endif
+
 	ret->L2 = L2;
 	ret->L3 = L3;
 	return ret;
@@ -23,16 +31,24 @@ cake_cntx_t* cake_query_cntx() {
 
     cake_cntx_t* ret = (cake_cntx_t*) malloc(sizeof(cake_cntx_t));
     double alpha_n = 1.0;
-
-    // query block size for the microkernel
-    cntx_t* blis_cntx = bli_gks_query_cntx();
-    ret->blis_cntx = blis_cntx;
     ret->alpha_n = alpha_n;
-    ret->mr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, blis_cntx);
-    ret->nr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, blis_cntx);
 	ret->L2 = get_cache_size(2);
 	ret->L3 = get_cache_size(3);
 	ret->ncores = get_num_physical_cores();
+
+    // query block size for the microkernel
+#ifdef USE_BLIS
+    cntx_t* blis_cntx = bli_gks_query_cntx();
+    ret->blis_cntx = blis_cntx;
+    ret->mr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, blis_cntx);
+    ret->nr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, blis_cntx);
+
+#elif USE_CAKE
+    ret->blis_cntx = NULL;
+    ret->mr = 6;
+    ret->nr = 16;
+#endif
+
 	return ret;
 }
 
