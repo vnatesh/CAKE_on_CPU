@@ -2,8 +2,139 @@
 
 
 
+void pack_A_sp_k_first(float* A, float* A_p, int M, int K, int p, 
+   sp_pack_t* sp_pack, blk_dims_t* x, cake_cntx_t* cake_cntx) {
+   
+   // copy over block dims to local vars to avoid readibility issues with x->
+   int m_r = cake_cntx->mr;
 
-// pack the entire matrix A into a single cache-aligned buffer
+   int m_c = x->m_c, k_c = x->k_c;
+   int m_c1 = x->m_c1, k_c1 = x->k_c1;
+   int m_c1_last_core = x->m_c1_last_core;
+   int mr_rem = x->mr_rem;
+   int p_l = x->p_l, m_pad = x->m_pad, k_pad = x->k_pad;
+   int Mb = x->Mb, Kb = x->Kb;
+
+
+   int m, k, A_offset = 0, A_p_offset = 0;
+   int m_cb, k_c_t, p_used, core, mr_per_core, outer_blk_off;
+
+
+   // int* nnz_cb = (int*) malloc(Mb*Kb * sizeof(int));  // storing number of nonzeros in each CB
+   
+   // int num_obs = m_pad ? (Mb-1)*p*Kb + p_l*Kb : Mb*p*Kb;
+   // int* nnz_ob = (int*) malloc(num_obs * sizeof(int));  // storing number of nonzeros in each OB
+   
+   int* nnz_outer = (int*) calloc(((x->M_padded*K) / m_r) , sizeof(int)); // storing number of nonzeros 
+                                                                          // in each outer prod col of A
+
+   int* nnz_outer_blk = (int*) calloc(((x->M_padded*Kb) / m_r) , sizeof(int)); // storing number of nonzeros
+                                                                              // in each mrxkcxnr kernel blk 
+
+   int* loc_m = (int*) calloc(x->M_padded*K , sizeof(int)); // array for storing M dim C writeback location for each nnz in A
+                                    // each value ranges from 0 to mr-1
+
+   int* nnz_core = (int*) malloc(p * sizeof(int)); // tmp array to count nnz of OBs in the current CB
+
+
+   int ob_ind = 0, cb_ind = 0;
+
+   for(m = 0; m < Mb; m++) {
+
+      if((m == Mb - 1) && m_pad) {
+         p_used = p_l;
+         m_cb = m_r*mr_rem;
+         mr_per_core = m_c1 / m_r;
+      } else {
+         p_used = p;
+         m_cb = p_used*m_c;
+         mr_per_core = m_c / m_r;
+      }
+
+      for(k = 0; k < Kb; k++) {
+         
+         k_c_t = k_c; 
+         if((k == Kb - 1) && k_pad) {
+            k_c_t = k_c1;
+         }
+
+         A_offset = m*p*m_c*K + k*k_c;
+         outer_blk_off = (m*p*m_c*Kb + k*m_cb) / m_r;
+
+         #pragma omp parallel for private(core)
+         for(core = 0; core < p_used; core++) {
+
+            int m_c_t, m_c_x;
+            bool pad;
+
+            if((m == Mb - 1) && m_pad) {
+               m_c_t = (core == (p_l - 1) ? m_c1_last_core : m_c1);
+               m_c_x = m_c1;
+               pad = (core == (p_l - 1) ? 1 : 0);
+            } else {
+               m_c_t = m_c;
+               m_c_x = m_c;
+               pad = 0;
+            }
+// K*m*p*m_c + k*p_used*k_c*m_c_t 
+            // nnz_core[core] = 
+            pack_ob_A_sp(&A[A_offset + core*m_c_x*K], &A_p[A_p_offset + core*m_c_x*k_c_t], 
+               &nnz_outer_blk[outer_blk_off + core*mr_per_core],
+               &nnz_outer[(A_p_offset + core*m_c_x*k_c_t) / m_r], 
+               &loc_m[A_p_offset + core*m_c_x*k_c_t], 
+               M, K, m*p*m_c, core*m_c_x, m_c_t, k_c_t, m_r, pad);
+         }
+
+         // int a = 0;
+         // for(int i = 0; i < p_used; i++) {
+         //    nnz_ob[ob_ind++] = nnz_core[i];
+         //    nnz_cb[cb_ind] += nnz_core[i];
+         //    // ob_offsets[m*p*Kb + k*p_used + i] = A_p_offset + a;
+         // }
+
+         A_p_offset += m_cb*k_c_t;
+         // cb_ind++:
+      }
+   }
+
+   float* A_sp_p = (float*) calloc((x->M_padded*K) , sizeof(float)); 
+   int* nnz_outer_blk_new = (int*) calloc(((x->M_padded*Kb) / m_r) , sizeof(int)); 
+   int* loc_m_new = (int*) calloc(x->M_padded*K , sizeof(int)); 
+   int val1, j = 0;
+   float val2;
+
+   for(int i = 0; i < x->M_padded*K; i++) {
+
+      val1 = loc_m[i];
+      val2 = A_p[i];
+      // printf("%d ", val1);
+      if(val2 != 0) {
+         loc_m_new[j] = val1;
+         A_sp_p[j++] = val2;
+         // printf("%f ", A_sp_p[j-1]);
+      }
+   }
+
+   int off = 0;
+   for(int i = 0; i < ((x->M_padded*Kb) / m_r); i++) {
+
+      nnz_outer_blk_new[i] = off;
+      off += nnz_outer_blk[i];
+   }
+
+   // for(int i = 0; i < x->M_padded*K; i++) {
+   //    printf("%f ", A_sp_p[i]);
+   // }
+
+   sp_pack->A_sp_p = A_sp_p;
+   sp_pack->loc_m = loc_m_new;
+   sp_pack->nnz_outer = nnz_outer;
+   sp_pack->nnz_outer_blk = nnz_outer_blk_new;
+}
+
+
+
+// pack the entire matrix A into a single contiguous cache-aligned buffer
 double pack_A_single_buf_k_first(float* A, float* A_p, int M, int K, int p, blk_dims_t* x, cake_cntx_t* cake_cntx) {
    
    // copy over block dims to local vars to avoid readibility ussiues with x->

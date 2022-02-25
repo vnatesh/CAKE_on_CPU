@@ -235,3 +235,17 @@ void print_array(float* arr, int len) {
 	printf("\n\n");
 
 }
+
+
+void print_mat(float* arr, int r, int c) {
+
+        for(int i = 0; i < r; i++) {
+                for(int j = 0; j < c; j++) {
+                        printf("%f ", arr[i*c + j]);
+                }
+                printf("\n");
+        }
+        printf("\n\n");
+
+}
+

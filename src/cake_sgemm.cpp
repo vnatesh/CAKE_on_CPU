@@ -5,22 +5,23 @@
 double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, bool packedA, bool packedB, float alpha, float beta, enum sched sch) {
 
+	sch = KMN;
 
-	if(sch == NA) {
-		if(M >= 2*K && M >= N)  {
-		    if(DEBUG) printf("MKN Cake Schedule\n");
-			sch = MKN;
-		} else if(K >= M && K >= N) {
-		    if(DEBUG) printf("KMN Cake Schedule\n");
-			sch = KMN;
-		} else if(N >= 2*K && N >= M) {
-			if(DEBUG) printf("NKM Cake Schedule\n");
-			sch = NKM;
-		} else {
-			if(DEBUG) printf("KMN Cake Schedule\n");
-			sch = KMN;
-		}
-	}
+	// if(sch == NA) {
+	// 	if(M >= 2*K && M >= N)  {
+	// 	    if(DEBUG) printf("MKN Cake Schedule\n");
+	// 		sch = MKN;
+	// 	} else if(K >= M && K >= N) {
+	// 	    if(DEBUG) printf("KMN Cake Schedule\n");
+	// 		sch = KMN;
+	// 	} else if(N >= 2*K && N >= M) {
+	// 		if(DEBUG) printf("NKM Cake Schedule\n");
+	// 		sch = NKM;
+	// 	} else {
+	// 		if(DEBUG) printf("KMN Cake Schedule\n");
+	// 		sch = KMN;
+	// 	}
+	// }
 
 
 	int A_sz, B_sz, C_sz;	
@@ -41,10 +42,14 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
     if(DEBUG) printf("mc = %d, kc = %d, nc = %d\n", x->m_c, x->k_c, x->n_c);
 
+	sp_pack_t* sp_pack;
 
 	if(packedA) {
 		A_p = A;
 	} else {
+
+
+		// print_mat(A,M,K);
 
 		clock_gettime(CLOCK_REALTIME, &start);
 
@@ -55,14 +60,59 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 		}
 		// A_sz = cake_sgemm_packed_A_size(M, K, p, cake_cntx) / sizeof(float);
 	 //    A_p = (float*) calloc(A_sz, sizeof(float));
-		pack_A(A, A_p, M, K, p, x, cake_cntx, sch);
+
+		sp_pack = (sp_pack_t*) malloc(sizeof(sp_pack_t));
+
+		pack_A_sp_k_first(A, A_p, M, K, p, sp_pack, x, cake_cntx);
 
 		clock_gettime(CLOCK_REALTIME, &end);
 		seconds = end.tv_sec - start.tv_sec;
 		nanoseconds = end.tv_nsec - start.tv_nsec;
 		diff_t = seconds + nanoseconds*1e-9;
-		if(DEBUG) printf("A pack time: %f \n", diff_t ); 
+		if(DEBUG) printf("A sparse pack time: %f \n", diff_t ); 
+
+		free(A_p);
+		A_p = sp_pack->A_sp_p;
+
+		// for(int i = 0; i < x->M_padded*K; i++) {
+		// 	printf("%f ", A_p[i]);
+		// }
+
+		// clock_gettime(CLOCK_REALTIME, &start);
+
+		// pack_A(A, A_p, M, K, p, x, cake_cntx, sch);
+
+		// clock_gettime(CLOCK_REALTIME, &end);
+		// seconds = end.tv_sec - start.tv_sec;
+		// nanoseconds = end.tv_nsec - start.tv_nsec;
+		// diff_t = seconds + nanoseconds*1e-9;
+		// if(DEBUG) printf("A dense pack time: %f \n", diff_t ); 
+
+		// int num_obs = x->m_pad ? (x->Mb-1)*p*x->Kb + x->p_l*x->Kb : x->Mb*p*x->Kb;
+
+		// printf("nnz_outer_blk\n");
+		// for(int i = 0; i < ((x->M_padded*x->Kb) / cake_cntx->mr); i++) {
+		// 	printf("%d ", sp_pack->nnz_outer_blk[i]);
+		// }
+		// printf("\n\n");
+
+
+		// printf("nnz_outer\n");
+		// for(int i = 0; i < x->M_padded*K/cake_cntx->mr; i++) {
+		// 	printf("%d ", sp_pack->nnz_outer[i]);
+		// }
+		// printf("\n\n");
+
+
+		// printf("loc_m\n");
+		// for(int i = 0; i < x->M_padded*K; i++) {
+		// 	printf("%d ", sp_pack->loc_m[i]);
+		// }
+		// printf("\n\n");
+
 	}
+
+		// exit(1);
 
 
 	if(packedB) {
@@ -117,7 +167,8 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 	clock_gettime(CLOCK_REALTIME, &start);
 
-	schedule(A_p, B_p, C_p, M, N, K, p, cake_cntx, x, sch);
+	// schedule(A_p, B_p, C_p, M, N, K, p, cake_cntx, x, sch);
+	schedule_KMN_sp(sp_pack, B_p, C_p, M, N, K, p, cake_cntx, x);
 
     clock_gettime(CLOCK_REALTIME, &end);
     seconds = end.tv_sec - start.tv_sec;
@@ -154,6 +205,7 @@ void schedule(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p,
 	switch(sch) {
 		case KMN: {
 			schedule_KMN(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+			// schedule_KMN_sp(sp_pack, B_p, C_p, M, N, K, p, cake_cntx, x)
 			break;
 		}
 		case MKN: {
@@ -170,3 +222,4 @@ void schedule(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p,
 		}	
 	}
 }
+

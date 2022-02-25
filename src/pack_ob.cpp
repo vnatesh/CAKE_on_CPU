@@ -2,6 +2,84 @@
 
 
 
+
+void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer_blk, int* nnz_outer, int* loc_m, 
+   int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad) {
+
+   int nnz_col, nnz_blk, nnz_ob = 0, ind_ob = 0, outer_ind = 0, outer_blk_ind = 0;
+   float a_tmp = 0;
+
+   if(pad) {
+      for(int m3 = 0; m3 < m_c; m3 += m_r) {
+
+         nnz_blk = 0;
+
+         for(int i = 0; i < k_c; i++) {
+
+            nnz_col = 0;
+
+            for(int j = 0; j < m_r; j++) {
+
+               if((m1 + m2 + m3 + j) >=  M) {
+                  A_p[ind_ob] = 0.0;
+               } else {
+
+                  a_tmp = A[m3*K + i + j*K];
+                  if(a_tmp != 0) {
+                     A_p[ind_ob] = a_tmp;
+                     loc_m[ind_ob] = j+1;
+                     nnz_col++;
+                     // nnz_ob++;
+                  }
+               }
+
+               ind_ob++;
+            }
+
+            nnz_outer[outer_ind++] = nnz_col;
+            nnz_blk += nnz_col;
+         }
+
+         nnz_outer_blk[outer_blk_ind++] = nnz_blk;
+      }     
+   } 
+
+   else {
+      for(int m3 = 0; m3 < m_c; m3 += m_r) {
+
+         nnz_blk = 0;
+
+         for(int i = 0; i < k_c; i++) {
+
+            nnz_col = 0;
+
+            for(int j = 0; j < m_r; j++) {
+
+               a_tmp = A[m3*K + i + j*K];
+               if(a_tmp != 0) {
+                  A_p[ind_ob] = a_tmp;
+                  loc_m[ind_ob] = j+1;
+                  nnz_col++;
+                  // nnz_ob++;
+               }
+
+               ind_ob++;
+            }
+
+            nnz_outer[outer_ind++] = nnz_col;
+            nnz_blk += nnz_col;
+         }
+
+         nnz_outer_blk[outer_blk_ind++] = nnz_blk;
+      }     
+   }
+
+   // return nnz_ob;
+}
+
+
+
+
 // void pack_ob_A_single_buf(float* A, float* A_p, int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad) {
 
 //    int ind_ob = 0;
@@ -31,6 +109,9 @@
 //       }     
 //    }
 // }
+
+
+
 
 
 void pack_ob_A_single_buf(float* A, float* A_p, int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad) {
@@ -97,6 +178,10 @@ void pack_ob_B_single_buf(float* B, float* B_p, int K, int N, int n1,
                B_p[ind_ob] = B[n2 + i*N + j];
                ind_ob++;
             }
+
+            // _mm256_store_ps (&B_p[ind_ob], _mm256_load_ps(&B[n2 + i*N]));
+            // _mm256_store_ps (&B_p[ind_ob + 8], _mm256_load_ps(&B[n2 + i*N + 8]));
+            ind_ob += n_r;
          }
       }
    }
