@@ -31,6 +31,33 @@ echo "Linking blis_test.x against '/usr/local/lib/libblis.a  -lm -lpthread -fope
 gcc blis_test.o /usr/local/lib/libblis.a  -lm -lpthread -fopenmp -lrt -o blis_test.x
 rm blis_test.o
 
+export BLIS_NUM_THREADS=10
+
+
+
+# compile blis on alienware (haswell)
+gcc -g -O2 -std=c99 -Wall -Wno-unused-function -Wfatal-errors -fPIC  -D_POSIX_C_SOURCE=200112L -fopenmp -I/tmp/CAKE_on_CPU/include/blis -DBLIS_VERSION_STRING=\"0.8.1-67\" -I. -c blis_test.c -o blis_test.o
+echo "Linking blis_test against '/tmp/CAKE_on_CPU/blis/lib/haswell/libblis.a  -lm -lpthread -fopenmp -lrt'"
+g++ blis_test.o /tmp/CAKE_on_CPU/blis/lib/haswell/libblis.a  -lm -lpthread -fopenmp -lrt -o blis_test
+
+
+# compile blis on raspberry pi 3b+ (coretx a53)
+gcc -g -O2 -std=c99 -Wall -Wno-unused-function -Wfatal-errors -fPIC  -D_POSIX_C_SOURCE=200112L -fopenmp -I/home/ubuntu/CAKE_on_CPU/include/blis -DBLIS_VERSION_STRING=\"0.8.1-67\" -I. -c blis_test.c -o blis_test.o
+echo "Linking blis_test against '/home/ubuntu/CAKE_on_CPU/blis/lib/cortexa53/libblis.a  -lm -lpthread -fopenmp -lrt'"
+g++ blis_test.o /home/ubuntu/CAKE_on_CPU/blis/lib/cortexa53/libblis.a  -lm -lpthread -fopenmp -lrt -o blis_test
+
+
+# compile blis on raspberry pi 4 (cortex a72)
+gcc -g -O2 -Wall -Wno-unused-function -Wfatal-errors -fPIC  -D_POSIX_C_SOURCE=200112L -fopenmp -I/home/ubuntu/CAKE_on_CPU/include/blis -DBLIS_VERSION_STRING=\"0.8.1-67\" -I. -c blis_test.c -o blis_test.o
+echo "Linking blis_test against '/home/ubuntu/CAKE_on_CPU/blis/lib/cortexa57/libblis.a  -lm -lpthread -fopenmp -lrt'"
+g++ blis_test.o /home/ubuntu/CAKE_on_CPU/blis/lib/cortexa57/libblis.a  -lm -lpthread -fopenmp -lrt -o blis_test
+
+# compile armpl test raspberry pi 4
+gcc -I/opt/arm/armpl_21.1_gcc-9.3/include -fopenmp  arm_test.c -o test.o  /opt/arm/armpl_21.1_gcc-9.3/lib/libarmpl_lp64_mp.a  -L{ARMPL_DIR}/lib -lm -o arm_test;
+
+# compile armpl test raspberry pi 3b+
+gcc -I/opt/arm/armpl_21.0_gcc-10.2/include -fopenmp  arm_test.c -o test.o  /opt/arm/armpl_21.0_gcc-10.2/lib/libarmpl_lp64_mp.a  -L{ARMPL_DIR}/lib -lm -o arm_test;
+
 
 # compile BLIS test with MPI
 mpigcc -O2 -Wall -Wno-unused-function -Wfatal-errors -fPIC -std=c99 -D_POSIX_C_SOURCE=200112L \
@@ -44,6 +71,31 @@ rm blis_test.o
 gcc -I/opt/arm/armpl_20.3_gcc-7.1/include -fopenmp  arm_test.c -o test.o  \
 /opt/arm/armpl_20.3_gcc-7.1/lib libarmpl_lp64_mp.a -L{ARMPL_DIR}/lib -lm -o arm_test
  
+
+# build ARM Compute Library
+git clone https://github.com/ARM-software/ComputeLibrary.git;
+cd ComputeLibrary;
+scons -j4 Werror=0 pmu=1 openmp=1 neon=1 opencl=0 os=linux arch=arm64-v8a;
+
+
+# compille ARM sgemm example on raspberry pi 4 (NEON)
+aarch64-linux-gnu-g++ -o neon_sgemm.o -c -Wall -DARCH_ARM -Wextra -pedantic \
+-Wdisabled-optimization -Wformat=2 -Winit-self -Wstrict-overflow=2 -Wswitch-default \
+-std=c++14 -Woverloaded-virtual -Wformat-security -Wctor-dtor-privacy -Wsign-promo \
+-Weffc++ -Wno-overlength-strings -Wlogical-op -Wnoexcept -Wstrict-null-sentinel -C \
+-fopenmp -march=armv8-a -DENABLE_NEON -DARM_COMPUTE_ENABLE_NEON -Wno-ignored-attributes \
+-DENABLE_FP16_KERNELS -DENABLE_FP32_KERNELS -DENABLE_QASYMM8_KERNELS \
+-DENABLE_QASYMM8_SIGNED_KERNELS -DENABLE_QSYMM16_KERNELS -DENABLE_INTEGER_KERNELS \
+-DENABLE_NHWC_KERNELS -DENABLE_NCHW_KERNELS -O3 -D_GLIBCXX_USE_NANOSLEEP \
+-DARM_COMPUTE_CPP_SCHEDULER=1 -DARM_COMPUTE_OPENMP_SCHEDULER=1 \
+-DARM_COMPUTE_GRAPH_ENABLED -DARM_COMPUTE_CPU_ENABLED \
+-I/home/ubuntu/ComputeLibrary/include -I/home/ubuntu/ComputeLibrary \
+-I/home/ubuntu/ComputeLibrary neon_sgemm.cpp
+
+aarch64-linux-gnu-g++ -o neon_sgemm -fopenmp neon_sgemm.o \
+/home/ubuntu/ComputeLibrary/build/utils/Utils.o -L/home/ubuntu/ComputeLibrary/build \
+-L/home/ubuntu/ComputeLibrary -lpthread -larm_compute -larm_compute_core
+
 
 #static linking MKL
 gcc  -DMKL_ILP64 -m64 -I${MKLROOT}/include test.c -Wl,--no-export-dynamic \
