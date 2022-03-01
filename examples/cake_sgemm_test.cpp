@@ -1,8 +1,10 @@
 #include "cake.h"
 
- 
+
+
+
 int main( int argc, char** argv ) {
-	// run_tests();
+	 // run_tests();
 
     if(argc < 3) {
         printf("Enter M, K, and N\n");
@@ -26,19 +28,38 @@ int main( int argc, char** argv ) {
 
 	// initialize A and B
     srand(time(NULL));
-	rand_init(A, M, K);
+	// rand_sparse(A, M, K, 0.90);
+	rand_sparse_gaussian(A, M, K, 0, 1);
+	// rand_init(A, M, K);
+	// print_array(A, M*K);
+	// exit(1);
 	rand_init(B, K, N);
 
 	cake_cntx_t* cake_cntx = cake_query_cntx();
+	
+//	cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
+	
 	clock_gettime(CLOCK_REALTIME, &start);
 
-	cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
+	cake_sp_sgemm(A, B, C, M, N, K, p, cake_cntx);
 
     clock_gettime(CLOCK_REALTIME, &end);
     long seconds = end.tv_sec - start.tv_sec;
     long nanoseconds = end.tv_nsec - start.tv_nsec;
     diff_t = seconds + nanoseconds*1e-9;
+	printf("sp_sgemm time: %f \n", diff_t); 
+
+
+	clock_gettime(CLOCK_REALTIME, &start);
+
+	cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
+
+    clock_gettime(CLOCK_REALTIME, &end);
+     seconds = end.tv_sec - start.tv_sec;
+     nanoseconds = end.tv_nsec - start.tv_nsec;
+    diff_t = seconds + nanoseconds*1e-9;
 	printf("sgemm time: %f \n", diff_t); 
+
 
 	cake_sgemm_checker(A, B, C, N, M, K);
 	
@@ -48,5 +69,7 @@ int main( int argc, char** argv ) {
 
 	return 0;
 }
+
+
 
 

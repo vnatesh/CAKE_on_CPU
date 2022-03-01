@@ -11,7 +11,7 @@
 #include <math.h>
 #include <string.h>
 
-#define DEBUG 0
+#define DEBUG 1
 #define ARR_PRINT 0
 #define CHECK_PRINT 0
 
@@ -73,9 +73,14 @@ typedef struct cache_dims_t{
 
 
 
+
+
+
+
 typedef struct sp_pack_t {
    int* loc_m; // M dim C writeback location for each nnz value in A
    int* nnz_outer; // number of nnz in every outer prod col vec (with len m_r) of A;
+   int* k_inds;
    int* nnz_outer_blk; // number of nonzeros in each mrxkcxnr outer product blk
    float* A_sp_p; //sparse packed A (only storing nonzeros)
 } sp_pack_t;
@@ -83,14 +88,34 @@ typedef struct sp_pack_t {
 void pack_A_sp_k_first(float* A, float* A_p, int M, int K, int p, 
    sp_pack_t* sp_pack, blk_dims_t* x, cake_cntx_t* cake_cntx);
 
-void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer_blk, int* nnz_outer, int* loc_m, 
+void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m, 
    int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad);
 
 void schedule_KMN_sp(sp_pack_t* sp_pack, float* B_p, float* C_p, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, blk_dims_t* x);
 
+
+void schedule_sp(sp_pack_t* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
+	cake_cntx_t* cake_cntx, blk_dims_t* x, enum sched sch);
+
+enum sched set_schedule(enum sched sch, int M, int N, int K);
+
+void cake_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k);
 void cake_sp_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k, 
 							int* nnz_outer, int* loc_m);
+double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, 
+	cake_cntx_t* cake_cntx, bool packedA = 0, bool packedB = 0, 
+	float alpha = 1, float beta = 0, enum sched sch = NA);
+
+
+void rand_sparse(float* mat, int r, int c, float sparsity);
+float rand_gen();
+float normalRandom();
+void rand_sparse_gaussian(float* mat, int r, int c, float mu, float sigma);
+
+
+
+
 
 
 
@@ -172,10 +197,6 @@ void schedule_MKN(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p
 void schedule_NKM(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, blk_dims_t* x);
 
-
-void cake_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k);
-void cake_sgemm_haswell_8x16(float* A, float* B, float* C, int m, int n, int k);
-void cake_sgemm_haswell_7x16(float* A, float* B, float* C, int m, int n, int k);
 
 
 // block sizing and system parameter querying

@@ -8,9 +8,9 @@ int run_tests() {
 	cake_cntx_t* cake_cntx = cake_query_cntx();
 	max_threads = cake_cntx->ncores;
 	int num_tests = 6;
-	int Ms[num_tests] = {1,10,96,111,960,2111};
-	int Ks[num_tests] = {1,10,96,111,960,2111};
-	int Ns[num_tests] = {1,10,96,111,960,2111};
+	int Ms[6] = {1,10,96,111,960,2111};
+	int Ks[6] = {1,10,96,111,960,2111};
+	int Ns[6] = {1,10,96,111,960,2111};
 	int cnt = 0;
 
 
@@ -211,7 +211,6 @@ void rand_init(float* mat, int r, int c) {
 
 
 
-
 // randomized sparse matrix with sparsity % of values that are zero
 void rand_sparse(float* mat, int r, int c, float sparsity) {
 
@@ -226,6 +225,33 @@ void rand_sparse(float* mat, int r, int c, float sparsity) {
 }
 
 
+float rand_gen() {
+   // return a uniformly distributed random value
+   return ( (float)(rand()) + 1. )/( (float)(RAND_MAX) + 1. );
+}
+
+
+float normalRandom() {
+   // return a normally distributed random value
+   float v1 = rand_gen();
+   float v2 = rand_gen();
+   return cos(2*3.14*v2)*sqrt(-2.*log(v1));
+}
+
+
+// randomized sparse Normal(0,1) matrix with sparsity % of values determined by sigma (std dev)
+void rand_sparse_gaussian(float* mat, int r, int c, float mu, float sigma) {
+
+	for(int i = 0; i < r*c; i++) {
+		float x = normalRandom()*sigma+mu;
+		if(fabs(x) <= 2) {
+			mat[i] = 0;
+		} else {
+			mat[i] =  x;
+		}
+	}	
+}
+
 
 void print_array(float* arr, int len) {
 
@@ -239,13 +265,12 @@ void print_array(float* arr, int len) {
 
 void print_mat(float* arr, int r, int c) {
 
-        for(int i = 0; i < r; i++) {
-                for(int j = 0; j < c; j++) {
-                        printf("%f ", arr[i*c + j]);
-                }
-                printf("\n");
-        }
-        printf("\n\n");
+	for(int i = 0; i < r; i++) {
+		for(int j = 0; j < c; j++) {
+			printf("%f ", arr[i*c + j]);
+		}
+		printf("\n");
+	}
+	printf("\n\n");
 
 }
-
