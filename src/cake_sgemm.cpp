@@ -25,7 +25,6 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
     if(DEBUG) printf("mc = %d, kc = %d, nc = %d\n", x->m_c, x->k_c, x->n_c);
 
-
 	if(packedA) {
 		A_p = A;
 	} else {
@@ -44,7 +43,7 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 		seconds = end.tv_sec - start.tv_sec;
 		nanoseconds = end.tv_nsec - start.tv_nsec;
 		diff_t = seconds + nanoseconds*1e-9;
-		if(DEBUG) printf("A sparse pack time: %f \n", diff_t ); 
+		if(DEBUG) printf("A pack time: %f \n", diff_t ); 
 	}
 
 

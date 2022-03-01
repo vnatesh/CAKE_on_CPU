@@ -366,7 +366,7 @@ void pack_ob_B_single_buf(float* B, float* B_p, int K, int N, int n1,
 
             // _mm256_store_ps (&B_p[ind_ob], _mm256_load_ps(&B[n2 + i*N]));
             // _mm256_store_ps (&B_p[ind_ob + 8], _mm256_load_ps(&B[n2 + i*N + 8]));
-            ind_ob += n_r;
+            // ind_ob += n_r;
          }
       }
    }
