@@ -18,13 +18,14 @@ void schedule_NKM(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p
 	int m, k, n, n_start, n_end, n_inc, k_start, k_end, k_inc;
 	int k_cb, n_c_t, m_c_t, p_used, core;
 
+
+#ifdef USE_BLIS 
 	// Set the scalars to use during each GEMM kernel call.
 	float alpha_blis = 1.0;
 	float beta_blis  = 1.0;
-    // rsc = 1; csc = m_r;
-#ifdef USE_BLIS 
 	inc_t rsc, csc;
 	rsc = n_r; csc = 1;
+    // rsc = 1; csc = m_r;
 	auxinfo_t def_data;
 #endif
 
