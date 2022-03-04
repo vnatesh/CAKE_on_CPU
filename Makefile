@@ -99,8 +99,8 @@ CINCFLAGS      := -I$(INC_PATH)
 CFLAGS_tmp         := $(call get-user-cflags-for,$(CONFIG_NAME))
 
 # Add local header paths to CFLAGS
-CFLAGS_tmp        += -I$(INCLUDE_PATH)
-CFLAGS_tmp        += -g -mavx -mfma
+CFLAGS_tmp        += -I$(INCLUDE_PATH) 
+CFLAGS_tmp        += -g -mavx -mfma 
 CFLAGS 	:= $(filter-out -fopenmp -std=c99, $(CFLAGS_tmp))
 
 # Locate the libblis library to which we will link.
@@ -140,20 +140,21 @@ ifeq ($(MAKE_DEFS_MK_PRESENT),no)
     $(error Cannot proceed: make_defs.mk not detected! Invalid configuration)
 endif
 
+# 	dpcpp -fp-speculation=fast g++ $(CFLAGS) $(CAKE_SRC)/block_sizing.cpp $(CAKE_SRC)/cake_sgemm.cpp \
 
 blis: $(wildcard *.h) $(wildcard *.c) 
 	g++ $(CFLAGS) $(CAKE_SRC)/block_sizing.cpp $(CAKE_SRC)/cake_sgemm.cpp \
 	$(CAKE_SRC)/cake_sgemm_k_first.cpp $(CAKE_SRC)/cake_sgemm_m_first.cpp $(CAKE_SRC)/cake_sgemm_n_first.cpp \
 	$(CAKE_SRC)/pack_helper.cpp $(CAKE_SRC)/pack_ob.cpp $(CAKE_SRC)/util.cpp \
-	$(CAKE_SRC)/pack_k_first.cpp $(CAKE_SRC)/pack_m_first.cpp $(CAKE_SRC)/pack_n_first.cpp \
+	$(CAKE_SRC)/cake_sgemm_small.cpp $(CAKE_SRC)/pack_k_first.cpp $(CAKE_SRC)/pack_m_first.cpp $(CAKE_SRC)/pack_n_first.cpp \
 	$(CAKE_SRC)/unpack_k_first.cpp $(CAKE_SRC)/unpack_m_first.cpp $(CAKE_SRC)/unpack_n_first.cpp \
 	$(LIBS) $(LDFLAGS) -DUSE_BLIS -shared -o $(LIBCAKE)
 
 cake: $(wildcard *.h) $(wildcard *.c) 
-	g++ $(CFLAGS) $(CAKE_SRC)/block_sizing.cpp $(CAKE_SRC)/cake_sgemm.cpp \
+	dpcpp $(CFLAGS) $(CAKE_SRC)/block_sizing.cpp $(CAKE_SRC)/cake_sgemm.cpp \
 	$(CAKE_SRC)/cake_sgemm_k_first.cpp $(CAKE_SRC)/cake_sgemm_m_first.cpp $(CAKE_SRC)/cake_sgemm_n_first.cpp \
 	$(CAKE_SRC)/cake_sp_sgemm.cpp $(CAKE_SRC)/kernels.cpp $(CAKE_SRC)/pack_helper.cpp $(CAKE_SRC)/pack_ob.cpp $(CAKE_SRC)/util.cpp \
-	$(CAKE_SRC)/pack_k_first.cpp $(CAKE_SRC)/pack_m_first.cpp $(CAKE_SRC)/pack_n_first.cpp \
+	$(CAKE_SRC)/cake_sgemm_small.cpp $(CAKE_SRC)/pack_k_first.cpp $(CAKE_SRC)/pack_m_first.cpp $(CAKE_SRC)/pack_n_first.cpp \
 	$(CAKE_SRC)/unpack_k_first.cpp $(CAKE_SRC)/unpack_m_first.cpp $(CAKE_SRC)/unpack_n_first.cpp \
 	$(LDFLAGS) -DUSE_CAKE  -shared -o $(LIBCAKE)
 

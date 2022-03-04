@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <immintrin.h>
 
 #define DEBUG 0
 #define ARR_PRINT 0
@@ -17,10 +18,6 @@
 
 #ifdef USE_BLIS
 #include "blis.h"
-
-#elif USE_CAKE
-#include <immintrin.h>
-
 #endif
 
 
@@ -55,6 +52,8 @@ typedef struct blk_dims_t {
 typedef struct cake_cntx_t{
 	void* blis_cntx;
 	double alpha_n;
+	double peak_dram_bw;
+	double peak_flops;
 	int mr;
 	int nr;
 	int L2;
@@ -76,6 +75,7 @@ typedef struct cache_dims_t{
 
 
 
+// sparse matrix handling
 
 typedef struct sp_pack_t {
    int* loc_m; // M dim C writeback location for each nnz value in A
@@ -93,12 +93,9 @@ void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m,
 
 void schedule_KMN_sp(sp_pack_t* sp_pack, float* B_p, float* C_p, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, blk_dims_t* x);
-
-
 void schedule_sp(sp_pack_t* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, blk_dims_t* x, enum sched sch);
 
-enum sched set_schedule(enum sched sch, int M, int N, int K);
 
 void cake_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k);
 void cake_sp_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k, 
@@ -116,6 +113,23 @@ void rand_sparse_gaussian(float* mat, int r, int c, float mu, float sigma);
 
 
 
+
+// small matrix handling
+double cake_sgemm_small(float* A, float* B, float* C, int M, int N, int K, int p, 
+	cake_cntx_t* cake_cntx, float alpha = 1, float beta = 0, enum sched sch = NA);
+void cake_sgemm_haswell_6x16_unpacked(float* A, float* B, float* C, int m, int n, int k, int M, int K, int N);
+
+void schedule_KMN_small(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
+	cake_cntx_t* cake_cntx, blk_dims_t* x);
+void schedule_MKN_small(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
+	cake_cntx_t* cake_cntx, blk_dims_t* x);
+void schedule_NKM_small(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
+	cake_cntx_t* cake_cntx, blk_dims_t* x);
+
+
+
+// choose cake schedule based on M,N,K values
+enum sched set_schedule(enum sched sch, int M, int N, int K);
 
 
 
@@ -189,7 +203,7 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	cake_cntx_t* cake_cntx, bool packedA = 0, bool packedB = 0, 
 	float alpha = 1, float beta = 0, enum sched sch = NA);
 void schedule(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
-	cake_cntx_t* cake_cntx, blk_dims_t* x, enum sched sch);
+	cake_cntx_t* cake_cntx, blk_dims_t* x, enum sched sch, bool sparse, bool small);
 void schedule_KMN(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, blk_dims_t* x) ;
 void schedule_MKN(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 

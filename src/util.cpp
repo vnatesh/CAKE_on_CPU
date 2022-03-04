@@ -205,7 +205,7 @@ void rand_init(float* mat, int r, int c) {
 		// mat[i] = (double) i;
 		// mat[i] = 1.0;
 		// mat[i] =  (double) (i%MAX);
-		mat[i] =  (float) rand() / RAND_MAX*2.0 - 1.0;
+		mat[i] =  (float) rand() / ((float) RAND_MAX)*2.0 - 1.0;
 	}	
 }
 
@@ -216,10 +216,10 @@ void rand_sparse(float* mat, int r, int c, float sparsity) {
 
 	for(int i = 0; i < r*c; i++) {
 		int x = rand();
-		if(x <= RAND_MAX*sparsity) {
+		if(x <= ((float) RAND_MAX)*sparsity) {
 			mat[i] = 0;
 		} else {
-			mat[i] =  (float) x / RAND_MAX*2.0 - 1.0;
+			mat[i] =  (float) x / ((float) RAND_MAX)*2.0 - 1.0;
 		}
 	}	
 }
@@ -227,7 +227,7 @@ void rand_sparse(float* mat, int r, int c, float sparsity) {
 
 float rand_gen() {
    // return a uniformly distributed random value
-   return ( (float)(rand()) + 1. )/( (float)(RAND_MAX) + 1. );
+   return ( (float)(rand()) + 1. )/( (float)(((float) RAND_MAX)) + 1. );
 }
 
 
