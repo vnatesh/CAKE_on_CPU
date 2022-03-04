@@ -7,10 +7,12 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 
 	int A_sz, B_sz, C_sz;	
-	struct timespec start, end;
+	struct timespec start, end, start1, end1;
 	long seconds, nanoseconds;
 	double diff_t, times;
 	float *A_p, *B_p, *C_p;
+
+	clock_gettime(CLOCK_REALTIME, &start1);
 
 	sch = set_schedule(sch, M, N, K);
 
@@ -19,11 +21,24 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	}
 
 	blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
-	init_block_dims(M, N, K, p, x, cake_cntx, sch);
 	omp_set_num_threads(p);
 
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
     if(DEBUG) printf("mc = %d, kc = %d, nc = %d\n", x->m_c, x->k_c, x->n_c);
+
+
+	// use packing-free kernels if packing time is more than 
+	// x% (10% here) of the projected total runtime
+	double t_pack = (2*(M*K + K*N + M*N)) / cake_cntx->peak_dram_bw;
+	double t_comp = M*N*K / (0.8*cake_cntx->peak_flops); // assume we can only reach 80% of peak
+
+	if(t_pack / (t_pack + t_comp) > 0.10) {
+		init_block_dims(M, N, K, p, x, cake_cntx, KMN);
+		schedule(A, B, C, M, N, K, p, cake_cntx, x, sch, 0, 1);
+		return 1;
+	}
+
+	init_block_dims(M, N, K, p, x, cake_cntx, sch);
 
 	if(packedA) {
 		A_p = A;
@@ -96,7 +111,7 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 	clock_gettime(CLOCK_REALTIME, &start);
 
-	schedule(A_p, B_p, C_p, M, N, K, p, cake_cntx, x, sch);
+	schedule(A_p, B_p, C_p, M, N, K, p, cake_cntx, x, sch, 0, 0);
 
     clock_gettime(CLOCK_REALTIME, &end);
     seconds = end.tv_sec - start.tv_sec;
@@ -116,10 +131,17 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
     diff_t = seconds + nanoseconds*1e-9;
 	if(DEBUG) printf("unpacking time: %f \n", diff_t); 	// exit(1);
 
+    clock_gettime(CLOCK_REALTIME, &end1);
+    seconds = end1.tv_sec - start1.tv_sec;
+    nanoseconds = end1.tv_nsec - start1.tv_nsec;
+    diff_t = seconds + nanoseconds*1e-9;
+	if(DEBUG) printf("full gemm time: %f \n", diff_t); 	// exit(1);
 
 	if(!packedA) free(A_p);
 	if(!packedB) free(B_p);
 	free(C_p);
+
+
 
 	return times;
 }
@@ -310,11 +332,11 @@ void schedule_sp(sp_pack_t* A_p, float* B_p, float* C_p, int M, int N, int K, in
 			break;
 		}
 		case MKN: {
-			// schedule_MKN_sp(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+			schedule_KMN_sp(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
 			break;
 		}
 		case NKM: {
-			// schedule_NKM_sp(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+			schedule_KMN_sp(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
 			break;
 		}
 		default: {
@@ -324,20 +346,39 @@ void schedule_sp(sp_pack_t* A_p, float* B_p, float* C_p, int M, int N, int K, in
 	}
 }
 
+
 void schedule(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
-	cake_cntx_t* cake_cntx, blk_dims_t* x, enum sched sch) {
+	cake_cntx_t* cake_cntx, blk_dims_t* x, enum sched sch, bool sparse, bool small) {
 
 	switch(sch) {
 		case KMN: {
-			schedule_KMN(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+			if(sparse) {
+				// schedule_KMN_sp(A_p, B_p, C_p, M, N, K, p, cake_cntx, x, 1, 0); 
+			} else if(small) {
+				schedule_KMN_small(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+			} else {
+				schedule_KMN(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+			}
 			break;
 		}
 		case MKN: {
-			schedule_MKN(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+			if(sparse) {
+				// schedule_KMN_sp(A_p, B_p, C_p, M, N, K, p, cake_cntx, x, 1, 0); 
+			} else if(small) {
+				schedule_MKN_small(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+			} else {
+				schedule_MKN(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+			}
 			break;
 		}
 		case NKM: {
-			schedule_NKM(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+			if(sparse) {
+				// schedule_KMN_sp(A_p, B_p, C_p, M, N, K, p, cake_cntx, x, 1, 0); 
+			} else if(small) {
+				schedule_KMN_small(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+			} else {
+				schedule_NKM(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+			}
 			break;
 		}
 		default: {
