@@ -35,6 +35,8 @@ cake_cntx_t* cake_query_cntx() {
 	ret->L2 = get_cache_size(2);
 	ret->L3 = get_cache_size(3);
 	ret->ncores = get_num_physical_cores();
+	ret->peak_dram_bw = 32 * 1e9; // TODO : hardcoded bw and flops on i9 for now
+	ret->peak_flops = 600 * 1e9;
 
     // query block size for the microkernel
 #ifdef USE_BLIS
@@ -266,6 +268,7 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sc
 	blk_ret->m_c = mc_ret;
 	blk_ret->k_c = mc_ret;
 	blk_ret->n_c = nc_ret;
+	// blk_ret->k_c = 120;
 
 	return blk_ret;
 }
