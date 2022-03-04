@@ -192,6 +192,7 @@ void cake_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k) 
 	__m256 a1, a2, b1, b2;
 	__m256 c[6*2];
 
+	// load 6x16 tile of C into 12 AVX2 registers
 	c[0] = _mm256_loadu_ps(C);
 	c[1] = _mm256_loadu_ps(C + 8);
 	c[2] = _mm256_loadu_ps(C + 16);
@@ -209,6 +210,7 @@ void cake_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k) 
 	int rem = k % 4;
 	k -= rem;
 
+	// 6x16 outer-product
 	for(int kk = 0; kk < k; kk += 4) { 
 
 		b1 = _mm256_load_ps(B);
@@ -317,7 +319,7 @@ void cake_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k) 
 		B += n;
 	}
 	
-
+	// lefotver k elements
 	for(int kk = 0; kk < rem; kk++) {
 
 		b1 = _mm256_load_ps(B);
@@ -361,6 +363,201 @@ void cake_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k) 
 	_mm256_storeu_ps((C + 80), c[10]);
 	_mm256_storeu_ps((C + 88), c[11]);
 }
+
+
+// assumes A col stored, B and C row stored
+void cake_sgemm_haswell_6x16_unpacked(float* A, float* B, float* C, int m, int n, int k, int M, int K, int N) {
+
+	__m256 a1, a2, b1, b2;
+	__m256 c[6*2];
+
+	// load 6x16 tile of C into 12 AVX2 registers
+	c[0] = _mm256_loadu_ps(C);
+	c[1] = _mm256_loadu_ps(C + 8);
+	c[2] = _mm256_loadu_ps(C + N);
+	c[3] = _mm256_loadu_ps(C + N + 8);
+	c[4] = _mm256_loadu_ps(C + 2*N);
+	c[5] = _mm256_loadu_ps(C + 2*N + 8);
+	c[6] = _mm256_loadu_ps(C + 3*N);
+	c[7] = _mm256_loadu_ps(C + 3*N + 8);
+	c[8] = _mm256_loadu_ps(C + 4*N);
+	c[9] = _mm256_loadu_ps(C + 4*N + 8);
+	c[10]= _mm256_loadu_ps(C + 5*N);
+	c[11]= _mm256_loadu_ps(C + 5*N + 8);
+
+
+	int rem = k % 4;
+	k -= rem;
+
+	// 6x16 outer-product
+	for(int kk = 0; kk < k; kk += 4) { 
+
+		b1 = _mm256_loadu_ps(B);
+		b2 = _mm256_loadu_ps(B + 8);
+
+		a1 = _mm256_broadcast_ss(A++);
+		a2 = _mm256_broadcast_ss(A++);
+		c[0] =  _mm256_fmadd_ps(a1, b1, c[0]);
+		c[1] =  _mm256_fmadd_ps(a1, b2, c[1]);
+		c[2] =  _mm256_fmadd_ps(a2, b1, c[2]);
+		c[3] =  _mm256_fmadd_ps(a2, b2, c[3]);
+
+		a1 = _mm256_broadcast_ss(A++);
+		a2 = _mm256_broadcast_ss(A++);
+		c[4] =  _mm256_fmadd_ps(a1, b1, c[4]);
+		c[5] =  _mm256_fmadd_ps(a1, b2, c[5]);
+		c[6] =  _mm256_fmadd_ps(a2, b1, c[6]);
+		c[7] =  _mm256_fmadd_ps(a2, b2, c[7]);
+
+		a1 = _mm256_broadcast_ss(A++);
+		a2 = _mm256_broadcast_ss(A++);
+		c[8] =  _mm256_fmadd_ps(a1, b1, c[8]);
+		c[9] =  _mm256_fmadd_ps(a1, b2, c[9]);
+		c[10] =  _mm256_fmadd_ps(a2, b1, c[10]);
+		c[11] =  _mm256_fmadd_ps(a2, b2, c[11]);
+
+		B += N;
+		A += M-6;
+
+
+		b1 = _mm256_loadu_ps(B);
+		b2 = _mm256_loadu_ps(B + 8);
+
+		a1 = _mm256_broadcast_ss(A++);
+		a2 = _mm256_broadcast_ss(A++);
+		c[0] =  _mm256_fmadd_ps(a1, b1, c[0]);
+		c[1] =  _mm256_fmadd_ps(a1, b2, c[1]);
+		c[2] =  _mm256_fmadd_ps(a2, b1, c[2]);
+		c[3] =  _mm256_fmadd_ps(a2, b2, c[3]);
+
+		a1 = _mm256_broadcast_ss(A++);
+		a2 = _mm256_broadcast_ss(A++);
+		c[4] =  _mm256_fmadd_ps(a1, b1, c[4]);
+		c[5] =  _mm256_fmadd_ps(a1, b2, c[5]);
+		c[6] =  _mm256_fmadd_ps(a2, b1, c[6]);
+		c[7] =  _mm256_fmadd_ps(a2, b2, c[7]);
+
+		a1 = _mm256_broadcast_ss(A++);
+		a2 = _mm256_broadcast_ss(A++);
+		c[8] =  _mm256_fmadd_ps(a1, b1, c[8]);
+		c[9] =  _mm256_fmadd_ps(a1, b2, c[9]);
+		c[10] =  _mm256_fmadd_ps(a2, b1, c[10]);
+		c[11] =  _mm256_fmadd_ps(a2, b2, c[11]);
+
+		B += N;
+		A += M-6;
+
+		b1 = _mm256_loadu_ps(B);
+		b2 = _mm256_loadu_ps(B + 8);
+
+		a1 = _mm256_broadcast_ss(A++);
+		a2 = _mm256_broadcast_ss(A++);
+		c[0] =  _mm256_fmadd_ps(a1, b1, c[0]);
+		c[1] =  _mm256_fmadd_ps(a1, b2, c[1]);
+		c[2] =  _mm256_fmadd_ps(a2, b1, c[2]);
+		c[3] =  _mm256_fmadd_ps(a2, b2, c[3]);
+
+		a1 = _mm256_broadcast_ss(A++);
+		a2 = _mm256_broadcast_ss(A++);
+		c[4] =  _mm256_fmadd_ps(a1, b1, c[4]);
+		c[5] =  _mm256_fmadd_ps(a1, b2, c[5]);
+		c[6] =  _mm256_fmadd_ps(a2, b1, c[6]);
+		c[7] =  _mm256_fmadd_ps(a2, b2, c[7]);
+
+		a1 = _mm256_broadcast_ss(A++);
+		a2 = _mm256_broadcast_ss(A++);
+		c[8] =  _mm256_fmadd_ps(a1, b1, c[8]);
+		c[9] =  _mm256_fmadd_ps(a1, b2, c[9]);
+		c[10] =  _mm256_fmadd_ps(a2, b1, c[10]);
+		c[11] =  _mm256_fmadd_ps(a2, b2, c[11]);
+
+		B += N;
+		A += M-6;
+
+
+		b1 = _mm256_loadu_ps(B);
+		b2 = _mm256_loadu_ps(B + 8);
+
+		a1 = _mm256_broadcast_ss(A++);
+		a2 = _mm256_broadcast_ss(A++);
+		c[0] =  _mm256_fmadd_ps(a1, b1, c[0]);
+		c[1] =  _mm256_fmadd_ps(a1, b2, c[1]);
+		c[2] =  _mm256_fmadd_ps(a2, b1, c[2]);
+		c[3] =  _mm256_fmadd_ps(a2, b2, c[3]);
+
+		a1 = _mm256_broadcast_ss(A++);
+		a2 = _mm256_broadcast_ss(A++);
+		c[4] =  _mm256_fmadd_ps(a1, b1, c[4]);
+		c[5] =  _mm256_fmadd_ps(a1, b2, c[5]);
+		c[6] =  _mm256_fmadd_ps(a2, b1, c[6]);
+		c[7] =  _mm256_fmadd_ps(a2, b2, c[7]);
+
+		a1 = _mm256_broadcast_ss(A++);
+		a2 = _mm256_broadcast_ss(A++);
+		c[8] =  _mm256_fmadd_ps(a1, b1, c[8]);
+		c[9] =  _mm256_fmadd_ps(a1, b2, c[9]);
+		c[10] =  _mm256_fmadd_ps(a2, b1, c[10]);
+		c[11] =  _mm256_fmadd_ps(a2, b2, c[11]);
+
+		B += N;
+		A += M-6;
+
+	}
+
+	// lefotver k elements
+	for(int kk = 0; kk < rem; kk++) {
+
+		b1 = _mm256_loadu_ps(B);
+		b2 = _mm256_loadu_ps(B + 8);
+
+		a1 = _mm256_broadcast_ss(A++);
+		a2 = _mm256_broadcast_ss(A++);
+		c[0] =  _mm256_fmadd_ps(a1, b1, c[0]);
+		c[1] =  _mm256_fmadd_ps(a1, b2, c[1]);
+		c[2] =  _mm256_fmadd_ps(a2, b1, c[2]);
+		c[3] =  _mm256_fmadd_ps(a2, b2, c[3]);
+
+		a1 = _mm256_broadcast_ss(A++);
+		a2 = _mm256_broadcast_ss(A++);
+		c[4] =  _mm256_fmadd_ps(a1, b1, c[4]);
+		c[5] =  _mm256_fmadd_ps(a1, b2, c[5]);
+		c[6] =  _mm256_fmadd_ps(a2, b1, c[6]);
+		c[7] =  _mm256_fmadd_ps(a2, b2, c[7]);
+
+		a1 = _mm256_broadcast_ss(A++);
+		a2 = _mm256_broadcast_ss(A++);
+		c[8] =  _mm256_fmadd_ps(a1, b1, c[8]);
+		c[9] =  _mm256_fmadd_ps(a1, b2, c[9]);
+		c[10] =  _mm256_fmadd_ps(a2, b1, c[10]);
+		c[11] =  _mm256_fmadd_ps(a2, b2, c[11]);
+
+		B += N;
+		A += M-6;
+	}
+	
+
+	_mm256_storeu_ps(C, c[0]);
+	_mm256_storeu_ps(C + 8,c[1]);
+	_mm256_storeu_ps(C + N, c[2]);
+	_mm256_storeu_ps(C + N + 8, c[3]);
+	_mm256_storeu_ps(C + 2*N, c[4]);
+	_mm256_storeu_ps(C + 2*N + 8, c[5]);
+	_mm256_storeu_ps(C + 3*N, c[6]);
+	_mm256_storeu_ps(C + 3*N + 8, c[7]);
+	_mm256_storeu_ps(C + 4*N, c[8]);
+	_mm256_storeu_ps(C + 4*N + 8, c[9]);
+	_mm256_storeu_ps(C + 5*N, c[10]);
+	_mm256_storeu_ps(C + 5*N + 8, c[11]);
+}
+
+
+
+
+
+
+
+
+//-----------------------------------OLD----------------------------------------
 
 // void cake_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k) {
 
