@@ -15,12 +15,13 @@ void schedule_KMN_sp(sp_pack_t* sp_pack, float* B_p, float* C_p, int M, int N, i
 	int Mb = x->Mb, Kb = x->Kb, Nb = x->Nb;
 	int M_padded = x->M_padded;
 
-	int m, k, n, m_start, m_end, m_inc, k_start, k_end, k_inc;
+	int m, k, n; //, m_start, m_end, m_inc, k_start, k_end, k_inc;
 	int m_cb, n_c_t, p_used, core;
 
     // rsc = 1; csc = m_r;
 	float* A_p = sp_pack->A_sp_p;
 	int* nnz_outer = sp_pack->nnz_outer;
+	int* k_inds = sp_pack->k_inds;
 	int* loc_m = sp_pack->loc_m;
 
 
@@ -81,7 +82,8 @@ void schedule_KMN_sp(sp_pack_t* sp_pack, float* B_p, float* C_p, int M, int N, i
 													&B_p[b_ind + n_reg*k_c_t*n_r], 
 													&C_p[c_ind + n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
 													m_r, n_r, k_c_t, 
-													&nnz_outer[out_ind + m_reg*k_c_t], 
+													&nnz_outer[out_ind + m_reg*k_c_t],
+													&k_inds[out_ind + m_reg*k_c_t], 
 													&loc_m[a_ind + m_reg*m_r*k_c_t]);
 						}
 					}
