@@ -1,136 +1,25 @@
 #include "cake.h"
 
 
-// void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m, 
-//    int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad) {
-
-//    int nnz_col, ind_blk, outer_ind = 0, a_ind = 0;
-//    float a_tmp = 0;
-
-//    int** cnt = (int**) malloc(7 * sizeof(int*));
-//    int cnt_inds[7]; // = (int*) malloc(7 * sizeof(int));
-
-//    for(int i = 0; i < 7; i++) {
-//       cnt[i] = (int*) malloc(k_c * sizeof(int));
-//    }
-
-//    if(pad) {
-
-//       for(int m3 = 0; m3 < m_c; m3 += m_r) {
-
-//          ind_blk = 0;
-//          memset(cnt_inds, 0, 7*sizeof(int));
-// // printf("wgwregwrg\n");
-
-//          for(int i = 0; i < k_c; i++) {
-
-//             nnz_col = 0;
-
-//             for(int j = 0; j < m_r; j++) {
-
-//                if((m1 + m2 + m3 + j) < M) {
-
-//                   if(A[m3*K + i + j*K] != 0) {
-//                      nnz_col++;
-//                   }
-//                }
-//             }
-
-//             cnt[nnz_col][cnt_inds[nnz_col]++] = i;
-//          }
-
-
-//          for(int c = 6; c > 0; c--) {
-//             for(int i = 0; i < cnt_inds[c]; i++) {
-
-//                for(int j = 0; j < m_r; j++) {
-
-//                   if((m1 + m2 + m3 + j) >=  M) {
-//                      A_p[a_ind + ind_blk] = 0.0;
-//                   } else {
-
-//                      a_tmp = A[m3*K + cnt[c][i] + j*K];
-//                      if(a_tmp != 0) {
-//                         A_p[a_ind + ind_blk] = a_tmp;
-//                         loc_m[a_ind + ind_blk++] = j;
-//                      }
-//                   }
-//                }
-
-//                k_inds[outer_ind] = cnt[c][i];
-//                nnz_outer[outer_ind++] = c;
-//             }
-
-//          }
-
-//          a_ind += m_r*k_c;
-//       }
-//    } 
-
-//    else {
-
-//       for(int m3 = 0; m3 < m_c; m3 += m_r) {
-
-//          ind_blk = 0;
-//          memset(cnt_inds, 0, 7*sizeof(int));
-
-//          for(int i = 0; i < k_c; i++) {
-
-//             nnz_col = 0;
-
-//             for(int j = 0; j < m_r; j++) {
-
-//                if(A[m3*K + i + j*K] != 0) {
-//                   nnz_col++;
-//                }
-//             }
-
-//             cnt[nnz_col][cnt_inds[nnz_col]++] = i;
-//          }
-
-
-//          for(int c = 6; c > 0; c--) {
-//             for(int i = 0; i < cnt_inds[c]; i++) {
-
-//                for(int j = 0; j < m_r; j++) {
-
-//                   a_tmp = A[m3*K + cnt[c][i] + j*K];
-//                   if(a_tmp != 0) {
-//                      A_p[a_ind + ind_blk] = a_tmp;
-//                      loc_m[a_ind + ind_blk++] = j;
-//                   }
-//                }
-
-//                k_inds[outer_ind] = cnt[c][i];
-//                nnz_outer[outer_ind++] = c;
-//             }
-
-//          }
-
-//          a_ind += m_r*k_c;
-//       }
-//    }
-
-//    for(int i = 0; i < 7; i++) {
-//       free(cnt[i]);
-//    }
-
-//    free(cnt);
-//    // free(cnt_inds);
-// }
-
-
-
 void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m, 
    int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad) {
 
    int nnz_col, ind_blk, outer_ind = 0, a_ind = 0;
    float a_tmp = 0;
 
+   int** cnt = (int**) malloc(7 * sizeof(int*));
+   int cnt_inds[7]; // = (int*) malloc(7 * sizeof(int));
+
+   for(int i = 0; i < 7; i++) {
+      cnt[i] = (int*) malloc(k_c * sizeof(int));
+   }
+
    if(pad) {
+
       for(int m3 = 0; m3 < m_c; m3 += m_r) {
 
          ind_blk = 0;
+         memset(cnt_inds, 0, 7*sizeof(int));
 
          for(int i = 0; i < k_c; i++) {
 
@@ -138,31 +27,58 @@ void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m,
 
             for(int j = 0; j < m_r; j++) {
 
-               if((m1 + m2 + m3 + j) >=  M) {
-                  A_p[a_ind + ind_blk] = 0.0;
-               } else {
+               if((m1 + m2 + m3 + j) < M) {
 
-                  a_tmp = A[m3*K + i + j*K];
-                  if(a_tmp != 0) {
-                     A_p[a_ind + ind_blk] = a_tmp;
-                     loc_m[a_ind + ind_blk++] = j;
+                  if(A[m3*K + i + j*K] != 0) {
                      nnz_col++;
                   }
                }
-
             }
 
-            nnz_outer[outer_ind++] = nnz_col;
+            cnt[nnz_col][cnt_inds[nnz_col]++] = i;
          }
 
+
+         for(int c = 6; c > 0; c--) {
+       
+            if(!cnt_inds[c]) {
+               // ind_blk += 6;
+               continue;
+            }
+
+            for(int i = 0; i < cnt_inds[c]; i++) {
+
+               for(int j = 0; j < m_r; j++) {
+
+                  if((m1 + m2 + m3 + j) >=  M) {
+                     A_p[a_ind + ind_blk] = 0.0;
+                  } else {
+
+                     a_tmp = A[m3*K + cnt[c][i] + j*K];
+                     if(a_tmp != 0) {
+                        A_p[a_ind + ind_blk] = a_tmp;
+                        loc_m[a_ind + ind_blk++] = j;
+                     }
+                  }
+               }
+
+               k_inds[outer_ind] = cnt[c][i];
+               nnz_outer[outer_ind++] = c;
+            }
+
+         }
+
+         outer_ind += cnt_inds[0];
          a_ind += m_r*k_c;
-      }     
+      }
    } 
 
    else {
+
       for(int m3 = 0; m3 < m_c; m3 += m_r) {
 
          ind_blk = 0;
+         memset(cnt_inds, 0, 7*sizeof(int));
 
          for(int i = 0; i < k_c; i++) {
 
@@ -170,21 +86,121 @@ void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m,
 
             for(int j = 0; j < m_r; j++) {
 
-               a_tmp = A[m3*K + i + j*K];
-               if(a_tmp != 0) {
-                  A_p[a_ind + ind_blk] = a_tmp;
-                  loc_m[a_ind + ind_blk++] = j;
+               if(A[m3*K + i + j*K] != 0) {
                   nnz_col++;
                }
             }
 
-            nnz_outer[outer_ind++] = nnz_col;
+            cnt[nnz_col][cnt_inds[nnz_col]++] = i;
          }
 
+
+         for(int c = 6; c > 0; c--) {
+
+            if(!cnt_inds[c]) {
+               // ind_blk += 6;
+               continue;
+            }
+
+            for(int i = 0; i < cnt_inds[c]; i++) {
+
+               for(int j = 0; j < m_r; j++) {
+
+                  // A_p[a_ind + ind_blk] = A[m3*K + cnt[c][i] + j*K];
+                  // loc_m[a_ind + ind_blk++] = j;
+                  
+                  a_tmp = A[m3*K + cnt[c][i] + j*K];
+                  if(a_tmp != 0) {
+                     A_p[a_ind + ind_blk] = a_tmp;
+                     loc_m[a_ind + ind_blk++] = j;
+                  }
+               }
+
+               k_inds[outer_ind] = cnt[c][i];
+               nnz_outer[outer_ind++] = c;
+            }
+
+         }
+
+         outer_ind += cnt_inds[0];
          a_ind += m_r*k_c;
-      }     
+      }
    }
+
+   for(int i = 0; i < 7; i++) {
+      free(cnt[i]);
+   }
+
+   free(cnt);
+   // free(cnt_inds);
 }
+
+
+
+// void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m, 
+//    int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad) {
+
+//    int nnz_col, ind_blk, outer_ind = 0, a_ind = 0;
+//    float a_tmp = 0;
+
+//    if(pad) {
+//       for(int m3 = 0; m3 < m_c; m3 += m_r) {
+
+//          ind_blk = 0;
+
+//          for(int i = 0; i < k_c; i++) {
+
+//             nnz_col = 0;
+
+//             for(int j = 0; j < m_r; j++) {
+
+//                if((m1 + m2 + m3 + j) >=  M) {
+//                   A_p[a_ind + ind_blk] = 0.0;
+//                } else {
+
+//                   a_tmp = A[m3*K + i + j*K];
+//                   if(a_tmp != 0) {
+//                      A_p[a_ind + ind_blk] = a_tmp;
+//                      loc_m[a_ind + ind_blk++] = j;
+//                      nnz_col++;
+//                   }
+//                }
+
+//             }
+
+//             nnz_outer[outer_ind++] = nnz_col;
+//          }
+
+//          a_ind += m_r*k_c;
+//       }     
+//    } 
+
+//    else {
+//       for(int m3 = 0; m3 < m_c; m3 += m_r) {
+
+//          ind_blk = 0;
+
+//          for(int i = 0; i < k_c; i++) {
+
+//             nnz_col = 0;
+
+//             for(int j = 0; j < m_r; j++) {
+
+//                a_tmp = A[m3*K + i + j*K];
+//                if(a_tmp != 0) {
+//                   A_p[a_ind + ind_blk] = a_tmp;
+//                   loc_m[a_ind + ind_blk++] = j;
+//                   nnz_col++;
+//                }
+//             }
+
+//             nnz_outer[outer_ind++] = nnz_col;
+//          }
+
+//          a_ind += m_r*k_c;
+//       }     
+//    }
+// }
 
 
 
