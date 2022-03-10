@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+// TODO : choose .h based on arch
+// #include <arm_neon.h>
 #include <immintrin.h>
 
 #define DEBUG 1
@@ -19,6 +21,12 @@
 #ifdef USE_BLIS
 #include "blis.h"
 #endif
+
+// #ifdef USE_CAKE
+
+// #define MR_NEW 8
+
+// #endif
 
 
 
@@ -103,6 +111,13 @@ void cake_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k);
 
 void cake_sp_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k, 
 							int* nnz_outer, int* k_inds, int* loc_m);
+
+void cake_sp_sgemm_armv8_8x12(float* A, float* B, float* C, int m, int n, int k, 
+							int* nnz_outer, int* k_inds, int* loc_m);
+void cake_sgemm_armv8_8x12(float* A, float* B, float* C, int m, int n, int k);
+
+
+
 
 double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, bool packedA = 0, bool packedB = 0, 
@@ -255,5 +270,3 @@ void rand_init(float* mat, int r, int c);
 void print_array(float* arr, int len);
 
 void print_mat(float* arr, int r, int c);
-
-

@@ -7,10 +7,12 @@ void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m,
    int nnz_col, ind_blk, outer_ind = 0, a_ind = 0;
    float a_tmp = 0;
 
-   int** cnt = (int**) malloc(7 * sizeof(int*));
-   int cnt_inds[7]; // = (int*) malloc(7 * sizeof(int));
+   int mr_bins = m_r + 1;
+   int** cnt = (int**) malloc(mr_bins * sizeof(int*));
+   int* cnt_inds = (int*) malloc(mr_bins * sizeof(int));
+   // int cnt_inds[7]; // = (int*) malloc(7 * sizeof(int));
 
-   for(int i = 0; i < 7; i++) {
+   for(int i = 0; i < mr_bins; i++) {
       cnt[i] = (int*) malloc(k_c * sizeof(int));
    }
 
@@ -19,7 +21,7 @@ void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m,
       for(int m3 = 0; m3 < m_c; m3 += m_r) {
 
          ind_blk = 0;
-         memset(cnt_inds, 0, 7*sizeof(int));
+         memset(cnt_inds, 0, mr_bins*sizeof(int));
 
          for(int i = 0; i < k_c; i++) {
 
@@ -39,7 +41,7 @@ void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m,
          }
 
 
-         for(int c = 6; c > 0; c--) {
+         for(int c = m_r; c > 0; c--) {
        
             if(!cnt_inds[c]) {
                // ind_blk += 6;
@@ -68,7 +70,7 @@ void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m,
 
          }
 
-         outer_ind += cnt_inds[0];
+         outer_ind += cnt_inds[0]; // skip ahead over cols with 0 nonzeros
          a_ind += m_r*k_c;
       }
    } 
@@ -78,7 +80,7 @@ void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m,
       for(int m3 = 0; m3 < m_c; m3 += m_r) {
 
          ind_blk = 0;
-         memset(cnt_inds, 0, 7*sizeof(int));
+         memset(cnt_inds, 0, mr_bins*sizeof(int));
 
          for(int i = 0; i < k_c; i++) {
 
@@ -95,7 +97,7 @@ void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m,
          }
 
 
-         for(int c = 6; c > 0; c--) {
+         for(int c = m_r; c > 0; c--) {
 
             if(!cnt_inds[c]) {
                // ind_blk += 6;
@@ -122,17 +124,17 @@ void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m,
 
          }
 
-         outer_ind += cnt_inds[0];
+         outer_ind += cnt_inds[0]; // skip ahead over cols with 0 nonzeros
          a_ind += m_r*k_c;
       }
    }
 
-   for(int i = 0; i < 7; i++) {
+   for(int i = 0; i < mr_bins; i++) {
       free(cnt[i]);
    }
 
    free(cnt);
-   // free(cnt_inds);
+   free(cnt_inds);
 }
 
 
