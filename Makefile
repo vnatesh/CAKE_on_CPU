@@ -96,7 +96,8 @@ TEST_OBJS      := $(sort $(patsubst $(INCLUDE_PATH)/%.c, \
 CINCFLAGS      := -I$(INC_PATH)
 
 # Use the "framework" CFLAGS for the configuration family.
-CFLAGS_tmp         := $(call get-user-cflags-for,$(CONFIG_NAME))
+# CFLAGS_tmp         := $(call get-user-cflags-for,$(CONFIG_NAME))
+CFLAGS_tmp := -Wall -Wno-unused-function -Wfatal-errors -fPIC -std=c99 -D_POSIX_C_SOURCE=200112L -lpthread -fopenmp
 CFLAGS_tmp        += -I$(INCLUDE_PATH) 
 CFLAGS_tmp        += -g
 # Add local header paths to CFLAGS
@@ -118,18 +119,21 @@ ifeq ($(UNAME_P),aarch64)
 	SRC_FILES := $(filter-out $(CAKE_HOME)/src/cake_sgemm_small.cpp, $(SRC_FILES))
 	KERNELS := $(CAKE_SRC)/kernels/armv8/*.cpp
 	TARGETS = cake_armv8
+	CFLAGS_tmp += -O3
 else ifeq ($(UNAME_P),x86_64)
 	SRC_FILES := $(filter-out $(CAKE_HOME)/src/linear.cpp, $(SRC_FILES))
 	KERNELS := $(CAKE_SRC)/kernels/haswell/*.cpp
-	CFLAGS_tmp        += -mavx -mfma -fPIC
+	CFLAGS_tmp += -mavx -mfma
 	TARGETS = cake_haswell
+	CFLAGS_tmp += -O2
 else
 	SRC_FILES := $(filter-out $(CAKE_HOME)/src/linear.cpp, $(SRC_FILES))
 	TARGETS = cake_blis
+	CFLAGS_tmp += -O2
 endif
 
 
-CFLAGS 	:= $(filter-out -fopenmp -std=c99, $(CFLAGS_tmp))
+CFLAGS 	:= $(filter-out -std=c99, $(CFLAGS_tmp))
 
 
 LIBS ?=
@@ -169,11 +173,11 @@ cake_blis: $(wildcard *.h) $(wildcard *.c)
 
 cake_haswell: $(wildcard *.h) $(wildcard *.c)
 	dpcpp  $(CFLAGS) $(SRC_FILES) $(KERNELS) \
-	$(LDFLAGS) -DUSE_CAKE_HASWELL -shared -lpthread -fopenmp -o $(LIBCAKE)
+	$(LDFLAGS) -DUSE_CAKE_HASWELL -shared -o $(LIBCAKE)
 
 cake_armv8: $(wildcard *.h) $(wildcard *.c)
-	g++ -O3  $(CFLAGS) $(SRC_FILES) $(KERNELS) \
-	$(LDFLAGS) -DUSE_CAKE_ARMV8  -shared -lpthread -fopenmp -o $(LIBCAKE)
+	g++ $(CFLAGS) $(SRC_FILES) $(KERNELS) \
+	$(LDFLAGS) -DUSE_CAKE_ARMV8  -shared -o $(LIBCAKE)
 
 # -- Clean rules --
 
