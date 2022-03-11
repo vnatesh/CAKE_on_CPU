@@ -14,8 +14,6 @@ CFLAGS_tmp         := $(call get-user-cflags-for,$(CONFIG_NAME))
 
 # Add local header paths to CFLAGS
 CFLAGS_tmp        += -I$(CAKE_INC_PATH)
-CFLAGS_tmp		  += -g -mavx -mfma
-CFLAGS 	:= $(filter-out -fopenmp -std=c99, $(CFLAGS_tmp))
 
 CFLAGS_blis := $(CFLAGS)
 CFLAGS_blis		  += -I$(BLIS_INC_PATH)
@@ -25,15 +23,39 @@ LIBCAKE      := -L$(CAKE_HOME) -lcake
 CAKE_SRC := $(CAKE_HOME)/src
 
 
+
+
+UNAME_P := $(shell uname -p)
+SRC_FILES =  $(wildcard $(CAKE_HOME)/src/*.cpp)
+
+ifeq ($(UNAME_P),aarch64)
+	TARGETS = cake_armv8
+else ifeq ($(UNAME_P),x86_64)
+	TARGETS = cake_haswell
+	CFLAGS_tmp		  += -g -mavx -mfma
+else
+	TARGETS = cake_blis
+endif
+
+CFLAGS 	:= $(filter-out -fopenmp -std=c99, $(CFLAGS_tmp))
+
+
+
+
+
+
 # --- Targets/rules ------------------------------------------------------------
 
-all: cake
+all: $(TARGETS)
 
-blis: $(wildcard *.h) $(wildcard *.c)
+cake_blis: $(wildcard *.h) $(wildcard *.c)
 	g++ $(CFLAGS_blis) cake_sgemm_test.cpp $(LIBCAKE) -o cake_sgemm_test
 
-cake: $(wildcard *.h) $(wildcard *.c)
-	g++ $(CFLAGS) cake_sgemm_test.cpp $(LIBCAKE) -o cake_sgemm_test
+cake_armv8: $(wildcard *.h) $(wildcard *.c)
+	g++ -O3 $(CFLAGS) cake_sgemm_test.cpp $(LIBCAKE) -o cake_sgemm_test
+
+cake_haswell: $(wildcard *.h) $(wildcard *.c)
+	dpcpp $(CFLAGS) cake_sgemm_test.cpp $(LIBCAKE) -o cake_sgemm_test
 
 clean:
 	rm -rf *.o *.so
