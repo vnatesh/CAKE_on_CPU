@@ -109,7 +109,7 @@ CFLAGS_tmp        += -g
 LIBCAKE      := libcake.so
 
 CAKE_SRC := $(CAKE_HOME)/src
-
+KERNELS := $(CAKE_SRC)/kernels/*.cpp
 
 UNAME_P := $(shell uname -p)
 SRC_FILES =  $(wildcard $(CAKE_HOME)/src/*.cpp)
@@ -117,20 +117,22 @@ SRC_FILES =  $(wildcard $(CAKE_HOME)/src/*.cpp)
 ifeq ($(UNAME_P),aarch64)
 	SRC_FILES := $(filter-out $(CAKE_HOME)/src/linear.cpp, $(SRC_FILES)) 
 	SRC_FILES := $(filter-out $(CAKE_HOME)/src/cake_sgemm_small.cpp, $(SRC_FILES))
-	KERNELS := $(CAKE_SRC)/kernels/armv8/*.cpp
+	KERNELS += $(CAKE_SRC)/kernels/armv8/*.cpp
 	TARGETS = cake_armv8
 	CFLAGS_tmp += -O3
 else ifeq ($(UNAME_P),x86_64)
 	SRC_FILES := $(filter-out $(CAKE_HOME)/src/linear.cpp, $(SRC_FILES))
-	KERNELS := $(CAKE_SRC)/kernels/haswell/*.cpp
+	KERNELS += $(CAKE_SRC)/kernels/haswell/*.cpp
 	CFLAGS_tmp += -mavx -mfma
 	TARGETS = cake_haswell
 	CFLAGS_tmp += -O2
 else
 	SRC_FILES := $(filter-out $(CAKE_HOME)/src/linear.cpp, $(SRC_FILES))
 	TARGETS = cake_blis
-	CFLAGS_tmp += -O2
+	CFLAGS_tmp  := $(call get-user-cflags-for,$(CONFIG_NAME))
+	CFLAGS_tmp += -I$(CAKE_HOME)/include/blis -I$(CAKE_HOME)/include
 endif
+
 
 
 CFLAGS 	:= $(filter-out -std=c99, $(CFLAGS_tmp))
