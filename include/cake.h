@@ -10,24 +10,23 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-// TODO : choose .h based on arch
-// #include <arm_neon.h>
+
+#ifdef USE_BLIS
+#include "blis.h"
+
+#elif USE_CAKE_ARMV8
+#include <arm_neon.h>
+
+#elif USE_CAKE_HASWELL
 #include <immintrin.h>
+
+#endif
+
+
 
 #define DEBUG 1
 #define ARR_PRINT 0
 #define CHECK_PRINT 0
-
-#ifdef USE_BLIS
-#include "blis.h"
-#endif
-
-// #ifdef USE_CAKE
-
-// #define MR_NEW 8
-
-// #endif
-
 
 
 enum sched {KMN, MKN, NKM, NA};
