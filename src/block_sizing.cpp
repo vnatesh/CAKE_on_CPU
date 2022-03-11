@@ -19,6 +19,11 @@ cake_cntx_t* cake_query_cntx_torch(int L2, int L3) {
     ret->blis_cntx = NULL;
     ret->mr = 6;
     ret->nr = 16;
+
+#elif USE_CAKE_ARMV8
+    ret->blis_cntx = NULL;
+    ret->mr = 8;
+    ret->nr = 12;
 #endif
 
 	ret->L2 = L2;
@@ -49,6 +54,11 @@ cake_cntx_t* cake_query_cntx() {
     ret->blis_cntx = NULL;
     ret->mr = 6;
     ret->nr = 16;
+
+#elif USE_CAKE_ARMV8
+    ret->blis_cntx = NULL;
+    ret->mr = 8;
+    ret->nr = 12;
 #endif
 
 	return ret;
