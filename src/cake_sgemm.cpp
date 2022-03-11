@@ -125,9 +125,9 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
 	omp_set_num_threads(p);
 
-	if(cake_gemm_small(A, B, C, M, N, K, p, x, cake_cntx, sch)) {
-		return 1;
-	}
+	// if(cake_gemm_small(A, B, C, M, N, K, p, x, cake_cntx, sch)) {
+	// 	return 1;
+	// }
 
 
 	int A_sz, B_sz, C_sz;	
