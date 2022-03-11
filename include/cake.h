@@ -176,7 +176,7 @@ void cake_sgemm_ukernel(float* A_p, float* B_p, float* C_p,
 void cake_spgemm_ukernel(float* A_p, float* B_p, float* C_p, 
 	int m_r, int n_r, int k_c_t, int* nnz_outer, int* k_inds, int* loc_m);
 void cake_sgemm_small_ukernel(float* A_p, float* B_p, float* C_p, 
-	int m_r, int n_r, int k_c_t, int* nnz_outer, int* k_inds, int* loc_m);
+	int m_r, int n_r, int k_c_t, int M, int K, int N);
 
 
 
