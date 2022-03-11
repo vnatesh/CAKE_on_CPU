@@ -84,7 +84,7 @@ void schedule_KMN_small(float* A_p, float* B_p, float* C_p, int M, int N, int K,
 							// 	mm = M % m_r;
 							// }					
 
-							cake_spgemm_ukernel(&A_p[a_ind + m_reg*m_r], 
+							cake_sgemm_small_ukernel(&A_p[a_ind + m_reg*m_r], 
 													&B_p[b_ind + n_reg*n_r], 
 													&C_p[c_ind + n_reg*n_r + m_reg*m_r*N], 
 													m_r, n_r, k_c_t, M, K, N);
@@ -171,7 +171,7 @@ void schedule_MKN_small(float* A_p, float* B_p, float* C_p, int M, int N, int K,
 					for(n_reg = 0; n_reg < (n_c_t / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_c_t / m_r); m_reg++) {	
 
-							cake_spgemm_ukernel(&A_p[a_ind + m_reg*m_r], 
+							cake_sgemm_small_ukernel(&A_p[a_ind + m_reg*m_r], 
 													&B_p[b_ind + n_reg*n_r], 
 													&C_p[c_ind + n_reg*n_r + m_reg*m_r*N], 
 													m_r, n_r, k_c_t, M, K, N);
@@ -256,7 +256,7 @@ void schedule_NKM_small(float* A_p, float* B_p, float* C_p, int M, int N, int K,
 					for(n_reg = 0; n_reg < (n_c_t / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_c_t / m_r); m_reg++) {	
 
-							cake_spgemm_ukernel(&A_p[a_ind + m_reg*m_r], 
+							cake_sgemm_small_ukernel(&A_p[a_ind + m_reg*m_r], 
 													&B_p[b_ind + n_reg*n_r], 
 													&C_p[c_ind + n_reg*n_r + m_reg*m_r*N], 
 													m_r, n_r, k_c_t, M, K, N);
