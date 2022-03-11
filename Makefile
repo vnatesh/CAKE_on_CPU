@@ -97,11 +97,9 @@ CINCFLAGS      := -I$(INC_PATH)
 
 # Use the "framework" CFLAGS for the configuration family.
 CFLAGS_tmp         := $(call get-user-cflags-for,$(CONFIG_NAME))
-
-# Add local header paths to CFLAGS
 CFLAGS_tmp        += -I$(INCLUDE_PATH) 
-CFLAGS_tmp        += -g -mavx -mfma 
-CFLAGS 	:= $(filter-out -fopenmp -std=c99, $(CFLAGS_tmp))
+CFLAGS_tmp        += -g
+# Add local header paths to CFLAGS
 
 # Locate the libblis library to which we will link.
 #LIBBLIS_LINK   := $(LIB_PATH)/$(LIBBLIS_L)
@@ -110,6 +108,29 @@ CFLAGS 	:= $(filter-out -fopenmp -std=c99, $(CFLAGS_tmp))
 LIBCAKE      := libcake.so
 
 CAKE_SRC := $(CAKE_HOME)/src
+
+
+UNAME_P := $(shell uname -p)
+SRC_FILES =  $(wildcard $(CAKE_HOME)/src/*.cpp)
+
+ifeq ($(UNAME_P),aarch64)
+	SRC_FILES := $(filter-out $(CAKE_HOME)/src/linear.cpp, $(SRC_FILES)) 
+	SRC_FILES := $(filter-out $(CAKE_HOME)/src/cake_sgemm_small.cpp, $(SRC_FILES))
+	KERNELS := $(CAKE_SRC)/kernels/armv8/*.cpp
+	TARGETS = cake_armv8
+else ifeq ($(UNAME_P),x86_64)
+	SRC_FILES := $(filter-out $(CAKE_HOME)/src/linear.cpp, $(SRC_FILES))
+	KERNELS := $(CAKE_SRC)/kernels/haswell/*.cpp
+	CFLAGS_tmp        += -mavx -mfma -fPIC
+	TARGETS = cake_haswell
+else
+	SRC_FILES := $(filter-out $(CAKE_HOME)/src/linear.cpp, $(SRC_FILES))
+	TARGETS = cake_blis
+endif
+
+
+CFLAGS 	:= $(filter-out -fopenmp -std=c99, $(CFLAGS_tmp))
+
 
 LIBS ?=
 #LIBDIR += -L. -L$(SYSTEMC_HOME)/lib-linux64 -L$(BOOST_HOME)/lib
@@ -121,7 +142,7 @@ LIBS += $(BLIS_INSTALL_PATH)/lib/libblis.a
 
 # --- Primary targets ---
 
-all: cake 
+all: $(TARGETS) 
 
 install:
 	./install.sh
@@ -142,62 +163,19 @@ endif
 
 # 	dpcpp -fp-speculation=fast g++ $(CFLAGS) $(CAKE_SRC)/block_sizing.cpp $(CAKE_SRC)/cake_sgemm.cpp \
 
-blis: $(wildcard *.h) $(wildcard *.c) 
-	g++ $(CFLAGS) $(CAKE_SRC)/block_sizing.cpp $(CAKE_SRC)/cake_sgemm.cpp \
-	$(CAKE_SRC)/cake_sgemm_k_first.cpp $(CAKE_SRC)/cake_sgemm_m_first.cpp $(CAKE_SRC)/cake_sgemm_n_first.cpp \
-	$(CAKE_SRC)/pack_helper.cpp $(CAKE_SRC)/pack_ob.cpp $(CAKE_SRC)/util.cpp \
-	$(CAKE_SRC)/cake_sgemm_small.cpp $(CAKE_SRC)/pack_k_first.cpp $(CAKE_SRC)/pack_m_first.cpp $(CAKE_SRC)/pack_n_first.cpp \
-	$(CAKE_SRC)/unpack_k_first.cpp $(CAKE_SRC)/unpack_m_first.cpp $(CAKE_SRC)/unpack_n_first.cpp \
-	$(LIBS) $(LDFLAGS) -DUSE_BLIS -shared -o $(LIBCAKE)
+cake_blis: $(wildcard *.h) $(wildcard *.c) 
+	g++ $(CFLAGS) $(CFLAGS) $(SRC_FILES) $(LIBS) \
+	$(LDFLAGS) -DUSE_BLIS -shared -o $(LIBCAKE)
 
-cake: $(wildcard *.h) $(wildcard *.c) 
-	dpcpp $(CFLAGS) $(CAKE_SRC)/block_sizing.cpp $(CAKE_SRC)/cake_sgemm.cpp \
-	$(CAKE_SRC)/cake_sgemm_k_first.cpp $(CAKE_SRC)/cake_sgemm_m_first.cpp $(CAKE_SRC)/cake_sgemm_n_first.cpp \
-	$(CAKE_SRC)/cake_sp_sgemm.cpp $(CAKE_SRC)/kernels.cpp $(CAKE_SRC)/pack_helper.cpp $(CAKE_SRC)/pack_ob.cpp $(CAKE_SRC)/util.cpp \
-	$(CAKE_SRC)/cake_sgemm_small.cpp $(CAKE_SRC)/pack_k_first.cpp $(CAKE_SRC)/pack_m_first.cpp $(CAKE_SRC)/pack_n_first.cpp \
-	$(CAKE_SRC)/unpack_k_first.cpp $(CAKE_SRC)/unpack_m_first.cpp $(CAKE_SRC)/unpack_n_first.cpp \
-	$(LDFLAGS) -DUSE_CAKE  -shared -o $(LIBCAKE)
+cake_haswell: $(wildcard *.h) $(wildcard *.c)
+	dpcpp  $(CFLAGS) $(SRC_FILES) $(KERNELS) \
+	$(LDFLAGS) -DUSE_CAKE_HASWELL -shared -lpthread -fopenmp -o $(LIBCAKE)
+
+cake_armv8: $(wildcard *.h) $(wildcard *.c)
+	g++ -O3  $(CFLAGS) $(SRC_FILES) $(KERNELS) \
+	$(LDFLAGS) -DUSE_CAKE_ARMV8  -shared -lpthread -fopenmp -o $(LIBCAKE)
 
 # -- Clean rules --
 
 clean:
 	rm -rf *.o *.so
-
-
-# .PHONY: all install build clean
-
-
-
-# INCDIR ?=
-# #INCDIR += -I. -I$(SYSTEMC_HOME)/include -I$(BOOST_HOME)/include -I$(CATAPULT_HOME)/Mgc_home/shared/include
-# INCDIR += -I$(BLIS_INSTALL_PATH)/include/blis -DBLIS_VERSION_STRING=\"0.8.0-13\" -I.
-
-
-# # CFLAGS ?= 
-# # CFLAGS += -O2 -Wall -Wno-unused-function -Wfatal-errors -fPIC -std=c99 \
-# # 			-D_POSIX_C_SOURCE=200112L $(INCDIR)
-# CFLAGS := $(call get-user-cflags-for,$(CONFIG_NAME))
-# CFLAGS += $(INCDIR) 
-
-# LIBS ?=
-# #LIBDIR += -L. -L$(SYSTEMC_HOME)/lib-linux64 -L$(BOOST_HOME)/lib
-# LIBS += $(BLIS_INSTALL_PATH)/lib/libblis.a -lm -lpthread -fopenmp -lrt 
-
-
-
-
-# # gcc -O3 -O2 -Wall -Wno-unused-function -Wfatal-errors -fPIC -std=c99 
-# # -D_POSIX_C_SOURCE=200112L -fopenmp -I/usr/local/include/blis -DBLIS_VERSION_STRING=\"0.8.0-13\" 
-# # -I. *.c -o cake_sgemm_test.o /usr/local/lib/libblis.a  -lm -lpthread -fopenmp -lrt -o cake_sgemm_test.x
-
-
-# all: build
-
-# install:
-# 	./install.sh
-
-# build: $(wildcard *.h) $(wildcard *.c) 
-# 	gcc $(CFLAGS) *.c -o cake_sgemm_test.o $(LIBS) -o cake_sgemm_test.x
-
-# clean:
-# 	rm -rf *.o

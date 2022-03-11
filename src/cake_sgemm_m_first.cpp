@@ -118,7 +118,7 @@ void schedule_MKN(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p
 					   		&C_p[c_ind + n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
 					   		rsc, csc, &def_data, (cntx_t*) cake_cntx->blis_cntx);
 
-#elif USE_CAKE
+#elif USE_CAKE_HASWELL
 							cake_sgemm_haswell_6x16(&A_p[a_ind + m_reg*m_r*k_c_t], 
 													&B_p[b_ind + n_reg*k_c_t*n_r], 
 													&C_p[c_ind + n_reg*m_c_t*n_r + m_reg*m_r*n_r], 

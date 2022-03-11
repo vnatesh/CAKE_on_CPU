@@ -15,7 +15,7 @@ cake_cntx_t* cake_query_cntx_torch(int L2, int L3) {
     ret->mr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, blis_cntx);
     ret->nr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, blis_cntx);
 
-#elif USE_CAKE
+#elif USE_CAKE_HASWELL
     ret->blis_cntx = NULL;
     ret->mr = 6;
     ret->nr = 16;
@@ -45,7 +45,7 @@ cake_cntx_t* cake_query_cntx() {
     ret->mr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, blis_cntx);
     ret->nr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, blis_cntx);
 
-#elif USE_CAKE
+#elif USE_CAKE_HASWELL
     ret->blis_cntx = NULL;
     ret->mr = 6;
     ret->nr = 16;
