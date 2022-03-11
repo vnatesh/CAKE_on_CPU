@@ -141,6 +141,7 @@ void cake_sgemm_haswell_6x16_B_packed(float* A, float* B, float* C, int m, int n
 void cake_sgemm_haswell_6x16_C_packed(float* A, float* B, float* C, int m, int n, int k, int M, int K, int N);
 
 
+
 void schedule_KMN_small(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, blk_dims_t* x);
 void schedule_MKN_small(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
@@ -161,6 +162,21 @@ bool cake_gemm_small(float* A, float* A_p, float* B, float* B_p, float* C, float
 
 // choose cake schedule based on M,N,K values
 enum sched set_schedule(enum sched sch, int M, int N, int K);
+
+
+
+
+
+
+
+
+// Kernel helper funcs
+void cake_sgemm_ukernel(float* A_p, float* B_p, float* C_p, 
+	int m_r, int n_r, int k_c_t, cake_cntx_t* cake_cntx);
+void cake_spgemm_ukernel(float* A_p, float* B_p, float* C_p, 
+	int m_r, int n_r, int k_c_t, int* nnz_outer, int* k_inds, int* loc_m);
+void cake_sgemm_small_ukernel(float* A_p, float* B_p, float* C_p, 
+	int m_r, int n_r, int k_c_t, int* nnz_outer, int* k_inds, int* loc_m);
 
 
 
