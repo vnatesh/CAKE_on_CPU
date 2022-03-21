@@ -163,6 +163,30 @@ double pack_A(float* A, float* A_p, int M, int K, int p,
 
 
 
+
+
+void pack_A_sp(float* A, float* A_p, int M, int K, int p, 
+   sp_pack_t* sp_pack, blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch) {
+
+	switch(sch) {
+		case KMN: {
+			return pack_A_sp_k_first(A, A_p, M, K, p, sp_pack, x, cake_cntx);
+		}
+		case MKN: {
+			return pack_A_sp_m_first(A, A_p, M, K, p, sp_pack, x, cake_cntx); 
+		}
+		case NKM: {
+			return pack_A_sp_n_first(A, A_p, M, K, p, sp_pack, x, cake_cntx);
+		}
+		default: {
+			printf("unknown schedule\n");
+			exit(1);
+		}	
+	}
+}
+
+
+
 void unpack_C(float* C, float* C_p, int M, int N, int p, 
 	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch) {
 

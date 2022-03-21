@@ -274,7 +274,6 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 	clock_gettime(CLOCK_REALTIME, &start1);
 
-
 	init_block_dims(M, N, K, p, x, cake_cntx, sch);
 	omp_set_num_threads(p);
 
@@ -300,7 +299,7 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 		sp_pack = (sp_pack_t*) malloc(sizeof(sp_pack_t));
 
-		pack_A_sp_k_first(A, A_p, M, K, p, sp_pack, x, cake_cntx);
+		pack_A_sp(A, A_p, M, K, p, sp_pack, x, cake_cntx, sch);
 
 		clock_gettime(CLOCK_REALTIME, &end);
 		seconds = end.tv_sec - start.tv_sec;
@@ -453,11 +452,11 @@ void schedule_sp(sp_pack_t* A_p, float* B_p, float* C_p, int M, int N, int K, in
 			break;
 		}
 		case MKN: {
-			schedule_KMN_sp(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+			schedule_MKN_sp(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
 			break;
 		}
 		case NKM: {
-			schedule_KMN_sp(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+			schedule_NKM_sp(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
 			break;
 		}
 		default: {
