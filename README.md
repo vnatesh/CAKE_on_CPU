@@ -1,5 +1,5 @@
 # Overview
-This repository contains an implementation of the CAKE algorithm for CPUs. It utilizes the BLIS microkernel in the innermost loop of MMM. The microkernel makes use of SIMD processing elements (PEs) in the CPU whereas CAKE was originally designed with systolic array PEs in mind.
+This repository contains an implementation of the CAKE algorithm for CPUs. The library provides users the option of using two types of kernels: a custom outer product kernel written using AVX2 intrinsics, and the BLIS kernel. Both kernels attain equivalent performance in terms of computation throughput. The microkernel makes use of SIMD processing elements (PEs) in the CPU whereas CAKE was originally designed with systolic array PEs in mind.
 
 ## Installation
 
