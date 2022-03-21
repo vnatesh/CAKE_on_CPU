@@ -92,13 +92,25 @@ typedef struct sp_pack_t {
    float* A_sp_p; //sparse packed A (only storing nonzeros)
 } sp_pack_t;
 
+
+
 void pack_A_sp_k_first(float* A, float* A_p, int M, int K, int p, 
    sp_pack_t* sp_pack, blk_dims_t* x, cake_cntx_t* cake_cntx);
-
+void pack_A_sp_m_first(float* A, float* A_p, int M, int K, int p, 
+   sp_pack_t* sp_pack, blk_dims_t* x, cake_cntx_t* cake_cntx);
+void pack_A_sp_n_first(float* A, float* A_p, int M, int K, int p, 
+   sp_pack_t* sp_pack, blk_dims_t* x, cake_cntx_t* cake_cntx);
 void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m, 
    int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad);
+void pack_A_sp(float* A, float* A_p, int M, int K, int p, 
+   sp_pack_t* sp_pack, blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch);
+
 
 void schedule_KMN_sp(sp_pack_t* sp_pack, float* B_p, float* C_p, int M, int N, int K, int p, 
+	cake_cntx_t* cake_cntx, blk_dims_t* x);
+void schedule_MKN_sp(sp_pack_t* sp_pack, float* B_p, float* C_p, int M, int N, int K, int p, 
+	cake_cntx_t* cake_cntx, blk_dims_t* x);
+void schedule_NKM_sp(sp_pack_t* sp_pack, float* B_p, float* C_p, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, blk_dims_t* x);
 void schedule_sp(sp_pack_t* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, blk_dims_t* x, enum sched sch);
