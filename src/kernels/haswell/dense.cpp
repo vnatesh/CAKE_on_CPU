@@ -28,7 +28,7 @@ void cake_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k) 
 	int rem = k % 4;
 	k -= rem;
 
-	// 6x16 outer-product
+	// 6x16 outer-product unrolled 4 times
 	for(int kk = 0; kk < k; kk += 4) { 
 
 		b1 = _mm256_load_ps(B);

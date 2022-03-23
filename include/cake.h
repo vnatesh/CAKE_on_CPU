@@ -24,7 +24,7 @@
 
 
 
-#define DEBUG 1
+#define DEBUG 0
 #define ARR_PRINT 0
 #define CHECK_PRINT 0
 
@@ -135,6 +135,7 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	float alpha = 1, float beta = 0, enum sched sch = NA);
 
 
+int run_tests_sparse();
 void rand_sparse(float* mat, int r, int c, float sparsity);
 float rand_gen();
 float normalRandom();

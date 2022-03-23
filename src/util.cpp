@@ -92,6 +92,100 @@ int run_tests() {
 }
 
 
+
+int run_tests_sparse() {
+
+	// float *A, *B, *C;
+	int M, K, N, m, k, n, max_threads,p;
+	float *A, *B, *C;
+	cake_cntx_t* cake_cntx = cake_query_cntx();
+	max_threads = cake_cntx->ncores;
+	int num_tests = 6;
+	int Ms[6] = {1,10,96,111,960,2111};
+	int Ks[6] = {1,10,96,111,960,2111};
+	int Ns[6] = {1,10,96,111,960,2111};
+	int cnt = 0;
+
+
+	for(p = 2; p <= max_threads; p++)  {
+		for(m = 0; m < num_tests; m++) {
+			for(k = 0; k < num_tests; k++) {
+				for(n = 0; n < num_tests; n++) {
+					
+					M = Ms[m];
+					K = Ks[k];
+					N = Ns[n];
+
+					A = (float*) malloc(M * K * sizeof( float ));
+					B = (float*) malloc(K * N * sizeof( float ));
+					C = (float*) calloc(M * N , sizeof( float ));
+				    srand(time(NULL));
+
+				    rand_sparse(A, M, K, 0.5);
+					rand_init(B, K, N);
+
+					cake_sp_sgemm(A, B, C, M, N, K, p, cake_cntx, 0,0,1,0, MKN);
+					if(cake_sgemm_checker(A, B, C, N, M, K)) {
+						printf("TESTS FAILED on M-first p=%d M=%d K=%d N=%d\n",p,M,K,N);
+						cnt++;
+					}
+
+					free(A);
+					free(B);
+					free(C);
+
+
+					// A = (float*) malloc(M * K * sizeof( float ));
+					// B = (float*) malloc(K * N * sizeof( float ));
+					// C = (float*) calloc(M * N , sizeof( float ));
+				 //    srand(time(NULL));
+
+				 //    rand_sparse(A, M, K, 0.5);
+					// rand_init(B, K, N);
+
+					// cake_sp_sgemm(A, B, C, M, N, K, p, cake_cntx, 0,0,1,0,KMN);
+					// if(cake_sgemm_checker(A, B, C, N, M, K)) {
+					// 	printf("TESTS FAILED on K-first p=%d M=%d K=%d N=%d\n",p,M,K,N);
+					// 	cnt++;
+					// }
+
+					// free(A);
+					// free(B);
+					// free(C);
+
+
+					// A = (float*) malloc(M * K * sizeof( float ));
+					// B = (float*) malloc(K * N * sizeof( float ));
+					// C = (float*) calloc(M * N , sizeof( float ));
+				 //    srand(time(NULL));
+
+				 //    rand_sparse(A, M, K, 0.5);
+					// rand_init(B, K, N);
+
+					// cake_sp_sgemm(A, B, C, M, N, K, p, cake_cntx, 0,0,1,0, NKM);
+					// if(cake_sgemm_checker(A, B, C, N, M, K)) {
+					// 	printf("TESTS FAILED on N-first p=%d M=%d K=%d N=%d\n",p,M,K,N);
+					// 	cnt++;
+					// }
+
+					// free(A);
+					// free(B);
+					// free(C);
+				}
+			}
+		}
+	}
+
+	if(cnt) {
+		printf("FAILED\n");
+	} else {
+		printf("ALL TESTS PASSED!\n");
+	}
+
+	return 0;
+}
+
+
 bool cake_sgemm_checker(float* A, float* B, float* C, int N, int M, int K) {
 
 	float* C_check = (float*) calloc(M * N , sizeof( float ));
