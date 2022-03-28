@@ -138,7 +138,7 @@ void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m,
 }
 
 
-
+// // packing without density-basedreordering
 // void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m, 
 //    int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad) {
 
