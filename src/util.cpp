@@ -106,6 +106,7 @@ int run_tests_sparse() {
 	int Ns[6] = {1,10,96,111,960,2111};
 	int cnt = 0;
 
+	printf("starting spMM tests\n");
 
 	for(p = 2; p <= max_threads; p++)  {
 		for(m = 0; m < num_tests; m++) {
@@ -179,7 +180,7 @@ int run_tests_sparse() {
 	if(cnt) {
 		printf("FAILED\n");
 	} else {
-		printf("ALL TESTS PASSED!\n");
+		printf("ALL SPARSE MM TESTS PASSED!\n");
 	}
 
 	return 0;
@@ -338,7 +339,7 @@ void rand_sparse_gaussian(float* mat, int r, int c, float mu, float sigma) {
 
 	for(int i = 0; i < r*c; i++) {
 		float x = normalRandom()*sigma+mu;
-		if(fabs(x) <= 2) {
+		if(fabs(x) <= 2) { // 2 sigmas i.e. 95% sparse
 			mat[i] = 0;
 		} else {
 			mat[i] =  x;

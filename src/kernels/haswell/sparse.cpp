@@ -33,6 +33,7 @@ void cake_sp_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int 
 
 		m_cnt = nnz_outer[kk];
 
+		// skip columns with 0 nonzeros
 		if(!m_cnt) {
 			break;
 		}
@@ -125,8 +126,9 @@ void cake_sp_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int 
 }
 
 
+// // sparse kernel without density-based reordering
 // void cake_sp_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k, 
-// 							int* nnz_outer, int* loc_m) {
+// 							int* nnz_outer, int* k_inds,  int* loc_m) {
 
 // 	int m_cnt1, m_cnt2, m_cnt3, m_cnt4;
 // 	__m256 a, b1, b2;
@@ -151,11 +153,6 @@ void cake_sp_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int 
 // 	for(int kk = 0; kk < k; kk += 4) { 
 
 // 		m_cnt1 = nnz_outer[kk];
-
-// 		if(!m_cnt1) {
-// 			break;
-// 		}
-
 // 		m_cnt2 = nnz_outer[kk+1];
 // 		m_cnt3 = nnz_outer[kk+2];
 // 		m_cnt4 = nnz_outer[kk+3];
@@ -220,11 +217,6 @@ void cake_sp_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int 
 // 	for(int kk = 0; kk < rem; kk++) { 
 
 // 		m_cnt1 = nnz_outer[kk];
-
-// 		if(!m_cnt1) {
-// 			break;
-// 		}
-
 // 		b1 = _mm256_load_ps(B);
 // 		b2 = _mm256_load_ps(B + 8);
 

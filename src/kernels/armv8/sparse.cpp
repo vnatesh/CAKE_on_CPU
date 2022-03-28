@@ -12,7 +12,7 @@ void cake_sp_sgemm_armv8_8x12(float* A, float* B, float* C, int m, int n, int k,
 	float32x4_t a, b1, b2, b3;
 	float32x4_t c[8*3];
 
-	// load 6x16 tile of C into 12 AVX2 registers
+	// load 8x12 tile of C into 24 neon simd registers
 	c[0] = vld1q_f32(C);
 	c[1] = vld1q_f32(C + 4);
 	c[2] = vld1q_f32(C + 8);
@@ -32,11 +32,11 @@ void cake_sp_sgemm_armv8_8x12(float* A, float* B, float* C, int m, int n, int k,
 	c[16] = vld1q_f32(C + 64);
 	c[17] = vld1q_f32(C + 68);
 	c[18] = vld1q_f32(C + 72);
-	c[19]= vld1q_f32(C + 76);
-	c[20]= vld1q_f32(C + 80);
-	c[21]= vld1q_f32(C + 84);
-	c[22]= vld1q_f32(C + 88);
-	c[23]= vld1q_f32(C + 92);
+	c[19] = vld1q_f32(C + 76);
+	c[20] = vld1q_f32(C + 80);
+	c[21] = vld1q_f32(C + 84);
+	c[22] = vld1q_f32(C + 88);
+	c[23] = vld1q_f32(C + 92);
 
 
 	int rem = k % 4;
@@ -47,6 +47,7 @@ void cake_sp_sgemm_armv8_8x12(float* A, float* B, float* C, int m, int n, int k,
 
 		m_cnt = nnz_outer[kk];
 
+		// skip columns with 0 nonzeros
 		if(!m_cnt) {
 			break;
 		}
