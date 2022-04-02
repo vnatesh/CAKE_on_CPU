@@ -11,6 +11,8 @@
 # intel vtune standalone install
 # https://software.intel.com/content/www/us/en/develop/articles/oneapi-standalone-components.html#vtune
 
+# MKL packing API and Goto article
+# https://www.codeproject.com/Articles/1169319/Reducing-Packing-Overhead-in-Matrix-Matrix-Multipl
 
 # dynamic linking of MKL integer GEMM benchmark on macOS
  gcc -DMKL_ILP64 -m64  -I"${MKLROOT}/include" matmul_int.c -L${MKLROOT}/lib \

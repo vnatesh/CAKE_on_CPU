@@ -307,6 +307,7 @@ void rand_init(float* mat, int r, int c) {
 
 
 // randomized sparse matrix with sparsity % of values that are zero
+// threshold pruning
 void rand_sparse(float* mat, int r, int c, float sparsity) {
 
 	for(int i = 0; i < r*c; i++) {

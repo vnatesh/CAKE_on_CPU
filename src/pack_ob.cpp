@@ -40,7 +40,7 @@ void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m,
             cnt[nnz_col][cnt_inds[nnz_col]++] = i;
          }
 
-         // reorder columns in A in descneding order of their densities
+         // reorder columns in A in descending order of their densities
          for(int c = m_r; c > 0; c--) {
        
             if(!cnt_inds[c]) {
@@ -138,7 +138,7 @@ void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m,
 }
 
 
-// // packing without density-basedreordering
+// // packing without density-based reordering
 // void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m, 
 //    int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad) {
 
