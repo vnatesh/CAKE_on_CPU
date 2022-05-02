@@ -55,7 +55,7 @@ cake_armv8: $(wildcard *.h) $(wildcard *.c)
 	g++ -O3 $(CFLAGS) cake_sgemm_test.cpp $(LIBCAKE) -o cake_sgemm_test
 
 cake_haswell: $(wildcard *.h) $(wildcard *.c)
-	dpcpp $(CFLAGS) cake_sgemm_test.cpp $(LIBCAKE) -o cake_sgemm_test
+	g++ $(CFLAGS) cake_sgemm_test.cpp $(LIBCAKE) -o cake_sgemm_test
 
 clean:
 	rm -rf *.o *.so

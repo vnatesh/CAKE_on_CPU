@@ -133,8 +133,12 @@ int get_cache_size(int level) {
 
 	if(level == 2) {
 		switch(model_id) {
+			case 1:
+				return (512 * (1 << 10));
 			case 3:
 				return (32 * (1 << 10));
+			case 49:
+				return (512 * (1 << 10));
 			case 69:
 				return (256 * (1 << 10));
 			case 142:
@@ -148,8 +152,12 @@ int get_cache_size(int level) {
 
 	if(level == 3) {
 		switch(model_id) {
+			case 1:
+				return (64 * (1 << 20));
 			case 3:
 				return (1 * (1 << 20));
+			case 49:
+				return (128 * (1 << 20));
 			case 69:
 				return (4 * (1 << 20));
 			case 142:

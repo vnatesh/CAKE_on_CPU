@@ -171,7 +171,7 @@ cake_blis: $(wildcard *.h) $(wildcard *.c)
 	$(LDFLAGS) -DUSE_BLIS -shared -o $(LIBCAKE)
 
 cake_haswell: $(wildcard *.h) $(wildcard *.c)
-	dpcpp  $(CFLAGS) $(SRC_FILES) $(KERNELS) \
+	g++  $(CFLAGS) $(SRC_FILES) $(KERNELS) \
 	$(LDFLAGS) -DUSE_CAKE_HASWELL -shared -o $(LIBCAKE)
 
 cake_armv8: $(wildcard *.h) $(wildcard *.c)
