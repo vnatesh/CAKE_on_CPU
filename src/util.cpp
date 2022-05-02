@@ -370,3 +370,14 @@ void print_mat(float* arr, int r, int c) {
 	printf("\n\n");
 
 }
+
+
+
+void transpose(float* At, float* A, int M, int K) {
+
+	for(int k = 0; k < K; k++) {
+		for(int m = 0; m < M; m++) {
+			At[m + k*M] = A[m*K + k];
+		}
+	}
+}

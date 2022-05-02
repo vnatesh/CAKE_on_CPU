@@ -142,7 +142,7 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	init_block_dims(M, N, K, p, x, cake_cntx, sch);
 
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
-    if(DEBUG) printf("mc = %d, kc = %d, nc = %d\n", x->m_c, x->k_c, x->n_c);
+    if(DEBUG) printf("mc = %d, kc = %d, nc = %d, alpha_n = %f\n", x->m_c, x->k_c, x->n_c, cake_cntx->alpha_n);
 
 	if(packedA) {
 		A_p = A;

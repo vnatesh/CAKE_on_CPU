@@ -220,7 +220,10 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sc
 	// L2_size >= 2*(mc*kc + kc*nr) + 2*(mc*nr)     (solve for x = m_c = k_c) 
 	int b = 2*cake_cntx->nr;
 	mc_L2 = (int)  (-b + sqrt(b*b + 4*(((double) cake_cntx->L2) / (2*sizeof(float))))) / 2 ;
-	mc_L2 -= (mc_L2 % mn_lcm);
+	// mc_L2 -= (mc_L2 % mn_lcm);
+	mc_L2 -= (mc_L2 % cake_cntx->mr);
+	// printf("mc_L2 = %d\n", mc_L2);
+
 
 	// solve for the optimal block size m_c and k_c based on the L3 size
 	// L3_size >= 2*(p*mc*kc + alpha*p*mc*kc) + 2*(p*mc*alpha*p*mc)     (solve for x = m_c = k_c) 
@@ -228,41 +231,47 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sc
 	// and to allow for double buffering of partial results in L3
 	mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (2*sizeof(float)))  
 			/ (max_threads * (1 + cake_cntx->alpha_n + cake_cntx->alpha_n*max_threads)));
-	
-	// if mc_L3 is too small, used mn_lcm
-	if(mn_lcm > mc_L3) {
-		mc_L3 = mn_lcm;
-	} else {
-		mc_L3 -= (mc_L3 % mn_lcm);
-	}
+	mc_L3 -= (mc_L3 % cake_cntx->nr);
+	// printf("mc_L3 = %d\n", mc_L3);
 
-	// mc = mc_L3 < mc_L2 ? mc_L3 : mc_L2;
-	mc = mc_L3;
+	// if mc_L3 is too small, reduce alpha. likewise if mc_L2 is too small, increase alpha
+	// This will reduce/increase L3 tile size and utilize mor/less DRAM bandwidth
+	cake_cntx->alpha_n = ((double) mc_L3) / mc_L2;
+	mc =  mc_L2;
+
+	// if(mn_lcm > mc_L3) {
+	// 	mc_L3 = mn_lcm;
+	// } else {
+	// 	mc_L3 -= (mc_L3 % mn_lcm);
+	// }
 	
 	mc_ret = mc;
 	if(M < p*cake_cntx->mr) {
-		mc_ret = mn_lcm;
+		mc_ret = cake_cntx->mr;
 	} else if(M < p*mc) {
 		
 		a = (M / p);
-		if(a < mn_lcm) {
-			mc_ret = mn_lcm;
+		if(a < cake_cntx->mr) {
+			mc_ret = cake_cntx->mr;
 		} else {
-			a -= (a % mn_lcm);
+			a -= (a % cake_cntx->mr);
 			mc_ret = a;
 		}
 	}
-
 
     cache_dims_t* blk_ret = (cache_dims_t*) malloc(sizeof(cache_dims_t));
 
 	switch(sch) {
 		case KMN: {
-			nc_ret = (int) cake_cntx->alpha_n*p*mc_ret;
+			nc_ret = (int) (cake_cntx->alpha_n*p*mc_ret);
+			nc_ret -= (nc_ret % cake_cntx->nr);
+			nc_ret = nc_ret == 0 ? cake_cntx->nr : nc_ret;
 			break;
 		}
 		case MKN: {
-			nc_ret = (int) cake_cntx->alpha_n*p*mc_ret;
+			nc_ret = (int) (cake_cntx->alpha_n*p*mc_ret);
+			nc_ret -= (nc_ret % cake_cntx->nr);
+			nc_ret = nc_ret == 0 ? cake_cntx->nr : nc_ret;			
 			break;
 		}
 		case NKM: {
