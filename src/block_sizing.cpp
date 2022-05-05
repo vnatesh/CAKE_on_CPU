@@ -294,10 +294,10 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sc
 		}	
 	}
 
-	if(argv) {
-		blk_ret->m_c = argv[6];
-		blk_ret->k_c = argv[7];
-		blk_ret->n_c = argv[8];
+	if(argv != NULL) {
+		blk_ret->m_c = atoi(argv[6]);
+		blk_ret->k_c = atoi(argv[7]);
+		blk_ret->n_c = atoi(argv[8]);
 	} else {
 		blk_ret->m_c = mc_ret;
 		blk_ret->k_c = mc_ret;

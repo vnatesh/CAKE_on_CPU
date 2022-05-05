@@ -147,7 +147,7 @@ void rand_sparse_gaussian(float* mat, int r, int c, float mu, float sigma);
 
 // small matrix handling
 bool cake_gemm_small(float* A, float* B, float* C, int M, int N, int K, int p, 
-	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch);
+	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, char* argv[] = NULL);
 void cake_sgemm_haswell_6x16_unpacked(float* A, float* B, float* C, int m, int n, int k, int M, int K, int N);
 void cake_sgemm_haswell_6x16_A_packed(float* A, float* B, float* C, int m, int n, int k, int M, int K, int N);
 void cake_sgemm_haswell_6x16_B_packed(float* A, float* B, float* C, int m, int n, int k, int M, int K, int N);

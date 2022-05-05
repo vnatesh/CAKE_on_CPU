@@ -3,7 +3,7 @@
 
 
 bool cake_gemm_small(float* A, float* B, float* C, int M, int N, int K, int p, 
-	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch) {
+	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, char* argv[]) {
 
 	int A_sz, B_sz, C_sz;	
 	struct timespec start, end;
@@ -99,7 +99,6 @@ bool cake_gemm_small(float* A, float* B, float* C, int M, int N, int K, int p,
 	// 	free(C_p);
 
 	// } else 
-	char* argv[] = NULL;
 	if(sch == NKM) {
 		sch = KMN;
 		init_block_dims(M, N, K, p, x, cake_cntx, sch, argv);

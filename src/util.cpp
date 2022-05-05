@@ -30,7 +30,7 @@ int run_tests() {
 					rand_init(A, M, K);
 					rand_init(B, K, N);
 
-					cake_sgemm(A, B, C, M, N, K, p, cake_cntx, 0,0,1,0, MKN);
+					cake_sgemm(A, B, C, M, N, K, p, cake_cntx, NULL, 0,0,1,0, MKN);
 					if(cake_sgemm_checker(A, B, C, N, M, K)) {
 						printf("TESTS FAILED on M-first p=%d M=%d K=%d N=%d\n",p,M,K,N);
 						cnt++;
@@ -49,7 +49,7 @@ int run_tests() {
 					rand_init(A, M, K);
 					rand_init(B, K, N);
 
-					cake_sgemm(A, B, C, M, N, K, p, cake_cntx, 0,0,1,0,KMN);
+					cake_sgemm(A, B, C, M, N, K, p, cake_cntx, NULL, 0,0,1,0,KMN);
 					if(cake_sgemm_checker(A, B, C, N, M, K)) {
 						printf("TESTS FAILED on K-first p=%d M=%d K=%d N=%d\n",p,M,K,N);
 						cnt++;
@@ -68,7 +68,7 @@ int run_tests() {
 					rand_init(A, M, K);
 					rand_init(B, K, N);
 
-					cake_sgemm(A, B, C, M, N, K, p, cake_cntx, 0,0,1,0, NKM);
+					cake_sgemm(A, B, C, M, N, K, p, cake_cntx, NULL, 0,0,1,0, NKM);
 					if(cake_sgemm_checker(A, B, C, N, M, K)) {
 						printf("TESTS FAILED on N-first p=%d M=%d K=%d N=%d\n",p,M,K,N);
 						cnt++;
