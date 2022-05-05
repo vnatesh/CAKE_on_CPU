@@ -87,7 +87,7 @@ int get_num_physical_cores() {
 	char ret2[16];
 	char command2[128];
 
-	sprintf(command2, "lscpu | grep Thread | tr -dc '0-9'");
+	sprintf(command2, "lscpu | grep Thread -m 1 | tr -dc '0-9'");
 	fp = popen(command2, "r");
 
 	if (fp == NULL) {
@@ -217,7 +217,7 @@ int get_cache_size(int level) {
 }
 
 
-cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch) {
+cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch, char* argv[]) {
 
 	int mc, mc_ret, nc_ret, a, mc_L2 = 0, mc_L3 = 0;
 	int max_threads = cake_cntx->ncores; // 2-way hyperthreaded
@@ -262,7 +262,7 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sc
 		if(a < cake_cntx->mr) {
 			mc_ret = cake_cntx->mr;
 		} else {
-			a -= (a % cake_cntx->mr);
+			a += (cake_cntx->mr - (a % cake_cntx->mr));
 			mc_ret = a;
 		}
 	}
@@ -284,6 +284,8 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sc
 		}
 		case NKM: {
 			nc_ret = (int) mc_ret;
+			nc_ret -= (nc_ret % cake_cntx->nr);
+			nc_ret = nc_ret == 0 ? cake_cntx->nr : nc_ret;			
 			break;
 		}
 		default: {
@@ -292,9 +294,15 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sc
 		}	
 	}
 
-	blk_ret->m_c = mc_ret;
-	blk_ret->k_c = mc_ret;
-	blk_ret->n_c = nc_ret;
+	if(argv) {
+		blk_ret->m_c = argv[6];
+		blk_ret->k_c = argv[7];
+		blk_ret->n_c = argv[8];
+	} else {
+		blk_ret->m_c = mc_ret;
+		blk_ret->k_c = mc_ret;
+		blk_ret->n_c = nc_ret;
+	}
 	// blk_ret->k_c = 120;
 
 	return blk_ret;
@@ -302,11 +310,11 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sc
 
 
 void init_block_dims(int M, int N, int K, int p, 
-	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch) {
+	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, char* argv[]) {
 
 	int m_r = cake_cntx->mr;
 	int n_r = cake_cntx->nr;
-	cache_dims_t* cache_dims = get_cache_dims(cake_cntx, M, p, sch);
+	cache_dims_t* cache_dims = get_cache_dims(cake_cntx, M, p, sch, argv);
     x->m_c = cache_dims->m_c;
 	x->k_c = cache_dims->k_c;
     x->n_c = cache_dims->n_c;
@@ -382,7 +390,10 @@ void init_block_dims(int M, int N, int K, int p,
 
 		case NKM: {
 
-			int m_c_tmp = (int) (cake_cntx->alpha_n*p*x->m_c);
+			int m_c_tmp = (int) (cake_cntx->alpha_n*x->m_c);
+			m_c_tmp -= (m_c_tmp % cake_cntx->mr);
+			m_c_tmp = m_c_tmp == 0 ? cake_cntx->mr : m_c_tmp;			
+			m_c_tmp *= p;
 
 			x->k_pad = (K % (p*x->k_c)) ? 1 : 0; 
 			x->m_pad = (M % m_c_tmp) ? 1 : 0; 

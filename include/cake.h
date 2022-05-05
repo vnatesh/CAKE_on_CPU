@@ -131,7 +131,7 @@ void cake_sgemm_armv8_8x12(float* A, float* B, float* C, int m, int n, int k);
 
 
 double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, 
-	cake_cntx_t* cake_cntx, bool packedA = 0, bool packedB = 0, 
+	cake_cntx_t* cake_cntx, char* argv[] = NULL, bool packedA = 0, bool packedB = 0, 
 	float alpha = 1, float beta = 0, enum sched sch = NA);
 
 
@@ -260,7 +260,7 @@ int cake_sgemm_packed_C_size(int M, int N, int p, blk_dims_t* x, cake_cntx_t* ca
 
 
 double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, 
-	cake_cntx_t* cake_cntx, bool packedA = 0, bool packedB = 0, 
+	cake_cntx_t* cake_cntx, char* argv[] = NULL, bool packedA = 0, bool packedB = 0, 
 	float alpha = 1, float beta = 0, enum sched sch = NA);
 void schedule(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, blk_dims_t* x, enum sched sch, bool sparse, bool small);
@@ -274,9 +274,9 @@ void schedule_NKM(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p
 
 
 // block sizing and system parameter querying
-cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch);
+cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch, char* argv[]);
 
-void init_block_dims(int M, int N, int K, int p, blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch);
+void init_block_dims(int M, int N, int K, int p, blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, char* argv[]);
 
 int get_cache_size(int level);
 
