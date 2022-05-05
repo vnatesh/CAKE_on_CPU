@@ -27,11 +27,11 @@ bool cake_gemm_small(float* A, float* B, float* C, int M, int N, int K, int p,
 	// if(t_pack_a / (t_pack + t_comp) < 0.05 ) {
 
 	// 	sch = KMN;
-	// 	init_block_dims(M, N, K, p, x, cake_cntx, sch);
+	// 	init_block_dims(M, N, K, p, x, cake_cntx, sch, argv);
 	// 	schedule(A, B, C, M, N, K, p, cake_cntx, x, sch, 0, 1);
 
 	// 	// sch = NKM;
-	// 	// init_block_dims(M, N, K, p, x, cake_cntx, sch);
+	// 	// init_block_dims(M, N, K, p, x, cake_cntx, sch, argv);
 
 	// 	// clock_gettime(CLOCK_REALTIME, &start);
 
@@ -55,7 +55,7 @@ bool cake_gemm_small(float* A, float* B, float* C, int M, int N, int K, int p,
 	// if(t_pack_b / (t_pack + t_comp) < 0.05) {
 
 	// 	sch = MKN;
-	// 	init_block_dims(M, N, K, p, x, cake_cntx, sch);
+	// 	init_block_dims(M, N, K, p, x, cake_cntx, sch, argv);
 
 	// 	clock_gettime(CLOCK_REALTIME, &start);
 
@@ -79,7 +79,7 @@ bool cake_gemm_small(float* A, float* B, float* C, int M, int N, int K, int p,
 	// } else if(t_pack_c / (t_pack + t_comp) < 0.05) {
 
 	// 	sch = KMN;
-	// 	init_block_dims(M, N, K, p, x, cake_cntx, sch);
+	// 	init_block_dims(M, N, K, p, x, cake_cntx, sch, argv);
 
 	//     C_sz = cake_sgemm_packed_C_size(M, N, p, x, cake_cntx, sch) / sizeof(float);
 	//     C_p = (float*) calloc(C_sz, sizeof(float));
@@ -99,12 +99,13 @@ bool cake_gemm_small(float* A, float* B, float* C, int M, int N, int K, int p,
 	// 	free(C_p);
 
 	// } else 
+	char* argv[] = NULL;
 	if(sch == NKM) {
 		sch = KMN;
-		init_block_dims(M, N, K, p, x, cake_cntx, sch);
+		init_block_dims(M, N, K, p, x, cake_cntx, sch, argv);
 		schedule(A, B, C, M, N, K, p, cake_cntx, x, sch, 0, 1);
 	} else {
-		init_block_dims(M, N, K, p, x, cake_cntx, sch);
+		init_block_dims(M, N, K, p, x, cake_cntx, sch, argv);
 		schedule(A, B, C, M, N, K, p, cake_cntx, x, sch, 0, 1);		
 	}
 
@@ -114,7 +115,7 @@ bool cake_gemm_small(float* A, float* B, float* C, int M, int N, int K, int p,
 
 
 double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, 
-	cake_cntx_t* cake_cntx, bool packedA, bool packedB, float alpha, float beta, enum sched sch) {
+	cake_cntx_t* cake_cntx, char* argv[], bool packedA, bool packedB, float alpha, float beta, enum sched sch) {
 
 	sch = set_schedule(sch, M, N, K);
 
@@ -139,7 +140,7 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 	clock_gettime(CLOCK_REALTIME, &start1);
 
-	init_block_dims(M, N, K, p, x, cake_cntx, sch);
+	init_block_dims(M, N, K, p, x, cake_cntx, sch, argv);
 
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
     if(DEBUG) printf("mc = %d, kc = %d, nc = %d, alpha_n = %f\n", x->m_c, x->k_c, x->n_c, cake_cntx->alpha_n);
@@ -253,7 +254,7 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 
 double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, 
-	cake_cntx_t* cake_cntx, bool packedA, bool packedB, float alpha, float beta, enum sched sch) {
+	cake_cntx_t* cake_cntx, char* argv[], bool packedA, bool packedB, float alpha, float beta, enum sched sch) {
 
 
 	int A_sz, B_sz, C_sz;	
@@ -274,7 +275,7 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 	clock_gettime(CLOCK_REALTIME, &start1);
 
-	init_block_dims(M, N, K, p, x, cake_cntx, sch);
+	init_block_dims(M, N, K, p, x, cake_cntx, sch, argv);
 	omp_set_num_threads(p);
 
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
