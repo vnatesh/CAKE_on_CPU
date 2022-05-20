@@ -217,7 +217,8 @@ int get_cache_size(int level) {
 }
 
 
-cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sch, char* argv[]) {
+cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, 
+	enum sched sch, char* argv[], float sparsity) {
 
 	int mc, mc_ret, nc_ret, a, mc_L2 = 0, mc_L3 = 0;
 	int max_threads = cake_cntx->ncores; // 2-way hyperthreaded
@@ -307,16 +308,52 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, enum sched sc
 	}
 	// blk_ret->k_c = 120;
 
+
+
+
+
+	if(sparsity > 0.00001) {
+		
+		mc_L2 = (int)  (-b + sqrt(b*b + 4*(((double) cake_cntx->L2) / (sizeof(float))))) / 2 ;
+		mc_L2 -= (mc_L2 % cake_cntx->mr);
+
+		mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (sizeof(float)))  
+		/ (max_threads * (1 + cake_cntx->alpha_n + cake_cntx->alpha_n*max_threads)));
+		mc_L3 -= (mc_L3 % cake_cntx->nr);
+
+
+		mc_ret = mc_L3;
+		if(M < p*cake_cntx->mr) {
+			mc_ret = cake_cntx->mr;
+		} else if(M < p*mc) {
+			
+			a = (M / p);
+			if(a < cake_cntx->mr) {
+				mc_ret = cake_cntx->mr;
+			} else {
+				a += (cake_cntx->mr - (a % cake_cntx->mr));
+				mc_ret = a;
+			}
+		}
+
+		blk_ret->m_c = mc_L3;
+		blk_ret->k_c = mc_L2;
+		blk_ret->n_c = nc_ret;
+	}
+
+
+
 	return blk_ret;
 }
 
 
 void init_block_dims(int M, int N, int K, int p, 
-	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, char* argv[]) {
+	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
+	float sparsity, char* argv[]) {
 
 	int m_r = cake_cntx->mr;
 	int n_r = cake_cntx->nr;
-	cache_dims_t* cache_dims = get_cache_dims(cake_cntx, M, p, sch, argv);
+	cache_dims_t* cache_dims = get_cache_dims(cake_cntx, M, p, sch, argv, sparsity);
     x->m_c = cache_dims->m_c;
 	x->k_c = cache_dims->k_c;
     x->n_c = cache_dims->n_c;
