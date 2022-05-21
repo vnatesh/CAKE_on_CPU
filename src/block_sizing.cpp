@@ -301,6 +301,34 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p,
 		blk_ret->m_c = atoi(argv[6]);
 		blk_ret->k_c = atoi(argv[7]);
 		blk_ret->n_c = atoi(argv[8]);
+	} else if(sparsity > 0.00001) {
+		
+			mc_L2 = (int)  (-b + sqrt(b*b + 4*sparsity*(((double) cake_cntx->L2) / (sizeof(float))))) / (2*sparsity) ;
+			mc_L2 -= (mc_L2 % cake_cntx->mr);
+
+			mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (sizeof(float)))  
+			/ (max_threads * (sparsity + cake_cntx->alpha_n + cake_cntx->alpha_n*max_threads)));
+			mc_L3 -= (mc_L3 % cake_cntx->nr);
+
+
+			mc_ret = mc_L3;
+			if(M < p*cake_cntx->mr) {
+				mc_ret = cake_cntx->mr;
+			} else if(M < p*mc) {
+				
+				a = (M / p);
+				if(a < cake_cntx->mr) {
+					mc_ret = cake_cntx->mr;
+				} else {
+					a += (cake_cntx->mr - (a % cake_cntx->mr));
+					mc_ret = a;
+				}
+			}
+
+			blk_ret->m_c = mc_L3;
+			blk_ret->k_c = mc_L2;
+			blk_ret->n_c = nc_ret;
+
 	} else {
 		blk_ret->m_c = mc_ret;
 		blk_ret->k_c = mc_ret;
@@ -311,45 +339,13 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p,
 
 
 
-
-	if(sparsity > 0.00001) {
-		
-		mc_L2 = (int)  (-b + sqrt(b*b + 4*(((double) cake_cntx->L2) / (sizeof(float))))) / 2 ;
-		mc_L2 -= (mc_L2 % cake_cntx->mr);
-
-		mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (sizeof(float)))  
-		/ (max_threads * (1 + cake_cntx->alpha_n + cake_cntx->alpha_n*max_threads)));
-		mc_L3 -= (mc_L3 % cake_cntx->nr);
-
-
-		mc_ret = mc_L3;
-		if(M < p*cake_cntx->mr) {
-			mc_ret = cake_cntx->mr;
-		} else if(M < p*mc) {
-			
-			a = (M / p);
-			if(a < cake_cntx->mr) {
-				mc_ret = cake_cntx->mr;
-			} else {
-				a += (cake_cntx->mr - (a % cake_cntx->mr));
-				mc_ret = a;
-			}
-		}
-
-		blk_ret->m_c = mc_L3;
-		blk_ret->k_c = mc_L2;
-		blk_ret->n_c = nc_ret;
-	}
-
-
-
 	return blk_ret;
 }
 
 
 void init_block_dims(int M, int N, int K, int p, 
 	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
-	float sparsity, char* argv[]) {
+	char* argv[], float sparsity) {
 
 	int m_r = cake_cntx->mr;
 	int n_r = cake_cntx->nr;
