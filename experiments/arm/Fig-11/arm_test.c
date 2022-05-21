@@ -60,6 +60,9 @@ int main(int argc, char* argv[])  {
     rand_init(A, m, k);
     rand_init(B, k, n);
 
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                m, n, k, alpha, A, k, B, n, beta, C, n);
+
     clock_gettime(CLOCK_REALTIME, &start);
 
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,

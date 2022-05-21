@@ -7,8 +7,8 @@ gcc -I/opt/arm/armpl_21.1_gcc-9.3/include -fopenmp  arm_test.c -o test.o  /opt/a
 mkdir reports_arm;
 
 # compile ARMCL sgemm test (NEON)
-ARMCL_PATH=/home/ubuntu/ComputeLibrary;
-LD_LIBRARY_PATH=$ARMCL_PATH/build:$LD_LIBRARY_PATH
+export ARMCL_PATH=/home/ubuntu/ComputeLibrary;
+export LD_LIBRARY_PATH=$ARMCL_PATH/build:$LD_LIBRARY_PATH
 
 aarch64-linux-gnu-g++ -o neon_sgemm.o -c -Wall -DARCH_ARM -Wextra -pedantic \
 -Wdisabled-optimization -Wformat=2 -Winit-self -Wstrict-overflow=2 -Wswitch-default \

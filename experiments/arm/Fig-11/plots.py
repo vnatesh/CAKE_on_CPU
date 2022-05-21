@@ -75,7 +75,7 @@ def plot_cake_vs_arm_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_arm', ntrials=10):
 	plt.xlabel("Number of Cores", fontsize = 18)
 	plt.xticks(NUM_CPUs)
 	plt.ylabel("Avg. DRAM Bw (GB/s)", fontsize = 18)
-	plt.legend(loc = "center right", prop={'size': 10})
+	plt.legend(loc = "upper left", prop={'size': 10})
 	plt.savefig("%s_dram.pdf" % fname, bbox_inches='tight')
 	plt.show()
 	plt.clf()
@@ -96,9 +96,9 @@ def plot_cake_vs_arm_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_arm', ntrials=10):
 		label = labels[3], linewidth = 2, linestyle = 'dashed', color = colors[5])
 	plt.xticks(list(range(1,9)))
 	#
-	plt.plot(list(NUM_CPUs), list(gflops_cake_arr), label = labels[0],  marker = markers[2], color = colors[5])
-	plt.plot(list(NUM_CPUs), list(gflops_cpu_arr), label = labels[1],  marker = markers[3], color = colors[4])
-	plt.plot(list(NUM_CPUs), list(gflops_cpu_arr1), label = labels[5],  marker = markers[1], color = colors[3])
+	plt.plot(list(NUM_CPUs), list(gflops_cpu_arr), label = labels[1],  marker = markers[1], color = colors[4])
+	plt.plot(list(NUM_CPUs), list(gflops_cake_arr), label = labels[0],  marker = markers[0], color = colors[5])
+	plt.plot(list(NUM_CPUs), list(gflops_cpu_arr1), label = labels[5],  marker = markers[2], color = colors[3])
 	#
 	plt.ticklabel_format(useOffset=False, style='plain')
 	plt.title('(b) Computation Throughput of CAKE vs ARM')
@@ -113,5 +113,5 @@ def plot_cake_vs_arm_cpu(M,N,K,mc,kc,alpha,fname = 'cake_vs_arm', ntrials=10):
 
 
 
-if __name__ == '__main__':
-	plot_cake_vs_arm_cpu(5000,5000,5000,48,48,1,ntrials=int(sys.argv[1]))
+# if __name__ == '__main__':
+plot_cake_vs_arm_cpu(5000,5000,5000,48,48,1,ntrials=int(sys.argv[1]))

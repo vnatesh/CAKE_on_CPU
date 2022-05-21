@@ -30,6 +30,8 @@ int main( int argc, char** argv ) {
 	rand_init(B, K, N);
 
 	cake_cntx_t* cake_cntx = cake_query_cntx();
+	
+	cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
 
 	clock_gettime(CLOCK_REALTIME, &start);
 
@@ -41,6 +43,12 @@ int main( int argc, char** argv ) {
 	diff_t = seconds + nanoseconds*1e-9;
 	printf("sgemm time: %f \n", diff_t); 
 
+    char fname[50];
+    snprintf(fname, sizeof(fname), "results_sq");
+    FILE *fp;
+    fp = fopen(fname, "a");
+    fprintf(fp, "cake,%d,%d,%f\n",p,M,diff_t);
+    fclose(fp);
 
 
 	free(A);
