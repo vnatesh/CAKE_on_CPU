@@ -21,13 +21,8 @@ int cake_sgemm_packed_A_size(int M, int K, int p, blk_dims_t* x, cake_cntx_t* ca
 		}
 
 		case NKM: {
-			int m_c_tmp = (int) (cake_cntx->alpha_n*x->m_c);
-			m_c_tmp -= (m_c_tmp % cake_cntx->mr);
-			m_c_tmp = m_c_tmp == 0 ? cake_cntx->mr : x->m_c;			
-			m_c_tmp *= p;
-
-			mr_rem = (int) ceil( ((double) (M % m_c_tmp)) / cake_cntx->mr);
-			M_padded = (M / m_c_tmp)*m_c_tmp + mr_rem*cake_cntx->mr;
+			mr_rem = (int) ceil( ((double) (M % (p*x->m_c))) / cake_cntx->mr) ;
+			M_padded = (cake_cntx->mr*mr_rem + (M /(p*x->m_c))*p*x->m_c);
 			break;
 		}
 
@@ -72,13 +67,8 @@ int cake_sgemm_packed_C_size(int M, int N, int p, blk_dims_t* x, cake_cntx_t* ca
 		}
 
 		case NKM: {			
-			int m_c_tmp = (int) (cake_cntx->alpha_n*x->m_c);
-			m_c_tmp -= (m_c_tmp % cake_cntx->mr);
-			m_c_tmp = m_c_tmp == 0 ? cake_cntx->mr : x->m_c;			
-			m_c_tmp *= p;
-
-			mr_rem = (int) ceil( ((double) (M % m_c_tmp)) / cake_cntx->mr);
-			M_padded = (M / m_c_tmp)*m_c_tmp + mr_rem*cake_cntx->mr;
+			mr_rem = (int) ceil( ((double) (M % (p*x->mc))) / cake_cntx->mr);
+			M_padded = (cake_cntx->mr*mr_rem + (M /(p*x->m_c))*p*x->m_c);
 			break;
 		}
 

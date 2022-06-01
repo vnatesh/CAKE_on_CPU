@@ -73,6 +73,7 @@ typedef struct cache_dims_t{
 	int m_c;
 	int k_c;
 	int n_c;
+	enum sched sch;
 } cache_dims_t;
 
 
@@ -175,8 +176,10 @@ bool cake_gemm_small(float* A, float* A_p, float* B, float* B_p, float* C, float
 
 // choose cake schedule based on M,N,K values
 enum sched set_schedule(enum sched sch, int M, int N, int K);
+enum sched derive_schedule(int M, int N, int K, int p, 
+					int mc_ret, cake_cntx_t* cake_cntx);
 
-
+enum sched print_schedule(enum sched sch) ;
 
 
 
@@ -184,11 +187,11 @@ enum sched set_schedule(enum sched sch, int M, int N, int K);
 
 
 // Kernel helper funcs
-void cake_sgemm_ukernel(float* A_p, float* B_p, float* C_p, 
+inline void cake_sgemm_ukernel(float* A_p, float* B_p, float* C_p, 
 	int m_r, int n_r, int k_c_t, cake_cntx_t* cake_cntx);
-void cake_spgemm_ukernel(float* A_p, float* B_p, float* C_p, 
+inline void cake_spgemm_ukernel(float* A_p, float* B_p, float* C_p, 
 	int m_r, int n_r, int k_c_t, int* nnz_outer, int* k_inds, int* loc_m);
-void cake_sgemm_small_ukernel(float* A_p, float* B_p, float* C_p, 
+inline void cake_sgemm_small_ukernel(float* A_p, float* B_p, float* C_p, 
 	int m_r, int n_r, int k_c_t, int M, int K, int N);
 
 
@@ -274,8 +277,8 @@ void schedule_NKM(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p
 
 
 // block sizing and system parameter querying
-cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, 
-	enum sched sch, char* argv[], float sparsity = 0);
+cache_dims_t* get_cache_dims(int M, int N, int K, int p, 
+	cake_cntx_t* cake_cntx, enum sched sch, char* argv[], float sparsity = 0);
 
 void init_block_dims(int M, int N, int K, int p, blk_dims_t* x, 
 	cake_cntx_t* cake_cntx, enum sched sch, char* argv[], float sparsity = 0);

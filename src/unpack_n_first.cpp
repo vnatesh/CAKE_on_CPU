@@ -6,12 +6,8 @@ void unpack_C_single_buf_n_first(float* C, float* C_p, int M, int N, int p, blk_
 
    // copy over block dims to local vars to avoid readibility ussiues with x->
    int m_r = cake_cntx->mr, n_r = cake_cntx->nr;
-
    int n_c = x->n_c;
-   int m_c = (int) (cake_cntx->alpha_n*x->m_c);
-   m_c -= (m_c % m_r);
-   m_c = m_c == 0 ? m_r : m_c;        
-
+   int m_c = x->m_c;
    int m_c1 = x->m_c1, n_c1 = x->n_c1;
    int m_pad = x->m_pad, n_pad = x->n_pad;
    int Mb = x->Mb, Nb = x->Nb;
