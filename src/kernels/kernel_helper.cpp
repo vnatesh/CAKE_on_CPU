@@ -1,7 +1,7 @@
 #include "cake.h"
 
 
-void cake_sgemm_ukernel(float* A_p, float* B_p, float* C_p, 
+inline void cake_sgemm_ukernel(float* A_p, float* B_p, float* C_p, 
 	int m_r, int n_r, int k_c_t, cake_cntx_t* cake_cntx) {
 
 
@@ -26,7 +26,7 @@ void cake_sgemm_ukernel(float* A_p, float* B_p, float* C_p,
 }
 
 
-void cake_sgemm_small_ukernel(float* A_p, float* B_p, float* C_p, 
+inline void cake_sgemm_small_ukernel(float* A_p, float* B_p, float* C_p, 
 	int m_r, int n_r, int k_c_t, int M, int K, int N) {
 
 #ifdef USE_CAKE_HASWELL
@@ -37,7 +37,7 @@ void cake_sgemm_small_ukernel(float* A_p, float* B_p, float* C_p,
 
 }
 
-void cake_spgemm_ukernel(float* A_p, float* B_p, float* C_p, 
+inline void cake_spgemm_ukernel(float* A_p, float* B_p, float* C_p, 
 	int m_r, int n_r, int k_c_t, int* nnz_outer, int* k_inds, int* loc_m) {
 
 #ifdef USE_CAKE_HASWELL
