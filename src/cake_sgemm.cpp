@@ -116,7 +116,6 @@ bool cake_gemm_small(float* A, float* B, float* C, int M, int N, int K, int p,
 double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, char* argv[], bool packedA, bool packedB, float alpha, float beta, enum sched sch) {
 
-	sch = set_schedule(sch, M, N, K);
 
 	if(cake_cntx == NULL) {
 		cake_cntx = cake_query_cntx();
@@ -129,7 +128,6 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	// 	return 1;
 	// }
 
-
 	int A_sz, B_sz, C_sz;	
 	struct timespec start, end, start1, end1;
 	long seconds, nanoseconds;
@@ -139,10 +137,12 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 	clock_gettime(CLOCK_REALTIME, &start1);
 
-	init_block_dims(M, N, K, p, x, cake_cntx, sch,  argv, 0);
+	init_block_dims(M, N, K, p, x, cake_cntx, sch, argv, 0);
+	sch = x->sch;
 
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
     if(DEBUG) printf("mc = %d, kc = %d, nc = %d, alpha_n = %f\n", x->m_c, x->k_c, x->n_c, cake_cntx->alpha_n);
+    if(DEBUG) print_schedule(sch);
 
 	if(packedA) {
 		A_p = A;
@@ -529,6 +529,29 @@ enum sched set_schedule(enum sched sch, int M, int N, int K) {
 	}
 
 	return sch;
+}
+
+
+enum sched print_schedule(enum sched sch) {
+
+	switch(sch) {
+		case KMN: {
+		    printf("\n KMN Cake Schedule\n");
+			break;
+		}
+		case MKN: {
+		    printf("\n MKN Cake Schedule\n");
+			break;
+		}
+		case NKM: {
+		    printf("\n NKM Cake Schedule\n");
+			break;
+		}
+		default: {
+			printf("\n unknown schedule\n");
+			exit(1);
+		}	
+	}
 }
 
 
