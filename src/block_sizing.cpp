@@ -217,8 +217,9 @@ int get_cache_size(int level) {
 }
 
 
-cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p, 
-	enum sched sch, char* argv[], float sparsity) {
+cache_dims_t* get_cache_dims(int M, int N, int K, int p, 
+			cake_cntx_t* cake_cntx, enum sched sch, 
+			char* argv[], float sparsity) {
 
 	int mc, mc_ret, nc_ret, a, mc_L2 = 0, mc_L3 = 0;
 	int max_threads = cake_cntx->ncores; // 2-way hyperthreaded
@@ -248,12 +249,7 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p,
 	cake_cntx->alpha_n = ((double) mc_L3) / mc_L2;
 	mc =  mc_L2;
 
-	// if(mn_lcm > mc_L3) {
-	// 	mc_L3 = mn_lcm;
-	// } else {
-	// 	mc_L3 -= (mc_L3 % mn_lcm);
-	// }
-	
+
 	mc_ret = mc;
 	if(M < p*cake_cntx->mr) {
 		mc_ret = cake_cntx->mr;
@@ -270,76 +266,131 @@ cache_dims_t* get_cache_dims(cake_cntx_t* cake_cntx, int M, int p,
 
     cache_dims_t* blk_ret = (cache_dims_t*) malloc(sizeof(cache_dims_t));
 
-	switch(sch) {
-		case KMN: {
-			nc_ret = (int) (cake_cntx->alpha_n*p*mc_ret);
-			nc_ret -= (nc_ret % cake_cntx->nr);
-			nc_ret = nc_ret == 0 ? cake_cntx->nr : nc_ret;
-			break;
-		}
-		case MKN: {
-			nc_ret = (int) (cake_cntx->alpha_n*p*mc_ret);
-			nc_ret -= (nc_ret % cake_cntx->nr);
-			nc_ret = nc_ret == 0 ? cake_cntx->nr : nc_ret;			
-			break;
-		}
-		case NKM: {
-			nc_ret = (int) mc_ret;
-			nc_ret -= (nc_ret % cake_cntx->nr);
-			nc_ret = nc_ret == 0 ? cake_cntx->nr : nc_ret;			
-			break;
-		}
-		default: {
-			printf("unknown schedule\n");
-			exit(1);
-		}	
-	}
+	// set schedule to MEMA-derived optimal value or user-defined
+	blk_ret->sch = (sch == NA ? 
+					derive_schedule(M, N, K, p, mc_ret, cake_cntx) : 
+					sch);
+
+
+
+
 
 	int ss = atoi(argv[5]);
 
+	// user-defined tile sizes
 	if(ss) {
 		blk_ret->m_c = atoi(argv[6]);
 		blk_ret->k_c = atoi(argv[7]);
 		blk_ret->n_c = atoi(argv[8]);
+
+	// sparsity-aware tiling when A matrix is sparse
 	} else if(sparsity > 0.00001) {
 		
-			mc_L2 = (int)  (-b + sqrt(b*b + 4*sparsity*(((double) cake_cntx->L2) / (sizeof(float))))) / (2*sparsity) ;
-			mc_L2 -= (mc_L2 % cake_cntx->mr);
+		mc_L2 = (int)  (-b + sqrt(b*b + 4*sparsity*(((double) cake_cntx->L2) / (sizeof(float))))) / (2*sparsity) ;
+		mc_L2 -= (mc_L2 % cake_cntx->mr);
 
-			mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (sizeof(float)))  
-			/ (max_threads * (sparsity + cake_cntx->alpha_n + cake_cntx->alpha_n*max_threads)));
-			mc_L3 -= (mc_L3 % cake_cntx->nr);
+		mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (sizeof(float)))  
+		/ (max_threads * (sparsity + cake_cntx->alpha_n + cake_cntx->alpha_n*max_threads)));
+		mc_L3 -= (mc_L3 % cake_cntx->nr);
 
 
-			mc_ret = mc_L3;
-			if(M < p*cake_cntx->mr) {
+		mc_ret = mc_L3;
+		if(M < p*cake_cntx->mr) {
+			mc_ret = cake_cntx->mr;
+		} else if(M < p*mc) {
+			
+			a = (M / p);
+			if(a < cake_cntx->mr) {
 				mc_ret = cake_cntx->mr;
-			} else if(M < p*mc) {
-				
-				a = (M / p);
-				if(a < cake_cntx->mr) {
-					mc_ret = cake_cntx->mr;
-				} else {
-					a += (cake_cntx->mr - (a % cake_cntx->mr));
-					mc_ret = a;
-				}
+			} else {
+				a += (cake_cntx->mr - (a % cake_cntx->mr));
+				mc_ret = a;
+			}
+		}
+
+		// spMM is always K-first so using nc_ret from KMN
+		nc_ret = (int) (cake_cntx->alpha_n*p*mc_ret);
+		nc_ret -= (nc_ret % cake_cntx->nr);
+		nc_ret = nc_ret == 0 ? cake_cntx->nr : nc_ret;
+
+		blk_ret->m_c = mc_L3;
+		blk_ret->k_c = mc_L2;
+		blk_ret->n_c = nc_ret;
+
+	// CAKE tiling for dense MM 
+	} else {
+
+		switch(blk_ret->sch) {
+
+			case KMN: {
+				nc_ret = (int) (cake_cntx->alpha_n*p*mc_ret);
+				nc_ret -= (nc_ret % cake_cntx->nr);
+				nc_ret = nc_ret == 0 ? cake_cntx->nr : nc_ret;
+				break;
 			}
 
-			blk_ret->m_c = mc_L3;
-			blk_ret->k_c = mc_L2;
-			blk_ret->n_c = nc_ret;
+			case MKN: {
+				nc_ret = (int) (cake_cntx->alpha_n*p*mc_ret);
+				nc_ret -= (nc_ret % cake_cntx->nr);
+				nc_ret = nc_ret == 0 ? cake_cntx->nr : nc_ret;			
+				break;
+			}
 
-	} else {
+			case NKM: {
+				nc_ret = (int) mc_ret;
+				nc_ret -= (nc_ret % cake_cntx->nr);
+				nc_ret = nc_ret == 0 ? cake_cntx->nr : nc_ret;
+
+				mc_ret = (int) (cake_cntx->alpha_n*mc_ret);
+				mc_ret -= (mc_ret % cake_cntx->mr);
+				mc_ret = mc_ret == 0 ? cake_cntx->mr : mc_ret;			
+				break;
+			}
+
+			default: {
+				printf("unknown schedule\n");
+				exit(1);
+			}
+		}
+
 		blk_ret->m_c = mc_ret;
 		blk_ret->k_c = mc_ret;
 		blk_ret->n_c = nc_ret;
 	}
-	// blk_ret->k_c = 120;
-
-
 
 
 	return blk_ret;
+}
+
+
+
+// derive and set schedule according to MEMA analysis
+enum sched derive_schedule(int M, int N, int K, int p, 
+					int mc_ret, cake_cntx_t* cake_cntx) {
+
+	float m,k,n, K_cut_M, K_cut_N, N_cut_M, M_cut_N;
+
+	m = (float) (p*mc_ret);
+	k = (float) (p*mc_ret);
+	n = (float) (p*mc_ret);
+
+	K_cut_M = (2.0*M) / (1.0 + (M * ((2.0/k) - (1.0/m))));
+	K_cut_N = (2.0*N) / (1.0 + (N * ((2.0/k) - (1.0/n))));
+
+	// N/M dim cutoffs for M vs N choice
+	m = (float) (cake_cntx->alpha_n*p*mc_ret);
+	n = (float) (cake_cntx->alpha_n*p*mc_ret);
+	N_cut_M = M / (1.0 + (M * ((1.0/n) - (1.0/m))));
+	M_cut_N = N / (1.0 + (N * ((1.0/m) - (1.0/n))));
+
+	// IO optimal schedule based on input parameters M,K,N,m,k,n
+	if((N <= N_cut_M) && (K <= K_cut_M)) {
+		return MKN;
+	} else if((M <= M_cut_N) && (K <= K_cut_N)) {
+		return NKM;
+	} else {
+		return KMN;
+	}
 }
 
 
@@ -349,12 +400,13 @@ void init_block_dims(int M, int N, int K, int p,
 
 	int m_r = cake_cntx->mr;
 	int n_r = cake_cntx->nr;
-	cache_dims_t* cache_dims = get_cache_dims(cake_cntx, M, p, sch, argv, sparsity);
+	cache_dims_t* cache_dims = get_cache_dims(cake_cntx, M, N, K, p, 
+									cake_cntx, sch, argv, sparsity);
     x->m_c = cache_dims->m_c;
 	x->k_c = cache_dims->k_c;
     x->n_c = cache_dims->n_c;
 
-	switch(sch) {
+	switch(cache_dims->sch) {
 
 		case KMN: {
 
@@ -382,7 +434,7 @@ void init_block_dims(int M, int N, int K, int p,
 			x->Nb = (N / x->n_c) + x->n_pad;
 			x->Kb = (K / x->k_c) + x->k_pad;
 
-			x->M_padded = (m_r*x->mr_rem + (M /(p*x->m_c))*p*x->m_c);
+			x->M_padded = (m_r*x->mr_rem + (M / (p*x->m_c))*p*x->m_c);
 			x->N_padded = (N - (N % x->n_c)) + x->n_c1;
 
 			break;
@@ -425,13 +477,8 @@ void init_block_dims(int M, int N, int K, int p,
 
 		case NKM: {
 
-			int m_c_tmp = (int) (cake_cntx->alpha_n*x->m_c);
-			m_c_tmp -= (m_c_tmp % cake_cntx->mr);
-			m_c_tmp = m_c_tmp == 0 ? cake_cntx->mr : m_c_tmp;			
-			m_c_tmp *= p;
-
 			x->k_pad = (K % (p*x->k_c)) ? 1 : 0; 
-			x->m_pad = (M % m_c_tmp) ? 1 : 0; 
+			x->m_pad = (M % (p*x->m_c)) ? 1 : 0; 
 			x->n_pad = (N % x->n_c) ? 1 : 0;
 
 			x->k_rem = K % (p*x->k_c);
@@ -446,20 +493,19 @@ void init_block_dims(int M, int N, int K, int p,
 			x->n_c1 = x->nr_rem * n_r;
 
 			x->k_c1_last_core = x->k_rem - x->k_c1*(x->p_l-1);
-			x->mr_rem = (int) ceil( ((double) (M % m_c_tmp)) / m_r);
+			x->mr_rem = (int) ceil( ((double) (M % (p*x->m_c))) / m_r);
 			x->m_c1 = x->mr_rem * m_r;
 
 			// number of CB blocks in the M, N, and K dims
-			x->Mb = (M / m_c_tmp) + x->m_pad;
+			x->Mb = (M / (p*x->m_c)) + x->m_pad;
 			x->Kb = (K / (p*x->k_c)) + x->k_pad;
 			x->Nb = (N / x->n_c) + x->n_pad;
 
-			x->M_padded = (M / m_c_tmp)*m_c_tmp + x->m_c1;
+			x->M_padded = (M / (p*x->m_c))*(p*x->m_c) + x->m_c1;
 			x->N_padded = (N - (N % x->n_c)) + x->n_c1;
 
 			break;
 		}
-
 
 
 		default: {
@@ -468,6 +514,8 @@ void init_block_dims(int M, int N, int K, int p,
 		}
 	}
 }
+
+
 
 
 
