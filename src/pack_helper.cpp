@@ -56,7 +56,7 @@ int cake_sgemm_packed_C_size(int M, int N, int p, blk_dims_t* x, cake_cntx_t* ca
 
 		case KMN: {
 			mr_rem = (int) ceil( ((double) (M % (p*x->m_c))) / cake_cntx->mr) ;
-			M_padded = (cake_cntx->mr*mr_rem + (M /(p*x->m_c))*p*x->m_c);
+			M_padded = (cake_cntx->mr*mr_rem + (M / (p*x->m_c))*p*x->m_c);
 			break;
 		}
 
@@ -67,8 +67,8 @@ int cake_sgemm_packed_C_size(int M, int N, int p, blk_dims_t* x, cake_cntx_t* ca
 		}
 
 		case NKM: {			
-			mr_rem = (int) ceil( ((double) (M % (p*x->mc))) / cake_cntx->mr);
-			M_padded = (cake_cntx->mr*mr_rem + (M /(p*x->m_c))*p*x->m_c);
+			mr_rem = (int) ceil( ((double) (M % (p*x->m_c))) / cake_cntx->mr);
+			M_padded = (cake_cntx->mr*mr_rem + (M / (p*x->m_c))*p*x->m_c);
 			break;
 		}
 

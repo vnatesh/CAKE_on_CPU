@@ -400,13 +400,14 @@ void init_block_dims(int M, int N, int K, int p,
 
 	int m_r = cake_cntx->mr;
 	int n_r = cake_cntx->nr;
-	cache_dims_t* cache_dims = get_cache_dims(cake_cntx, M, N, K, p, 
+	cache_dims_t* cache_dims = get_cache_dims(M, N, K, p, 
 									cake_cntx, sch, argv, sparsity);
     x->m_c = cache_dims->m_c;
 	x->k_c = cache_dims->k_c;
     x->n_c = cache_dims->n_c;
+    x->sch = cache_dims->sch;
 
-	switch(cache_dims->sch) {
+	switch(x->sch) {
 
 		case KMN: {
 

@@ -53,6 +53,7 @@ typedef struct blk_dims_t {
 	int Nb;
 	int M_padded;
 	int N_padded;
+	enum sched sch;
 } blk_dims_t;
 
 
