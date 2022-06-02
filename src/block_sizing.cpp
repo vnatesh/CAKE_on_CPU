@@ -272,16 +272,14 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 					sch);
 
 
-
-
-
-	int ss = atoi(argv[5]);
-
 	// user-defined tile sizes
-	if(ss) {
-		blk_ret->m_c = atoi(argv[6]);
-		blk_ret->k_c = atoi(argv[7]);
-		blk_ret->n_c = atoi(argv[8]);
+	if(argv != NULL) {
+		int ss = atoi(argv[5]);
+		if(ss) {
+			blk_ret->m_c = atoi(argv[6]);
+			blk_ret->k_c = atoi(argv[7]);
+			blk_ret->n_c = atoi(argv[8]);
+		}
 
 	// sparsity-aware tiling when A matrix is sparse
 	} else if(sparsity > 0.00001) {

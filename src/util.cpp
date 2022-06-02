@@ -372,6 +372,29 @@ void print_mat(float* arr, int r, int c) {
 }
 
 
+void print_schedule(enum sched sch) {
+
+	switch(sch) {
+		case KMN: {
+		    printf("\n KMN Cake Schedule\n");
+			break;
+		}
+		case MKN: {
+		    printf("\n MKN Cake Schedule\n");
+			break;
+		}
+		case NKM: {
+		    printf("\n NKM Cake Schedule\n");
+			break;
+		}
+		default: {
+			printf("\n unknown schedule\n");
+			exit(1);
+		}	
+	}
+}
+
+
 
 void transpose(float* At, float* A, int M, int K) {
 

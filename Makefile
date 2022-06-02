@@ -109,18 +109,16 @@ CFLAGS_tmp        += -g
 LIBCAKE      := libcake.so
 
 CAKE_SRC := $(CAKE_HOME)/src
-KERNELS := $(CAKE_SRC)/kernels/*.cpp
-
 UNAME_P := $(shell uname -p)
 SRC_FILES =  $(wildcard $(CAKE_HOME)/src/*.cpp)
 SRC_FILES := $(filter-out $(CAKE_HOME)/src/linear.cpp, $(SRC_FILES)) 
 
 ifeq ($(UNAME_P),aarch64)
-	KERNELS += $(CAKE_SRC)/kernels/armv8/*.cpp
+	KERNELS = $(CAKE_SRC)/kernels/armv8/*.cpp
 	TARGETS = cake_armv8
 	CFLAGS_tmp += -O3
 else ifeq ($(UNAME_P),x86_64)
-	KERNELS += $(CAKE_SRC)/kernels/haswell/*.cpp
+	KERNELS = $(CAKE_SRC)/kernels/haswell/*.cpp
 	CFLAGS_tmp += -mavx -mfma
 	TARGETS = cake_haswell
 	CFLAGS_tmp += -O2
