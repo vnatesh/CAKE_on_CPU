@@ -321,34 +321,63 @@ void pack_ob_A_single_buf(float* A, float* A_p, int M, int K, int m1, int m2, in
 
    int ind_ob = 0;
 
-   if(pad) {
-      for(int m3 = 0; m3 < m_c; m3 += m_r) {
-         for(int i = 0; i < k_c; i++) {
-            for(int j = 0; j < m_r; j++) {
+   for(int m3 = 0; m3 < m_c; m3 += m_r) {
+      for(int i = 0; i < k_c; i++) {
+         for(int j = 0; j < m_r; j++) {
 
-               if((m1 + m2 + m3 + j) >=  M) {
-                  A_p[ind_ob] = 0.0;
-               } else {
-                  A_p[ind_ob] = A[m3*K + i + j*K];
-               }
+            if((m1 + m2 + m3 + j) >=  M) {
+               A_p[ind_ob] = 0.0;
+            } else {
+               // printf("PAD IND %d\n", m3*K + i + j*K);
 
-               ind_ob++;
-            }
-         }
-      }     
-   } 
-
-   else {
-      for(int m3 = 0; m3 < m_c; m3 += m_r) {
-         for(int i = 0; i < k_c; i++) {
-            for(int j = 0; j < m_r; j++) {
                A_p[ind_ob] = A[m3*K + i + j*K];
-               ind_ob++;
             }
+
+            ind_ob++;
+            // printf("ind_ob %d\n", ind_ob);
          }
-      }     
-   }
+      }
+   }     
+
+   // if(pad) {
+   // printf("PAD m1 %d m2 %d mc %d kc %d pad %d\n", m1, m2, m_c, k_c, pad);
+
+   //    for(int m3 = 0; m3 < m_c; m3 += m_r) {
+   //       for(int i = 0; i < k_c; i++) {
+   //          for(int j = 0; j < m_r; j++) {
+
+   //             if((m1 + m2 + m3 + j) >=  M) {
+   //                A_p[ind_ob] = 0.0;
+   //             } else {
+   //                printf("PAD IND %d\n", m3*K + i + j*K);
+
+   //                A_p[ind_ob] = A[m3*K + i + j*K];
+   //             }
+
+   //             ind_ob++;
+   //             // printf("ind_ob %d\n", ind_ob);
+   //          }
+   //       }
+   //    }     
+   // } 
+
+   // else {
+   //    printf("m1 %d m2 %d mc %d kc %d pad %d\n", m1, m2, m_c, k_c, pad);
+
+   //    for(int m3 = 0; m3 < m_c; m3 += m_r) {
+   //       for(int i = 0; i < k_c; i++) {
+   //          for(int j = 0; j < m_r; j++) {
+   //                printf("IND %d\n", m3*K + i + j*K);
+
+   //             A_p[ind_ob] = A[m3*K + i + j*K];
+
+   //             ind_ob++;
+   //          }
+   //       }
+   //    }     
+   // }
 }
+
 
 
 

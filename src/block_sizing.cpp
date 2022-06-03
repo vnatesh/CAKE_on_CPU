@@ -75,7 +75,7 @@ int get_num_physical_cores() {
 	fp = popen(command1, "r");
 
 	if (fp == NULL) {
-		printf("Failed to run command\n" );
+		printf("Failed to run proc/cpuinfo command\n" );
 		exit(1);
 	}
 
@@ -91,7 +91,7 @@ int get_num_physical_cores() {
 	fp = popen(command2, "r");
 
 	if (fp == NULL) {
-		printf("Failed to run command\n" );
+		printf("Failed to run lscpu1 command\n" );
 		exit(1);
 	}
 
@@ -120,7 +120,7 @@ int get_cache_size(int level) {
 	fp = popen(command, "r");
 
 	if (fp == NULL) {
-		printf("Failed to run command\n" );
+		printf("Failed to run lscpu2 command\n" );
 		exit(1);
 	}
 
@@ -185,7 +185,7 @@ int get_cache_size(int level) {
 	}
 
 	if (fp == NULL) {
-		printf("Failed to run command\n" );
+		printf("Failed to run lscpu3 command\n" );
 		exit(1);
 	}
 
@@ -407,7 +407,8 @@ void init_block_dims(int M, int N, int K, int p,
 	x->k_c = cache_dims->k_c;
     x->n_c = cache_dims->n_c;
     x->sch = cache_dims->sch;
-
+    free(cache_dims);
+    
 	switch(x->sch) {
 
 		case KMN: {

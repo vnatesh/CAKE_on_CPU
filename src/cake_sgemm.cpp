@@ -55,7 +55,6 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 		if(DEBUG) printf("A pack time: %f \n", diff_t ); 
 	}
 
-
 	if(packedB) {
 		B_p = B;
 	} else {
@@ -134,7 +133,7 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	if(!packedA) free(A_p);
 	if(!packedB) free(B_p);
 	free(C_p);
-
+	free(x);
 
 
 	return times;
@@ -330,6 +329,7 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	if(!packedA) free(A_p);
 	if(!packedB) free(B_p);
 	free(C_p);
+	free(x);
 
 	return times;
 }
