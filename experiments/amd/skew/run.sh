@@ -5,7 +5,7 @@
 gcc -g -O2 -std=c99 -Wall -Wno-unused-function -Wfatal-errors -fPIC  \
 -D_POSIX_C_SOURCE=200112L -fopenmp -I${CAKE_HOME}/include/blis \
 -DBLIS_VERSION_STRING=\"0.8.1-67\" -I. -c blis_test.c -o blis_test.o;
-g++ blis_test.o $CAKE_HOME/blis/lib/zen2/libblis.a  -lm -lpthread -fopenmp \
+g++ blis_test.o $CAKE_HOME/blis/lib/zen2/libblis-mt.a  -lm -lpthread -fopenmp \
 -lrt -o blis_test;
 
 # compile cake_sgemm_test

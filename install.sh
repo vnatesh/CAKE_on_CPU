@@ -5,13 +5,13 @@
 # make install
 
 # Download BLIS kernels
-git clone https://github.com/flame/blis.git
+git clone https://github.com/amd/blis.git
 
 BLIS_PATH=$PWD
 cd blis
 
 # reset to older blis version for now
-git reset --hard 961d9d5
+#git reset --hard 961d9d5
 
 # ./configure CC=aarch64-linux-gnu-gcc --prefix=$BLIS_PATH --enable-threading=openmp cortexa53
 # install BLIS in curr dir and configire with openmp
@@ -25,8 +25,8 @@ make install
 #make distclean
 cd ..
 
-source ./env.sh
-make build
+#source ./env.sh
+#make build
 
 # # build CAKE pytorch extension 
 # cd python
