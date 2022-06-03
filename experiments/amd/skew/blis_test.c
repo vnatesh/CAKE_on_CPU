@@ -53,7 +53,7 @@ int main( int argc, char** argv )
 	char fname[50];
 	snprintf(fname, sizeof(fname), "result_skew");
 
-    int p = 10, ntrials = 100;
+    int p = atoi(argv[3]), ntrials = atoi(argv[4]);
 	bli_thread_set_num_threads(p);
 
 	// Set the scalars to use.

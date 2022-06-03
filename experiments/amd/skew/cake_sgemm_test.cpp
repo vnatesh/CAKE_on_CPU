@@ -6,7 +6,7 @@
 int main( int argc, char** argv ) {
 //	  run_tests();
 
-	int M, K, N, p = 10, ntrials = 100;
+	int M, K, N, p = atoi(argv[3]), ntrials = atoi(argv[4]);
 	struct timespec start, end;
 	double diff_t, ans;
 	float *A, *B, *C;
