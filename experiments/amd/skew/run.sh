@@ -18,8 +18,10 @@ echo "algo,M,K,N,time" >> result_skew
 p=24
 ntrials=10
 
-for x in {300..2500..1000}
-./cake_sgemm_test $x $x $p $ntrials
-./blis_test $x $x $p $ntrials
+for x in {300..2500..1000};
+do
 
+	./cake_sgemm_test $x $x $p $ntrials
+	./blis_test $x $x $p $ntrials
+done
 # scp result_skew vikas@10.0.0.185:/Users/vikas/Documents/test
