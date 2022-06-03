@@ -13,8 +13,13 @@ make;
 
 export GOMP_CPU_AFFINITY="0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23";
 
+echo "algo,M,K,N,time" >> result_skew
 
-./cake_sgemm_test 1000 1000
-./blis_test 1000 1000
+p=24
+ntrials=10
+
+for x in {300..2500..1000}
+./cake_sgemm_test $x $x $p $ntrials
+./blis_test $x $x $p $ntrials
 
 # scp result_skew vikas@10.0.0.185:/Users/vikas/Documents/test

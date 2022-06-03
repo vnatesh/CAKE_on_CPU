@@ -17,10 +17,6 @@ int main( int argc, char** argv ) {
 	snprintf(fname, sizeof(fname), "result_skew");
 
     FILE *fp;
-    fp = fopen(fname, "a");
-    fprintf(fp, "algo,M,K,N,time\n");
-    fclose(fp);
-
 
 	K = atoi(argv[1]);
 	N = atoi(argv[2]);

@@ -274,10 +274,9 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 
 	// user-defined tile sizes
 	int ss = 0;
-	if(argv != NULL) {
+	if(argv) {
 		ss = atoi(argv[5]);
 	}
-
 
 	if(ss) {
 		blk_ret->m_c = atoi(argv[6]);
