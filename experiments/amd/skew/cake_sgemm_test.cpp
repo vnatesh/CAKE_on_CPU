@@ -21,14 +21,14 @@ int main( int argc, char** argv ) {
 	K = atoi(argv[1]);
 	N = atoi(argv[2]);
 
-	for(int i = 0; i < ntrials; i++) {
-		for(M = 500; M < 20001; M += 500) {
+    srand(time(NULL));
 
+	for(M = 500; M < 15001; M += 500) {
+		for(int i = 0; i < ntrials; i++) {
 			A = (float*) malloc(M * K * sizeof( float ));
 			B = (float*) malloc(K * N * sizeof( float ));
 			C = (float*) calloc(M * N , sizeof( float ));
 
-		    srand(time(NULL));
 			rand_init(A, M, K);
 			rand_init(B, K, N);
 
@@ -57,7 +57,6 @@ int main( int argc, char** argv ) {
 			B = (float*) malloc(K * N * sizeof( float ));
 			C = (float*) calloc(M * N , sizeof( float ));
 
-		    srand(time(NULL));
 			rand_init(A, M, K);
 			rand_init(B, K, N);
 			
@@ -86,7 +85,6 @@ int main( int argc, char** argv ) {
 			B = (float*) malloc(K * N * sizeof( float ));
 			C = (float*) calloc(M * N , sizeof( float ));
 
-		    srand(time(NULL));
 			rand_init(A, M, K);
 			rand_init(B, K, N);
 			

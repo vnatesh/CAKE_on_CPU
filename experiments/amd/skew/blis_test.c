@@ -64,8 +64,10 @@ int main( int argc, char** argv )
 	k = atoi(argv[1]);;
 	n = atoi(argv[2]);;
 
-	for(int i = 0; i < ntrials; i++) {
-		for(m = 500; m < 20001; m += 500) {
+    srand(time(NULL));
+
+	for(m = 500; m < 15001; m += 500) {
+		for(int i = 0; i < ntrials; i++) {
 
 			rsc = 1; csc = m;
 			rsa = 1; csa = m;
@@ -75,7 +77,6 @@ int main( int argc, char** argv )
 			b = (float*) malloc( k * n * sizeof( float ) );
 			c = (float*) calloc( m * n , sizeof( float ) );
 
-		    srand(time(NULL));
 			rand_init(a, m, k);
 			rand_init(b, k, n);
 

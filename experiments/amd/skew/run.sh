@@ -16,9 +16,9 @@ export GOMP_CPU_AFFINITY="0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 2
 echo "algo,M,K,N,time" >> result_skew
 
 p=24
-ntrials=10
+ntrials=15
 
-for x in {300..2500..1000};
+for x in {200..2500..500};
 do
 
 	./cake_sgemm_test $x $x $p $ntrials
