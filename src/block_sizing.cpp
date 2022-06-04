@@ -219,7 +219,7 @@ int get_cache_size(int level) {
 
 cache_dims_t* get_cache_dims(int M, int N, int K, int p, 
 			cake_cntx_t* cake_cntx, enum sched sch, 
-			char* argv[], float sparsity) {
+			char* argv[], float density) {
 
 	int mc, mc_ret, nc_ret, a, mc_L2 = 0, mc_L3 = 0;
 	int max_threads = cake_cntx->ncores; // 2-way hyperthreaded
@@ -229,7 +229,7 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 	// solve for optimal mc,kc based on L2 size
 	// L2_size >= 2*(mc*kc + kc*nr) + 2*(mc*nr)     (solve for x = m_c = k_c) 
 	int b = 2*cake_cntx->nr;
-	mc_L2 = (int)  (-b + sqrt(b*b + 4*(((double) cake_cntx->L2) / (2*sizeof(float))))) / 2 ;
+	mc_L2 = (int)  ((-b + sqrt(b*b + 4*(((double) cake_cntx->L2) / (2*sizeof(float))))) / 2.0) ;
 	// mc_L2 -= (mc_L2 % mn_lcm);
 	mc_L2 -= (mc_L2 % cake_cntx->mr);
 	// printf("mc_L2 = %d\n", mc_L2);
@@ -240,8 +240,8 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 	// We only use ~ half of the each cache to prevent our working blocks from being evicted
 	// and to allow for double buffering of partial results in L3
 	mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (2*sizeof(float)))  
-			/ (max_threads * (1 + cake_cntx->alpha_n + cake_cntx->alpha_n*max_threads)));
-	mc_L3 -= (mc_L3 % cake_cntx->nr);
+			/ (max_threads * (1 + 1.0 + 1.0*max_threads)));
+	mc_L3 -= (mc_L3 % cake_cntx->mr);
 	// printf("mc_L3 = %d\n", mc_L3);
 
 	// if mc_L3 is too small, reduce alpha. likewise if mc_L2 is too small, increase alpha
@@ -284,14 +284,16 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 		blk_ret->n_c = atoi(argv[8]);
 
 	// sparsity-aware tiling when A matrix is sparse
-	} else if(sparsity > 0.00001) {
+	} else if(density > 0.00001) {
 		
-		mc_L2 = (int)  (-b + sqrt(b*b + 4*sparsity*(((double) cake_cntx->L2) / (sizeof(float))))) / (2*sparsity) ;
+		double a_coeff = (density/cake_cntx->mr) * ((int) ceil(density * cake_cntx->mr)) ;
+
+		mc_L2 = (int)  ((-b + sqrt(b*b + 4*a_coeff*(((double) cake_cntx->L2) / (sizeof(float))))) / (2.0*a_coeff)) ;
 		mc_L2 -= (mc_L2 % cake_cntx->mr);
 
 		mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (sizeof(float)))  
-		/ (max_threads * (sparsity + cake_cntx->alpha_n + cake_cntx->alpha_n*max_threads)));
-		mc_L3 -= (mc_L3 % cake_cntx->nr);
+		/ (max_threads * (a_coeff + cake_cntx->alpha_n + cake_cntx->alpha_n*max_threads)));
+		mc_L3 -= (mc_L3 % cake_cntx->mr);
 
 
 		mc_ret = mc_L3;
@@ -383,6 +385,8 @@ enum sched derive_schedule(int M, int N, int K, int p,
 	N_cut_M = M / (1.0 + (M * ((1.0/n) - (1.0/m))));
 	M_cut_N = N / (1.0 + (N * ((1.0/m) - (1.0/n))));
 
+	printf("K_cut_M %f K_cut_N %f N_cut_M %f M_cut_N %f\n",K_cut_M,
+	 K_cut_N,N_cut_M,M_cut_N);
 	// IO optimal schedule based on input parameters M,K,N,m,k,n
 	if((N <= N_cut_M) && (K <= K_cut_M)) {
 		return MKN;
@@ -396,12 +400,12 @@ enum sched derive_schedule(int M, int N, int K, int p,
 
 void init_block_dims(int M, int N, int K, int p, 
 	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
-	char* argv[], float sparsity) {
+	char* argv[], float density) {
 
 	int m_r = cake_cntx->mr;
 	int n_r = cake_cntx->nr;
 	cache_dims_t* cache_dims = get_cache_dims(M, N, K, p, 
-									cake_cntx, sch, argv, sparsity);
+									cake_cntx, sch, argv, density);
     x->m_c = cache_dims->m_c;
 	x->k_c = cache_dims->k_c;
     x->n_c = cache_dims->n_c;

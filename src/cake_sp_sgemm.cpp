@@ -232,7 +232,7 @@ void schedule_NKM_sp(sp_pack_t* sp_pack, float* B_p, float* C_p, int M, int N, i
 	// copy over block dims to local vars to avoid readibility ussiues with x->
 	int m_r = cake_cntx->mr, n_r = cake_cntx->nr;
 
-	int m_c = (int) cake_cntx->alpha_n*x->m_c, k_c = x->k_c, n_c = x->n_c;
+	int m_c = x->m_c, k_c = x->k_c, n_c = x->n_c;
 	int m_c1 = x->m_c1, k_c1 = x->k_c1, n_c1 = x->n_c1;
 	int k_c1_last_core = x->k_c1_last_core;
 	int k_rem = x->k_rem;
