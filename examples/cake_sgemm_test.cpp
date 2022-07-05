@@ -54,7 +54,7 @@ int main( int argc, char** argv ) {
 
 	clock_gettime(CLOCK_REALTIME, &start);
 
-	cake_sgemm(A, B, C, M, N, K, p, cake_cntx, argv);
+	cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
 
     clock_gettime(CLOCK_REALTIME, &end);
      seconds = end.tv_sec - start.tv_sec;
