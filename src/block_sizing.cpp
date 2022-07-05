@@ -284,8 +284,9 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 		blk_ret->n_c = atoi(argv[8]);
 
 	// sparsity-aware tiling when A matrix is sparse
-	} else if(density > 0.00001) {
+	} else if(density > 0.0000001) {
 		
+		printf("sparsity-aware tiling\n");
 		double a_coeff = (density/cake_cntx->mr) * ((int) ceil(density * cake_cntx->mr)) ;
 
 		mc_L2 = (int)  ((-b + sqrt(b*b + 4*a_coeff*(((double) cake_cntx->L2) / (sizeof(float))))) / (2.0*a_coeff)) ;

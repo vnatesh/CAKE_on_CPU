@@ -28,9 +28,11 @@ int main( int argc, char** argv ) {
 
 	// initialize A and B
     srand(time(NULL));
-	// rand_sparse(A, M, K, 0.90);
+
+    float sparsity = 0.90
+	rand_sparse(A, M, K, sparsity);
 	// rand_sparse_gaussian(A, M, K, 0, 1);
-	rand_init(A, M, K);
+	// rand_init(A, M, K);
 	// print_array(A, M*K);
 	// exit(1);
 	rand_init(B, K, N);
@@ -41,7 +43,7 @@ int main( int argc, char** argv ) {
 	
 	clock_gettime(CLOCK_REALTIME, &start);
 
-	// cake_sp_sgemm(A, B, C, M, N, K, p, cake_cntx, argv);
+	cake_sp_sgemm(A, B, C, M, N, K, p, cake_cntx, 1-sparsity);
 
     clock_gettime(CLOCK_REALTIME, &end);
     long seconds = end.tv_sec - start.tv_sec;
@@ -66,7 +68,8 @@ int main( int argc, char** argv ) {
 	free(A);
 	free(B);
 	free(C);
-
+	free(cake_cntx);
+	
 	return 0;
 }
 

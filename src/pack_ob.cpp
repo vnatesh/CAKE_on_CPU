@@ -596,6 +596,9 @@ void unpack_ob_C_multiple_buf(float* C, float* C_p, int M, int N, int m1, int n1
 }
 
 
+// when writing reorderd rows back to C, 
+// write to correct row row_inds[m1 + m2 + m3 + i]
+
 void unpack_ob_C_single_buf(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
             int m_c, int n_c, int m_r, int n_r) {
 
