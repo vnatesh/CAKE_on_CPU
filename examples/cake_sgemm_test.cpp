@@ -29,7 +29,7 @@ int main( int argc, char** argv ) {
 	// initialize A and B
     srand(time(NULL));
 
-    float sparsity = 0.90
+    float sparsity = 0.90;
 	rand_sparse(A, M, K, sparsity);
 	// rand_sparse_gaussian(A, M, K, 0, 1);
 	// rand_init(A, M, K);
