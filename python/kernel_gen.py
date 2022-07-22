@@ -12,7 +12,6 @@ class Haswell:
 
 	def gen_var_decls(self, m, n):
 		ret = '''  
-	int m_cnt, k_ind;
 	__m256 a, '''
 		for i in range(1, n//8):
 			ret += "b%d, " % i
@@ -70,8 +69,7 @@ void cake_sgemm_haswell_%dx%d(float* A, float* B, float* C, int m, int n, int k)
 				(i*nlanes + j, j+1, i*nlanes + j)
 			ret += '''
 
-		B += n;
-				'''
+		B += n;'''
 			return ret
 
 
@@ -83,7 +81,7 @@ void cake_sgemm_haswell_%dx%d(float* A, float* B, float* C, int m, int n, int k)
 			'''
 			ret += self.gen_inner_kernel(m, n)
 			ret += '''
-			}
+	}
 			'''
 			return ret
 
@@ -97,25 +95,13 @@ void cake_sgemm_haswell_%dx%d(float* A, float* B, float* C, int m, int n, int k)
 	for(int kk = 0; kk < k; kk += 4) { 
 
 			'''
-			ret += self.gen_inner_kernel(m, n)
+			ret += self.gen_inner_kernel(m, n) + '\n\n'
 			for i in range(1,4):
 				ret += self.gen_inner_kernel(m, n) + '\n\n'
 			ret += '''
 	}
-			'''
+	'''
 			return ret
-
-
-		def gen_kernel(self):
-			m = self.mr
-			n = self.nr
-			func = self.gen_func_def( m, n)
-			var_decls = self.haswell.gen_var_decls(m, n)
-			C_load = self.haswell.gen_C_load( m, n)
-			outer_prod = self.gen_outer_prod_loop(m, n)
-			leftover = self.gen_leftover_k( m, n)
-			C_store = self.haswell.gen_C_store( m, n)
-			return func + var_decls + C_load + outer_prod + leftover + C_store
 
 
 
@@ -196,17 +182,6 @@ void cake_sp_sgemm_haswell_%dx%d(float* A, float* B, float* C, int m, int n, int
 			'''
 			return ret
 
-		def gen_kernel(self):
-			m = self.mr
-			n = self.nr
-			func = self.gen_func_def( m, n)
-			var_decls = self.haswell.gen_var_decls(m, n)
-			C_load = self.haswell.gen_C_load( m, n)
-			outer_prod = self.gen_outer_prod_loop(m, n)
-			leftover = self.gen_leftover_k( m, n)
-			C_store = self.haswell.gen_C_store( m, n)
-			return func + var_decls + C_load + outer_prod + leftover + C_store
-
 
 
 
@@ -219,7 +194,6 @@ class Armv8:
 
 	def gen_var_decls(self, m, n):
 		ret = '''  
-	int m_cnt, k_ind;
 	float32x4_t a, '''
 		for i in range(1, n//4):
 			ret += "b%d, " % i
@@ -277,8 +251,7 @@ void cake_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k) {
 				(i*nlanes + j, i*nlanes + j, j+1)
 			ret += '''
 
-		B += n;
-				'''
+		B += n;'''
 			return ret
 
 
@@ -304,25 +277,13 @@ void cake_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k) {
 	for(int kk = 0; kk < k; kk += 4) { 
 
 			'''
-			ret += self.gen_inner_kernel(m, n)
+			ret += self.gen_inner_kernel(m, n) + '\n\n'
 			for i in range(1,4):
 				ret += self.gen_inner_kernel(m, n) + '\n\n'
 			ret += '''
 	}
 			'''
 			return ret
-
-
-		def gen_kernel(self):
-			m = self.mr
-			n = self.nr
-			func = self.gen_func_def( m, n)
-			var_decls = self.armv8.gen_var_decls(m, n)
-			C_load = self.armv8.gen_C_load( m, n)
-			outer_prod = self.gen_outer_prod_loop(m, n)
-			leftover = self.gen_leftover_k( m, n)
-			C_store = self.armv8.gen_C_store( m, n)
-			return func + var_decls + C_load + outer_prod + leftover + C_store
 
 
 
@@ -403,18 +364,27 @@ void cake_sp_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k
 			'''
 			return ret
 
-		def gen_kernel(self):
-			m = self.mr
-			n = self.nr
-			func = self.gen_func_def( m, n)
-			var_decls = self.armv8.gen_var_decls(m, n)
-			C_load = self.armv8.gen_C_load( m, n)
-			outer_prod = self.gen_outer_prod_loop(m, n)
-			leftover = self.gen_leftover_k( m, n)
-			C_store = self.armv8.gen_C_store( m, n)
-			return func + var_decls + C_load + outer_prod + leftover + C_store
 
 
+
+def gen_kernel(arch, mr, nr, op):
+	arch = arch(mr, nr)
+	m = arch.mr
+	n = arch.nr
+	if op == 'sparse':
+		op = arch.sparse
+		sp = '''
+int m_cnt, k_ind;'''
+	else:
+		op = arch.dense
+		sp = ''
+	func = op.gen_func_def(m, n)
+	var_decls = arch.gen_var_decls(m, n)
+	C_load = arch.gen_C_load(m, n)
+	outer_prod = op.gen_outer_prod_loop(m, n)
+	leftover = op.gen_leftover_k(m, n)
+	C_store = arch.gen_C_store(m, n)
+	return func + sp + var_decls + C_load + outer_prod + leftover + C_store
 
 
 def gen_kernel_headers(arch):
@@ -453,11 +423,6 @@ static cake_sgemm_%s* kernel_map[10][6] =
 	ret += ','.join(dense_arr) + '''
 };'''
 	ret += '''
-void cake_sgemm_haswell_6x16_unpacked(float* A, float* B, float* C, int m, int n, int k, int M, int K, int N);
-void cake_sgemm_haswell_6x16_A_packed(float* A, float* B, float* C, int m, int n, int k, int M, int K, int N);
-void cake_sgemm_haswell_6x16_B_packed(float* A, float* B, float* C, int m, int n, int k, int M, int K, int N);
-void cake_sgemm_haswell_6x16_C_packed(float* A, float* B, float* C, int m, int n, int k, int M, int K, int N);
-
 // kernel helper functions
 inline void cake_sgemm_ukernel(float* A_p, float* B_p, float* C_p, 
 	int m_r, int n_r, int k_c_t, cake_cntx_t* cake_cntx) {
@@ -483,17 +448,6 @@ inline void cake_sgemm_ukernel(float* A_p, float* B_p, float* C_p,
 
 }
 
-
-inline void cake_sgemm_small_ukernel(float* A_p, float* B_p, float* C_p, 
-	int m_r, int n_r, int k_c_t, int M, int K, int N) {
-
-#ifdef USE_CAKE_HASWELL
-	cake_sgemm_haswell_6x16_unpacked(A_p, B_p, C_p, m_r, n_r, k_c_t, M, K, N);
-// #elif USE_CAKE_ARMV8
-// 	cake_sgemm_haswell_6x16_unpacked(A_p, B_p, C_p, m_r, n_r, k_c_t, M, K ,N);
-#endif
-
-}
 
 inline void cake_spgemm_ukernel(float* A_p, float* B_p, float* C_p, 
 	int m_r, int n_r, int k_c_t, char* nnz_outer, int* k_inds, char* loc_m) {
@@ -525,8 +479,8 @@ def gen_all_kernels(arch):
 	'''
 	for i in range(1,11):
 		for j in range(1,7):
-			ret1 += arch_class(i*2,j*fact).sparse.gen_kernel()
-			ret2 += arch_class(i*2,j*fact).dense.gen_kernel()
+			ret1 += gen_kernel(arch_class, i*2,j*fact, 'sparse')
+			ret2 += gen_kernel(arch_class, i*2,j*fact, 'dense')
 	f1 = open("sparse.cpp", 'w')
 	f1.write(ret1)
 	f2 = open("dense.cpp", 'w')
@@ -539,7 +493,7 @@ if __name__ == '__main__':
 
 
 # from kernel_gen import *
-# a = Armv8(8,12).dense.gen_kernel()
+# a = gen_kernel(Haswell, 6, 16, 'dense')
 # a = Haswell(6,16)
 # b = a.dense.gen_kernel()
 # print(b)

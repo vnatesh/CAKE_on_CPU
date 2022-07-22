@@ -423,7 +423,7 @@ void schedule(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p,
 			if(sparse) {
 				// schedule_KMN_sp(A_p, B_p, C_p, M, N, K, p, cake_cntx, x, 1, 0); 
 			} else if(small) {
-				schedule_KMN_small(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+				// schedule_KMN_small(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
 			} else {
 				schedule_KMN(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
 			}
@@ -433,7 +433,7 @@ void schedule(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p,
 			if(sparse) {
 				// schedule_KMN_sp(A_p, B_p, C_p, M, N, K, p, cake_cntx, x, 1, 0); 
 			} else if(small) {
-				schedule_MKN_small(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+				// schedule_MKN_small(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
 			} else {
 				schedule_MKN(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
 			}
@@ -443,7 +443,7 @@ void schedule(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p,
 			if(sparse) {
 				// schedule_KMN_sp(A_p, B_p, C_p, M, N, K, p, cake_cntx, x, 1, 0); 
 			} else if(small) {
-				schedule_NKM_small(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+				// schedule_NKM_small(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
 			} else {
 				schedule_NKM(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
 			}
