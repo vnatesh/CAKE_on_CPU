@@ -20,9 +20,9 @@ void schedule_KMN_sp(sp_pack_t* sp_pack, float* B_p, float* C_p, int M, int N, i
 
     // rsc = 1; csc = m_r;
 	float* A_p = sp_pack->A_sp_p;
-	int* nnz_outer = sp_pack->nnz_outer;
+	char* nnz_outer = sp_pack->nnz_outer;
 	int* k_inds = sp_pack->k_inds;
-	int* loc_m = sp_pack->loc_m;
+	char* loc_m = sp_pack->loc_m;
 
 
 	for(n = 0; n < Nb; n++) {
@@ -118,9 +118,9 @@ void schedule_MKN_sp(sp_pack_t* sp_pack, float* B_p, float* C_p, int M, int N, i
 	int k_cb, n_c_t, m_c_t, p_used, core;
 
 	float* A_p = sp_pack->A_sp_p;
-	int* nnz_outer = sp_pack->nnz_outer;
+	char* nnz_outer = sp_pack->nnz_outer;
 	int* k_inds = sp_pack->k_inds;
-	int* loc_m = sp_pack->loc_m;
+	char* loc_m = sp_pack->loc_m;
 
 
 	for(n = 0; n < Nb; n++) {
@@ -244,9 +244,9 @@ void schedule_NKM_sp(sp_pack_t* sp_pack, float* B_p, float* C_p, int M, int N, i
 	int k_cb, n_c_t, m_c_t, p_used, core;
 
 	float* A_p = sp_pack->A_sp_p;
-	int* nnz_outer = sp_pack->nnz_outer;
+	char* nnz_outer = sp_pack->nnz_outer;
 	int* k_inds = sp_pack->k_inds;
-	int* loc_m = sp_pack->loc_m;
+	char* loc_m = sp_pack->loc_m;
 
 
 	for(m = 0; m < Mb; m++) {
