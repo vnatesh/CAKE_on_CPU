@@ -54,14 +54,31 @@ cake_cntx_t* cake_query_cntx() {
     ret->blis_cntx = NULL;
     ret->mr = 6;
     ret->nr = 16;
+    ret->m_map = (ret->mr/2) - 1;
+    ret->n_map = (ret->nr/16) - 1;
 
 #elif USE_CAKE_ARMV8
     ret->blis_cntx = NULL;
     ret->mr = 8;
     ret->nr = 12;
+    ret->m_map = (ret->mr/2) - 1;
+    ret->n_map = (ret->nr/12) - 1;
 #endif
 
 	return ret;
+}
+
+
+void update_mr_nr(cake_cntx_t* cake_cntx, int m_r, int n_r) {
+    ret->mr = m_r;
+    ret->nr = n_r;
+#ifdef USE_CAKE_HASWELL
+    ret->m_map = (ret->mr/2) - 1;
+    ret->n_map = (ret->nr/16) - 1;
+#elif USE_CAKE_ARMV8
+    ret->m_map = (ret->mr/2) - 1;
+    ret->n_map = (ret->nr/12) - 1;
+#endif
 }
 
 

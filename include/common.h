@@ -63,6 +63,8 @@ typedef struct cake_cntx_t{
 	double peak_flops;
 	int mr;
 	int nr;
+	int m_map;
+	int n_map;
 	int L2;
 	int L3;
 	int ncores;

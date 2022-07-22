@@ -8,6 +8,8 @@ cake_cntx_t* cake_query_cntx();
 
 cake_cntx_t* cake_query_cntx_torch(int L2, int L3);
 
+void update_mr_nr(cake_cntx_t* cake_cntx, int m_r, int n_r);
+
 int get_cache_size(int level);
 
 int lcm(int n1, int n2);
