@@ -424,22 +424,33 @@ def gen_kernel_headers(arch):
 
 typedef void cake_sp_sgemm_%s(float* A, float* B, float* C, int m, int n, int k, 
 									char* nnz_outer, int* k_inds, char* loc_m);
+typedef void cake_sgemm_%s(float* A, float* B, float* C, int m, int n, int k);
 ''' % arch
 	for i in range(1,11):
 		for j in range(1,7):
 			ret += '''
 void cake_sp_sgemm_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
-									char* nnz_outer, int* k_inds, char* loc_m);''' % (arch, i*2,j*fact)	
+									char* nnz_outer, int* k_inds, char* loc_m);
+void cake_sgemm_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k);
+									''' % (arch, i*2,j*fact, arch, i*2,j*fact)	
+	sparse_arr = []
+	dense_arr = []
+	for i in range(1,11):
+		sparse_arr.append('''
+	{'''+','.join(['cake_sp_sgemm_%s_%dx%d' % (arch, i*2,j*fact) for j in range(1,7)]) + '}')
+		dense_arr.append('''
+	{'''+','.join(['cake_sgemm_%s_%dx%d' % (arch, i*2,j*fact) for j in range(1,7)]) + '}')	
 	ret += '''
-static cake_sp_sgemm_%s* kernel_map[10][6] = 
+static cake_sp_sgemm_%s* kernel_map_sp[10][6] = 
 {
 	''' % arch
-	func_arr = []
-	for i in range(1,11):
-		func_arr.append('''
-	{'''+','.join(['cake_sp_sgemm_%s_%dx%d' % (arch, i*2,j*fact) for j in range(1,7)]) + '}')
-	ret += ','.join(func_arr) 
+	ret += ','.join(sparse_arr) + '''
+};'''
 	ret += '''
+static cake_sgemm_%s* kernel_map[10][6] = 
+{
+	''' % arch
+	ret += ','.join(dense_arr) + '''
 };'''
 	ret += '''
 void cake_sgemm_haswell_6x16_unpacked(float* A, float* B, float* C, int m, int n, int k, int M, int K, int N);
