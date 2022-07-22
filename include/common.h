@@ -81,8 +81,8 @@ typedef struct cache_dims_t{
 // sparse matrix handling
 
 typedef struct sp_pack_t {
-   int* loc_m; // M dim C writeback location for each nnz value in A
-   int* nnz_outer; // number of nnz in every outer prod col vec (with len m_r) of A;
+   char* loc_m; // M dim C writeback location for each nnz value in A
+   char* nnz_outer; // number of nnz in every outer prod col vec (with len m_r) of A;
    int* k_inds; // density-based reorder indices of A cols within a mrxkcxnr tile
    int* nnz_outer_blk; // number of nonzeros in each mrxkcxnr outer product blk
    float* A_sp_p; //sparse packed A (only storing nonzeros)

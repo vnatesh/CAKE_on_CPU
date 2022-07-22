@@ -21,13 +21,13 @@ void pack_A_sp_n_first(float* A, float* A_p, int M, int K, int p,
    int k_cb, m_c_t, p_used, core;
 
 
-   int* nnz_outer = (int*) calloc(((x->M_padded*K) / m_r) , sizeof(int)); // storing number of nonzeros 
+   char* nnz_outer = (int*) calloc(((x->M_padded*K) / m_r) , sizeof(int)); // storing number of nonzeros 
                                                                           // in each outer prod col of A
 
    int* k_inds = (int*) calloc(((x->M_padded*K) / m_r) , sizeof(int)); // storing kc_ind 
                                                                           // of each outer prod col of A
 
-   int* loc_m = (int*) calloc(x->M_padded*K , sizeof(int)); // array for storing M dim C writeback location for each nnz in A
+   char* loc_m = (int*) calloc(x->M_padded*K , sizeof(int)); // array for storing M dim C writeback location for each nnz in A
                                     // each value ranges from 0 to mr-1
 
 
