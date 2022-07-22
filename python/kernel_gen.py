@@ -387,7 +387,7 @@ int m_cnt, k_ind;'''
 	return func + sp + var_decls + C_load + outer_prod + leftover + C_store
 
 
-def gen_kernel_headers(arch):
+def gen_kernel_headers(arch, m_lim, n_lim):
 	fact = 12 if arch == 'armv8' else 16
 	ret = '''
 #include "common.h"
@@ -396,8 +396,8 @@ typedef void cake_sp_sgemm_%s(float* A, float* B, float* C, int m, int n, int k,
 									char* nnz_outer, int* k_inds, char* loc_m);
 typedef void cake_sgemm_%s(float* A, float* B, float* C, int m, int n, int k);
 ''' % (arch, arch)
-	for i in range(1,11):
-		for j in range(1,7):
+	for i in range(1, m_lim//2 + 1):
+		for j in range(1, n_lim//fact + 1):
 			ret += '''
 void cake_sp_sgemm_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
 									char* nnz_outer, int* k_inds, char* loc_m);
@@ -407,9 +407,9 @@ void cake_sgemm_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k);
 	dense_arr = []
 	for i in range(1,11):
 		sparse_arr.append('''
-	{'''+','.join(['cake_sp_sgemm_%s_%dx%d' % (arch, i*2,j*fact) for j in range(1,7)]) + '}')
+	{'''+','.join(['cake_sp_sgemm_%s_%dx%d' % (arch, i*2,j*fact) for j in range(1,n_lim//fact + 1)]) + '}')
 		dense_arr.append('''
-	{'''+','.join(['cake_sgemm_%s_%dx%d' % (arch, i*2,j*fact) for j in range(1,7)]) + '}')	
+	{'''+','.join(['cake_sgemm_%s_%dx%d' % (arch, i*2,j*fact) for j in range(1,n_lim//fact + 1)]) + '}')	
 	ret += '''
 static cake_sp_sgemm_%s* kernel_map_sp[10][6] = 
 {
@@ -422,14 +422,16 @@ static cake_sgemm_%s* kernel_map[10][6] =
 	''' % arch
 	ret += ','.join(dense_arr) + '''
 };'''
-	f = open("include/kernels.h", 'r')
-	f.write(ret + f.read())
+	f = open("include/kernels.h", 'r+')
+	content = f.read()
+	f.seek(0)
+	f.write(ret + content)
 
 
 
 
 
-def gen_all_kernels(arch):
+def gen_all_kernels(arch, m_lim, n_lim):
 	if arch == 'armv8':
 		arch_class = Armv8
 		fact = 12
@@ -439,8 +441,8 @@ def gen_all_kernels(arch):
 	ret1 = ret2 = '''
 #include "cake.h"
 	'''
-	for i in range(1,11):
-		for j in range(1,7):
+	for i in range(1, m_lim//2 + 1):
+		for j in range(1, n_lim//fact + 1):
 			ret1 += gen_kernel(arch_class, i*2,j*fact, 'sparse')
 			ret2 += gen_kernel(arch_class, i*2,j*fact, 'dense')
 	f1 = open("sparse.cpp", 'w')
@@ -450,8 +452,8 @@ def gen_all_kernels(arch):
 
 
 if __name__ == '__main__':
-	gen_kernel_headers(sys.argv[1])
-	gen_all_kernels(sys.argv[1])
+	gen_kernel_headers(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))
+	gen_all_kernels(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))
 
 
 # from kernel_gen import *

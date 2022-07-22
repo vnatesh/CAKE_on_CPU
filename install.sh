@@ -8,14 +8,13 @@
 
 if uname -m | grep -q 'aarch64'; 
 then
-   python3 python/kernel_gen.py armv8
+   python3 python/kernel_gen.py armv8 20 72
    mv sparse.cpp dense.cpp src/kernels/armv8
 else
-   python3 python/kernel_gen.py haswell
+   python3 python/kernel_gen.py haswell 20 96
    mv sparse.cpp dense.cpp src/kernels/haswell
 fi
 
-mv kernels.h include
 
 if [ "$1" == "blis" ]; 
 then
