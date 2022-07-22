@@ -142,7 +142,8 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 
 double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, 
-	cake_cntx_t* cake_cntx, float density, char* argv[], bool packedA, bool packedB, 
+	cake_cntx_t* cake_cntx, float density, char* argv[], 
+	bool packedA, sp_pack_t* sp_pack, bool packedB, 
 	float alpha, float beta, enum sched sch) {
 
 
@@ -168,24 +169,13 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	omp_set_num_threads(p);
 
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
-    if(DEBUG) printf("mc = %d, kc = %d, nc = %d\n", x->m_c, x->k_c, x->n_c);
+    if(DEBUG) printf("mc = %d, kc = %d, nc = %d, alpha_n = %f\n", x->m_c, x->k_c, x->n_c, cake_cntx->alpha_n);
 
-	sp_pack_t* sp_pack;
 
-	if(packedA) {
-		// A_p = A;
-		printf("TODO: pre-packed A mat struct\n");
-		exit(1);
-	} else {
-		// print_mat(A,M,K);
+	if(sp_pack == NULL) {
 
 		clock_gettime(CLOCK_REALTIME, &start);
 
-		// A_sz = cake_sgemm_packed_A_size(M, K, p, x, cake_cntx, sch);
-		// if(posix_memalign((void**) &A_p, 64, A_sz)) {
-		// 	printf("posix memalign error\n");
-		// 	exit(1);
-		// }
 		A_sz = cake_sgemm_packed_A_size(M, K, p, x, cake_cntx, sch) / sizeof(float);
 	    A_p = (float*) calloc(A_sz, sizeof(float));
 
@@ -198,54 +188,7 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 		nanoseconds = end.tv_nsec - start.tv_nsec;
 		diff_t = seconds + nanoseconds*1e-9;
 		if(DEBUG) printf("A sparse pack time: %f \n", diff_t ); 
-
-		// free(A_p);
-		// A_p = sp_pack->A_sp_p;
-
-		// for(int i = 0; i < x->M_padded*K; i++) {
-		// 	printf("%f ", A_p[i]);
-		// }
-		// clock_gettime(CLOCK_REALTIME, &start);
-
-		// pack_A(A, A_p, M, K, p, x, cake_cntx, sch);
-
-		// clock_gettime(CLOCK_REALTIME, &end);
-		// seconds = end.tv_sec - start.tv_sec;
-		// nanoseconds = end.tv_nsec - start.tv_nsec;
-		// diff_t = seconds + nanoseconds*1e-9;
-		// if(DEBUG) printf("A dense pack time: %f \n", diff_t ); 
-
-		// int num_obs = x->m_pad ? (x->Mb-1)*p*x->Kb + x->p_l*x->Kb : x->Mb*p*x->Kb;
-
-		// printf("nnz_outer_blk\n");
-		// for(int i = 0; i < ((x->M_padded*x->Kb) / cake_cntx->mr); i++) {
-		// 	printf("%d ", sp_pack->nnz_outer_blk[i]);
-		// }
-		// printf("\n\n");
-
-
-		// printf("\nnnz_outer\n");
-		// for(int i = 0; i < x->M_padded*K/cake_cntx->mr; i++) {
-		// 	printf("%d ", sp_pack->nnz_outer[i]);
-		// }
-		// printf("\n\n");
-
-		// printf("\nk inds\n");
-		// for(int i = 0; i < x->M_padded*K/cake_cntx->mr; i++) {
-		// 	printf("%d ", sp_pack->k_inds[i]);
-		// }
-		// printf("\n\n");
-
-		// printf("\nloc_m\n");
-		// for(int i = 0; i < x->M_padded*K; i++) {
-		// 	printf("%d ", sp_pack->loc_m[i]);
-		// }
-		// printf("\n\n");
-
 	}
-
-		// exit(1);
-
 
 	if(packedB) {
 		B_p = B;

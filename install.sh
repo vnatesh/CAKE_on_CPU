@@ -5,26 +5,41 @@
 # make install
 
 # Download BLIS kernels
-git clone https://github.com/amd/blis.git
 
-BLIS_PATH=$PWD
-cd blis
+if uname -m | grep -q 'aarch64'; 
+then
+   python kernel_gen.py armv8
+   mv sparse.cpp dense.cpp src/kernels/armv8
+else
+   python kernel_gen.py haswell
+   mv sparse.cpp dense.cpp src/kernels/haswell
+fi
 
-# reset to older blis version for now
-#git reset --hard 961d9d5
+mv kernels.h include
 
-# ./configure CC=aarch64-linux-gnu-gcc --prefix=$BLIS_PATH --enable-threading=openmp cortexa53
-# install BLIS in curr dir and configire with openmp
-./configure --prefix=$BLIS_PATH --enable-threading=openmp auto
-# ./configure --enable-threading=openmp haswell
-make -j4
-make check
+if [ "$1" == "blis" ]; 
+then
 
-# install BLIS
-make install
-#make distclean
-cd ..
+	git clone https://github.com/amd/blis.git
 
+	BLIS_PATH=$PWD
+	cd blis
+
+	# reset to older blis version for now
+	#git reset --hard 961d9d5
+
+	# ./configure CC=aarch64-linux-gnu-gcc --prefix=$BLIS_PATH --enable-threading=openmp cortexa53
+	# install BLIS in curr dir and configire with openmp
+	./configure --prefix=$BLIS_PATH --enable-threading=openmp auto
+	# ./configure --enable-threading=openmp haswell
+	make -j4
+	make check
+
+	# install BLIS
+	make install
+	#make distclean
+	cd ..
+fi
 #source ./env.sh
 #make build
 

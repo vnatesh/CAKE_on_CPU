@@ -49,7 +49,7 @@ void pack_A_sp_m_first(float* A, float* A_p, int M, int K, int p,
    sp_pack_t* sp_pack, blk_dims_t* x, cake_cntx_t* cake_cntx);
 void pack_A_sp_n_first(float* A, float* A_p, int M, int K, int p, 
    sp_pack_t* sp_pack, blk_dims_t* x, cake_cntx_t* cake_cntx);
-void pack_ob_A_sp(float* A, float* A_p, int* nnz_outer, int* k_inds, int* loc_m, 
+void pack_ob_A_sp(float* A, float* A_p, char* nnz_outer, int* k_inds, char* loc_m, 
    int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad);
 void pack_A_sp(float* A, float* A_p, int M, int K, int p, 
    sp_pack_t* sp_pack, blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch);

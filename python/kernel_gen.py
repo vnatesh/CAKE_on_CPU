@@ -1,5 +1,7 @@
+import sys
+# autogenerate sparse and dense outer product kernels of any dimension for Haswell and Armv8
 
-# autogenerate sparse and dense outer product kernels of any dimension
+
 
 class Haswell:
 	def __init__(self, mr, nr):
@@ -205,10 +207,279 @@ void cake_sp_sgemm_haswell_%dx%d(float* A, float* B, float* C, int m, int n, int
 			C_store = self.haswell.gen_C_store( m, n)
 			return func + var_decls + C_load + outer_prod + leftover + C_store
 
+
+
+
+class Armv8:
+	def __init__(self, mr, nr):
+		self.mr = mr
+		self.nr = nr
+		self.sparse = self.Sparse(self)
+		self.dense = self.Dense(self)
+
+	def gen_var_decls(self, m, n):
+		ret = '''  
+	int m_cnt, k_ind;
+	float32x4_t a, '''
+		for i in range(1, n/4):
+			ret += "b%d, " % i
+		ret += "b%d;" % (n/4)
+		ret += '''
+	float32x4_t c[%d*%d];
+	''' % (m,n/4)
+		return ret
+
+	def gen_C_load(self, m, n):
+		C_load = '''
+	// load tile of C into arm neon SIMD registers
+	c[0]  = vld1q_f32(C);'''
+		for i in range(1, m*n / 4):
+			C_load += '''
+	c[%d]  = vld1q_f32(C + %d);''' % (i,i*4)
+		return C_load
+
+	def gen_C_store(self, m, n):
+		C_store = '''
+	vst1q_f32(C, c[0]);'''
+		for i in range(1, m*n / 4):
+			C_store += '''
+	vst1q_f32(C + %d, c[%d]);''' % (i*4,i)
+		C_store += '''
+}'''
+		return C_store
+
+
+	class Dense:
+		def __init__(self, armv8):
+			self.mr = armv8.mr
+			self.nr = armv8.nr
+			self.armv8 = armv8
+			
+		def gen_func_def(self, m, n):
+			return '''
+void cake_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k) {
+			''' % (m,n)
+
+		def gen_inner_kernel(self, m, n):
+			nlanes = n/4
+			ret = '''
+		b1 = vld1q_f32(B);'''
+			for i in range(1, nlanes):
+				ret += '''
+		b%d = vld1q_f32(B + %d);''' % (i+1, i*4)
+			for i in range(m):
+				ret += '''
+
+		a = vld1q_dup_f32(A++);'''
+				for j in range(nlanes):
+					ret += '''
+		c[%d] =  vfmaq_f32(c[%d], b%d, a);''' % \
+				(i*nlanes + j, i*nlanes + j, j+1)
+			ret += '''
+
+		B += n;
+				'''
+			return ret
+
+
+# print(gen_inner_kernel(6,16))
+				
+		def gen_leftover_k(self, m, n):
+			ret = '''
+	for(int kk = 0; kk < rem; kk++) { 
+			'''
+			ret += self.gen_inner_kernel(m, n)
+			ret += '''
+			}
+			'''
+			return ret
+
+		def gen_outer_prod_loop(self, m, n):
+			ret = '''
+
+	int rem = k % 4;
+	k -= rem;
+
+	// outer-product unrolled 4 times
+	for(int kk = 0; kk < k; kk += 4) { 
+
+			'''
+			ret += self.gen_inner_kernel(m, n)
+			for i in range(1,4):
+				ret += self.gen_inner_kernel(m, n) + '\n\n'
+			ret += '''
+	}
+			'''
+			return ret
+
+
+		def gen_kernel(self):
+			m = self.mr
+			n = self.nr
+			func = self.gen_func_def( m, n)
+			var_decls = self.armv8.gen_var_decls(m, n)
+			C_load = self.armv8.gen_C_load( m, n)
+			outer_prod = self.gen_outer_prod_loop(m, n)
+			leftover = self.gen_leftover_k( m, n)
+			C_store = self.armv8.gen_C_store( m, n)
+			return func + var_decls + C_load + outer_prod + leftover + C_store
+
+
+
+	class Sparse:
+		def __init__(self, armv8):
+			self.mr = armv8.mr
+			self.nr = armv8.nr
+			self.armv8 = armv8
+
+		def gen_func_def(self, m, n):
+			return '''
+void cake_sp_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
+									char* nnz_outer, int* k_inds, char* loc_m) {
+			''' % (m,n)
+
+		def gen_inner_kernel(self, m, n):
+			nlanes = n/4
+			ret = '''
+		b1 = vld1q_f32(B + k_ind);'''
+			for i in range(1, nlanes):
+				ret += '''
+		b%d = vld1q_f32(B + k_ind + %d);''' % (i+1, i*4)
+			ret += '''
+			
+		for(int j = 0; j < m_cnt; j++) {
+			a = vld1q_dup_f32(A++);
+			c[*loc_m * %d]     =  vfmaq_f32(c[*loc_m * %d], b1, a);''' % (nlanes, nlanes)
+			for i in range(1, nlanes):
+				ret += '''
+			c[*loc_m * %d + %d] =  vfmaq_f32(c[*loc_m * %d + %d], b%d, a);''' % (nlanes, i, nlanes, i, i+1)
+			ret += '''
+			loc_m++;
+		}
+				'''
+			return ret
+				
+		def gen_leftover_k(self, m, n):
+			ret = '''
+	for(int kk = 0; kk < rem; kk++) { 
+
+		m_cnt = nnz_outer[k + kk];
+		k_ind = n*k_inds[k + kk];
+			'''
+			ret += self.gen_inner_kernel(m, n)
+			ret += '''
+	}
+			'''
+			return ret
+
+		def gen_outer_prod_loop(self, m, n):
+			ret = '''
+
+	int rem = k % 4;
+	k -= rem;
+
+	// float* B_ptr = &B[0];
+
+	for(int kk = 0; kk < k; kk += 4) { 
+
+		m_cnt = nnz_outer[kk];
+
+		// skip columns with 0 nonzeros
+		if(!m_cnt) {
+			break;
+		}
+
+		k_ind = n*k_inds[kk];
+			'''
+			ret += self.gen_inner_kernel(m, n)
+			for i in range(1,4):
+				ret += '''
+		m_cnt = nnz_outer[kk+%d];
+		k_ind = n*k_inds[kk+%d];
+				''' % (i,i)
+				ret += self.gen_inner_kernel(m, n)
+			ret += '''
+	}
+			'''
+			return ret
+
+		def gen_kernel(self):
+			m = self.mr
+			n = self.nr
+			func = self.gen_func_def( m, n)
+			var_decls = self.armv8.gen_var_decls(m, n)
+			C_load = self.armv8.gen_C_load( m, n)
+			outer_prod = self.gen_outer_prod_loop(m, n)
+			leftover = self.gen_leftover_k( m, n)
+			C_store = self.armv8.gen_C_store( m, n)
+			return func + var_decls + C_load + outer_prod + leftover + C_store
+
+
+
+
+def gen_kernel_headers(arch):
+	fact = 12 if arch == 'armv8' else 16
+	ret = '''
+#include "common.h"
+
+typedef void cake_sp_sgemm_%s(float* A, float* B, float* C, int m, int n, int k, 
+									char* nnz_outer, int* k_inds, char* loc_m);
+''' % arch
+	for i in range(1,11):
+		for j in range(1,7):
+			ret += '''
+void cake_sp_sgemm_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
+									char* nnz_outer, int* k_inds, char* loc_m);''' % (arch, i*2,j*fact)	
+	ret += '''
+static cake_sp_sgemm_%s kernel_map[10][6] = 
+{
+	''' % arch
+	func_arr = []
+	for i in range(1,11):
+		func_arr.append('''
+	{'''+','.join(['cake_sp_sgemm_%s_%dx%d' % (arch, i*2,j*fact) for j in range(1,7)]) + '}')
+	ret += ','.join(func_arr) 
+	ret += '''
+};'''
+	f = open("kernels.h", 'w')
+	f.write(ret)
+
+
+
+
+
+def gen_all_kernels(arch):
+	if arch == 'armv8':
+		arch_class = Armv8
+		fact = 12
+	else:
+		arch_class = Haswell
+		fact = 16
+	ret1 = ret2 = '''
+#include "cake.h"
+	'''
+	for i in range(1,11):
+		for j in range(1,7):
+			ret1 += arch_class(i*2,j*fact).sparse.gen_kernel()
+			ret2 += arch_class(i*2,j*fact).dense.gen_kernel()
+	f1 = open("sparse.cpp", 'w')
+	f1.write(ret1)
+	f2 = open("dense.cpp", 'w')
+	f2.write(ret2)
+
+
+if __name__ == '__main__':
+	gen_kernel_headers(sys.argv[1])
+	gen_all_kernels(sys.argv[1])
+
+
 # from kernel_gen import *
+# a = Armv8(8,12).dense.gen_kernel()
 # a = Haswell(6,16)
 # b = a.dense.gen_kernel()
 # print(b)
 # #
+
+
 
 # print(gen_sparse_kernel(6,16))

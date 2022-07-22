@@ -279,10 +279,10 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 	}
 
 	if(ss) {
+		printf("user-defined tile sizes\n");
 		blk_ret->m_c = atoi(argv[6]);
 		blk_ret->k_c = atoi(argv[7]);
 		blk_ret->n_c = atoi(argv[8]);
-
 	// sparsity-aware tiling when A matrix is sparse
 	} else if(density > 0.0000001) {
 		
