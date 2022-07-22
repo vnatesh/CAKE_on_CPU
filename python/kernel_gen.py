@@ -14,19 +14,19 @@ class Haswell:
 		ret = '''  
 	int m_cnt, k_ind;
 	__m256 a, '''
-		for i in range(1, n/8):
+		for i in range(1, n//8):
 			ret += "b%d, " % i
-		ret += "b%d;" % (n/8)
+		ret += "b%d;" % (n//8)
 		ret += '''
 	__m256 c[%d*%d];
-	''' % (m,n/8)
+	''' % (m,n//8)
 		return ret
 
 	def gen_C_load(self, m, n):
 		C_load = '''
 	// load tile of C into AVX2 registers
 	c[0]  = _mm256_loadu_ps(C);'''
-		for i in range(1, m*n / 8):
+		for i in range(1, m*n // 8):
 			C_load += '''
 	c[%d]  = _mm256_loadu_ps(C + %d);''' % (i,i*8)
 		return C_load
@@ -34,7 +34,7 @@ class Haswell:
 	def gen_C_store(self, m, n):
 		C_store = '''
 	_mm256_storeu_ps(C, c[0]);'''
-		for i in range(1, m*n / 8):
+		for i in range(1, m*n // 8):
 			C_store += '''
 	_mm256_storeu_ps((C + %d), c[%d]);''' % (i*8,i)
 		C_store += '''
@@ -54,7 +54,7 @@ void cake_sgemm_haswell_%dx%d(float* A, float* B, float* C, int m, int n, int k)
 			''' % (m,n)
 
 		def gen_inner_kernel(self, m, n):
-			nlanes = n/8
+			nlanes = n//8
 			ret = '''
 		b1 = _mm256_load_ps(B);'''
 			for i in range(1, nlanes):
@@ -132,7 +132,7 @@ void cake_sp_sgemm_haswell_%dx%d(float* A, float* B, float* C, int m, int n, int
 			''' % (m,n)
 
 		def gen_inner_kernel(self, m, n):
-			nlanes = n/8
+			nlanes = n//8
 			ret = '''
 		b1 = _mm256_load_ps(B + k_ind);'''
 			for i in range(1, nlanes):
@@ -221,19 +221,19 @@ class Armv8:
 		ret = '''  
 	int m_cnt, k_ind;
 	float32x4_t a, '''
-		for i in range(1, n/4):
+		for i in range(1, n//4):
 			ret += "b%d, " % i
-		ret += "b%d;" % (n/4)
+		ret += "b%d;" % (n//4)
 		ret += '''
 	float32x4_t c[%d*%d];
-	''' % (m,n/4)
+	''' % (m,n//4)
 		return ret
 
 	def gen_C_load(self, m, n):
 		C_load = '''
 	// load tile of C into arm neon SIMD registers
 	c[0]  = vld1q_f32(C);'''
-		for i in range(1, m*n / 4):
+		for i in range(1, m*n // 4):
 			C_load += '''
 	c[%d]  = vld1q_f32(C + %d);''' % (i,i*4)
 		return C_load
@@ -241,7 +241,7 @@ class Armv8:
 	def gen_C_store(self, m, n):
 		C_store = '''
 	vst1q_f32(C, c[0]);'''
-		for i in range(1, m*n / 4):
+		for i in range(1, m*n // 4):
 			C_store += '''
 	vst1q_f32(C + %d, c[%d]);''' % (i*4,i)
 		C_store += '''
@@ -261,7 +261,7 @@ void cake_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k) {
 			''' % (m,n)
 
 		def gen_inner_kernel(self, m, n):
-			nlanes = n/4
+			nlanes = n//4
 			ret = '''
 		b1 = vld1q_f32(B);'''
 			for i in range(1, nlanes):
@@ -339,7 +339,7 @@ void cake_sp_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k
 			''' % (m,n)
 
 		def gen_inner_kernel(self, m, n):
-			nlanes = n/4
+			nlanes = n//4
 			ret = '''
 		b1 = vld1q_f32(B + k_ind);'''
 			for i in range(1, nlanes):

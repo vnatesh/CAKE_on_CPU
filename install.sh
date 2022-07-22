@@ -8,10 +8,10 @@
 
 if uname -m | grep -q 'aarch64'; 
 then
-   python kernel_gen.py armv8
+   python3 python/kernel_gen.py armv8
    mv sparse.cpp dense.cpp src/kernels/armv8
 else
-   python kernel_gen.py haswell
+   python3 python/kernel_gen.py haswell
    mv sparse.cpp dense.cpp src/kernels/haswell
 fi
 
