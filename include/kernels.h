@@ -1,17 +1,4 @@
-#include "common.h"
 
-
-
-void cake_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k);
-// void cake_sp_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k, 
-// 							int* nnz_outer, int* loc_m);
-
-void cake_sp_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k, 
-							int* nnz_outer, int* k_inds, int* loc_m);
-
-void cake_sp_sgemm_armv8_8x12(float* A, float* B, float* C, int m, int n, int k, 
-							int* nnz_outer, int* k_inds, int* loc_m);
-void cake_sgemm_armv8_8x12(float* A, float* B, float* C, int m, int n, int k);
 
 
 
