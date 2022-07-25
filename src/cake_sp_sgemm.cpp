@@ -6,7 +6,7 @@ void schedule_KMN_sp(sp_pack_t* sp_pack, float* B_p, float* C_p, int M, int N, i
 
 	// copy over block dims to local vars to avoid readibility ussiues with x->
 	int m_r = cake_cntx->mr, n_r = cake_cntx->nr;
-	int m_map = cake_cntx->mr, n_map = cake_cntx->nr;
+	int m_map = cake_cntx->m_map, n_map = cake_cntx->n_map;
 
 	int m_c = x->m_c, k_c = x->k_c, n_c = x->n_c;
 	int m_c1 = x->m_c1, k_c1 = x->k_c1, n_c1 = x->n_c1;
@@ -79,7 +79,7 @@ void schedule_KMN_sp(sp_pack_t* sp_pack, float* B_p, float* C_p, int M, int N, i
 						for(m_reg = 0; m_reg < (m_c_t / m_r); m_reg++) {							
 
 							// A_p_offset = nnz_outer_blk[a_ind + m_reg];
-							kernel_map[m_map][n_map](&A_p[a_ind + m_reg*m_r*k_c_t], 
+							kernel_map_sp[m_map][n_map](&A_p[a_ind + m_reg*m_r*k_c_t], 
 													&B_p[b_ind + n_reg*k_c_t*n_r], 
 													&C_p[c_ind + n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
 													m_r, n_r, k_c_t, 

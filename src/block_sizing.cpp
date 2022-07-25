@@ -70,14 +70,14 @@ cake_cntx_t* cake_query_cntx() {
 
 
 void update_mr_nr(cake_cntx_t* cake_cntx, int m_r, int n_r) {
-    ret->mr = m_r;
-    ret->nr = n_r;
+    cake_cntx->mr = m_r;
+    cake_cntx->nr = n_r;
 #ifdef USE_CAKE_HASWELL
-    ret->m_map = (ret->mr/2) - 1;
-    ret->n_map = (ret->nr/16) - 1;
+    cake_cntx->m_map = (m_r/2) - 1;
+    cake_cntx->n_map = (n_r/16) - 1;
 #elif USE_CAKE_ARMV8
-    ret->m_map = (ret->mr/2) - 1;
-    ret->n_map = (ret->nr/12) - 1;
+    cake_cntx->m_map = (m_r/2) - 1;
+    cake_cntx->n_map = (n_r/12) - 1;
 #endif
 }
 
@@ -333,8 +333,8 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 		nc_ret -= (nc_ret % cake_cntx->nr);
 		nc_ret = nc_ret == 0 ? cake_cntx->nr : nc_ret;
 
-		blk_ret->m_c = mc_L3;
-		blk_ret->k_c = mc_L2;
+		blk_ret->m_c = mc_L3 < M ? mc_L3 : cake_cntx->mr;
+		blk_ret->k_c = mc_L2 < K ? mc_L2 : K;
 		blk_ret->n_c = nc_ret;
 
 	// CAKE tiling for dense MM 
