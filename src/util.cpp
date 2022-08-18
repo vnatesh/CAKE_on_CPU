@@ -125,7 +125,7 @@ int run_tests_sparse() {
 				    rand_sparse(A, M, K, 0.5);
 					rand_init(B, K, N);
 
-					cake_sp_sgemm(A, B, C, M, N, K, p, cake_cntx, 0,0,1,0, MKN);
+					cake_sp_sgemm(A, B, C, M, N, K, p, cake_cntx, 0.5);
 					if(cake_sgemm_checker(A, B, C, N, M, K)) {
 						printf("TESTS FAILED on M-first p=%d M=%d K=%d N=%d\n",p,M,K,N);
 						cnt++;
@@ -306,8 +306,9 @@ void rand_init(float* mat, int r, int c) {
 
 
 
-// randomized sparse matrix with sparsity % of values that are zero
-// threshold pruning
+// randomized sparse matrix in range [-1,1] 
+// with sparsity % of values that are zero
+// i.e., threshold pruning
 void rand_sparse(float* mat, int r, int c, float sparsity) {
 
 	for(int i = 0; i < r*c; i++) {
@@ -321,17 +322,29 @@ void rand_sparse(float* mat, int r, int c, float sparsity) {
 }
 
 
+
+// return a uniformly distributed random value in [0,1]
 float rand_gen() {
-   // return a uniformly distributed random value
-   return ( (float)(rand()) + 1. )/( (float)(((float) RAND_MAX)) + 1. );
+   return ( (float)(rand()) + 1. ) / ( (float)(((float) RAND_MAX)) + 1. );
 }
 
 
+// Box-Muller transform to generate a normally 
+// distributed N(0,1) random value
 float normalRandom() {
-   // return a normally distributed random value
+  
    float v1 = rand_gen();
    float v2 = rand_gen();
    return cos(2*3.14*v2)*sqrt(-2.*log(v1));
+}
+
+
+// generates random matrix in ~ N(0,1)
+void rand_gaussian(float* mat, int r, int c) {
+
+	for(int i = 0; i < r*c; i++) {
+		mat[i] =  normalRandom();
+	}	
 }
 
 
