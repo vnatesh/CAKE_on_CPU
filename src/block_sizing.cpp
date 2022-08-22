@@ -236,7 +236,7 @@ int get_cache_size(int level) {
 
 cache_dims_t* get_cache_dims(int M, int N, int K, int p, 
 			cake_cntx_t* cake_cntx, enum sched sch, 
-			char* argv[], float density) {
+			char* argv[], float density, float type_size) {
 
 	int mc, mc_ret, nc_ret, a, mc_L2 = 0, mc_L3 = 0;
 	int max_threads = cake_cntx->ncores; // 2-way hyperthreaded
@@ -246,7 +246,7 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 	// solve for optimal mc,kc based on L2 size
 	// L2_size >= 2*(mc*kc + kc*nr) + 2*(mc*nr)     (solve for x = m_c = k_c) 
 	int b = 2*cake_cntx->nr;
-	mc_L2 = (int)  ((-b + sqrt(b*b + 4*(((double) cake_cntx->L2) / (2*sizeof(float))))) / 2.0) ;
+	mc_L2 = (int)  ((-b + sqrt(b*b + 4*(((double) cake_cntx->L2) / (2*type_size)))) / 2.0) ;
 	// mc_L2 -= (mc_L2 % mn_lcm);
 	mc_L2 -= (mc_L2 % cake_cntx->mr);
 	// printf("mc_L2 = %d\n", mc_L2);
@@ -256,13 +256,13 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 	// L3_size >= 2*(p*mc*kc + alpha*p*mc*kc) + 2*(p*mc*alpha*p*mc)     (solve for x = m_c = k_c) 
 	// We only use ~ half of the each cache to prevent our working blocks from being evicted
 	// and to allow for double buffering of partial results in L3
-	mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (2*sizeof(float)))  
+	mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (2*type_size))  
 			/ (max_threads * (1 + 1.0 + 1.0*max_threads)));
 	mc_L3 -= (mc_L3 % cake_cntx->mr);
 	// printf("mc_L3 = %d\n", mc_L3);
 
 	// if mc_L3 is too small, reduce alpha. likewise if mc_L2 is too small, increase alpha
-	// This will reduce/increase L3 tile size and utilize mor/less DRAM bandwidth
+	// This will reduce/increase L3 tile size and utilize more/less DRAM bandwidth
 	cake_cntx->alpha_n = ((double) mc_L3) / mc_L2;
 	mc =  mc_L2;
 
@@ -418,12 +418,12 @@ enum sched derive_schedule(int M, int N, int K, int p,
 
 void init_block_dims(int M, int N, int K, int p, 
 	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
-	char* argv[], float density) {
+	char* argv[], float density, float type_size) {
 
 	int m_r = cake_cntx->mr;
 	int n_r = cake_cntx->nr;
 	cache_dims_t* cache_dims = get_cache_dims(M, N, K, p, 
-									cake_cntx, sch, argv, density);
+									cake_cntx, sch, argv, density, type_size);
     x->m_c = cache_dims->m_c;
 	x->k_c = cache_dims->k_c;
     x->n_c = cache_dims->n_c;

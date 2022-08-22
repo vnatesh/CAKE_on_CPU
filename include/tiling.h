@@ -22,10 +22,14 @@ int get_num_physical_cores();
 enum sched derive_schedule(int M, int N, int K, int p, 
 					int mc_ret, cake_cntx_t* cake_cntx);
 
+
+// default type size = 4 bytes for float
 cache_dims_t* get_cache_dims(int M, int N, int K, int p, 
-	cake_cntx_t* cake_cntx, enum sched sch, char* argv[], float density = 0);
+	cake_cntx_t* cake_cntx, enum sched sch, char* argv[], 
+	float density = 0, float type_size = 4);
 
 void init_block_dims(int M, int N, int K, int p, blk_dims_t* x, 
-	cake_cntx_t* cake_cntx, enum sched sch, char* argv[], float density = 0);
+	cake_cntx_t* cake_cntx, enum sched sch, char* argv[], 
+	float density = 0, float type_size = 4);
 
 
