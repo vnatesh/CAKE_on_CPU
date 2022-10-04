@@ -32,12 +32,12 @@ ifeq ($(UNAME_P),aarch64)
 	TARGETS = cake_armv8
 else ifeq ($(UNAME_P),x86_64)
 	TARGETS = cake_haswell
-	CFLAGS_tmp		  += -g -mavx -mfma
+	CFLAGS_tmp		  += -O3 -g -mavx -mfma -fopenmp
 else
 	TARGETS = cake_blis
 endif
 
-CFLAGS 	:= $(filter-out -fopenmp -std=c99, $(CFLAGS_tmp))
+CFLAGS 	:= $(filter-out -std=c99, $(CFLAGS_tmp))
 
 
 
