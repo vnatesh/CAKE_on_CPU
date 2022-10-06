@@ -185,7 +185,7 @@ void cake_sgemm_haswell_6x16(float* A, float* B, float* C, int m, int n, int k) 
 
 		B += n;
 				
-			}
+	}
 			
 	_mm256_storeu_ps(C, c[0]);
 	_mm256_storeu_ps((C + 8), c[1]);

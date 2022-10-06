@@ -33,6 +33,7 @@ void cake_conv_haswell_6x16(float* A, float* B, float* C, int n_in, int n_out, i
 	__m256 a, b1, b2;
 	__m256 c[6*2];
 
+	// printf("yo %f %f ", A[0], B[0]);
 
 	c[0]  = _mm256_loadu_ps(C);
 	c[1]  = _mm256_loadu_ps(C + 8);
@@ -192,7 +193,6 @@ void cake_conv_haswell_6x16(float* A, float* B, float* C, int n_in, int n_out, i
 		B += n_in;
 						// B += 16;
 
-
 	}
 
 	for(int kk = 0; kk < rem; kk++) { 
@@ -254,7 +254,7 @@ void cake_conv_haswell_6x16(float* A, float* B, float* C, int n_in, int n_out, i
 	// _mm256_storeu_ps((C + 72), c[9]);
 	// _mm256_storeu_ps((C + 80), c[10]);
 	// _mm256_storeu_ps((C + 88), c[11]);
-
+	// printf("%f \n", C[0]);
 }
 
 
@@ -309,7 +309,8 @@ cache_dims_t* get_cache_dims_conv(int Wf, int Hf, int Win, int Hin,
 		Ck = 128;
 	}
 	// Ck += Cin % Ck;
-	Ck = 2;
+	// Ck = 7;
+	// Ck = Cin;
 
 	blk_ret->m_c = mc_ret;
 	blk_ret->k_c = Ck;
@@ -426,8 +427,114 @@ void init_block_dims_conv(int Wf, int Hf, int Win, int Hin,
 
 
 
+void pack_ob_A_single_buf_conv(float* A, float* A_p, int M, int K, int m1, int m2, int m_c, int k_c, int m_r, bool pad) {
+
+   int ind_ob = 0;
+   int Wf = 3, Hf = 3;
+   for(int m3 = 0; m3 < m_c; m3 += m_r) {
+      for(int ker = 0; ker < Wf*Hf; ker++) {
+        for(int i = 0; i < k_c; i++) {
+
+           for(int j = 0; j < m_r; j++) {
+
+              if((m1 + m2 + m3 + j) >=  M) {
+                 A_p[ind_ob] = 0.0;
+              } else {
+                 // printf("PAD IND %d\n", m3*K + i + j*K);
+
+                 A_p[ind_ob] = A[m3*K + i*Wf*Hf + ker + j*K];
+              }
+
+              ind_ob++;
+              // printf("ind_ob %d\n", ind_ob);
+           }
+        }
+     }     
+  }
+}
+
+// // pack the entire matrix A into a single contiguous cache-aligned buffer
+// double pack_filters(float* A, float* A_p, int M, int K, int p, blk_dims_t* x, cake_cntx_t* cake_cntx) {
+
+// 	// copy over block dims to local vars to avoid readibility ussiues with x->
+// 	int m_r = cake_cntx->mr;
+
+// 	int m_c = x->m_c, k_c = x->k_c;
+// 	int m_c1 = x->m_c1, k_c1 = x->k_c1;
+// 	int m_c1_last_core = x->m_c1_last_core;
+// 	int mr_rem = x->mr_rem;
+// 	int p_l = x->p_l, m_pad = x->m_pad, k_pad = x->k_pad;
+// 	int Mb = x->Mb, Kb = x->Kb;
+
+// 	struct timespec start, end;
+// 	double diff_t;
+
+// 	int m, k, A_offset = 0, A_p_offset = 0;
+// 	int m_cb, k_c_t, p_used, core;
+
+// 	k_c *= 9;
+// 	k_c1 *= 9;
+
+
+//    clock_gettime(CLOCK_REALTIME, &start);
+
+//    for(m = 0; m < Mb; m++) {
+
+//       if((m == Mb - 1) && m_pad) {
+//          p_used = p_l;
+//          m_cb = m_r*mr_rem ; 
+//       } else {
+//          p_used = p;
+//          m_cb = p_used*m_c;
+//       }
+
+//       for(k = 0; k < Kb; k++) {
+         
+//          k_c_t = k_c; 
+//          if((k == Kb - 1) && k_pad) {
+//             k_c_t = k_c1;
+//          }
+
+//          A_offset = m*p*m_c*K + k*k_c;
+
+//          #pragma omp parallel for private(core)
+//          for(core = 0; core < p_used; core++) {
+
+//             int m_c_t, m_c_x;
+//             bool pad;
+
+//             if((m == Mb - 1) && m_pad) {
+//                m_c_t = (core == (p_l - 1) ? m_c1_last_core : m_c1);
+//                m_c_x = m_c1;
+//                pad = (core == (p_l - 1) ? 1 : 0);
+//             } else {
+//                m_c_t = m_c;
+//                m_c_x = m_c;
+//                pad = 0;
+//             }
+
+//             pack_ob_A_single_buf(&A[A_offset + core*m_c_x*K], &A_p[A_p_offset + core*m_c_x*k_c_t], 
+//                M, K, m*p*m_c, core*m_c_x, m_c_t, k_c_t, m_r, pad);
+//          }
+
+//          A_p_offset += m_cb*k_c_t;
+//       }
+//    }
+
+//      clock_gettime(CLOCK_REALTIME, &end);
+//      long seconds = end.tv_sec - start.tv_sec;
+//      long nanoseconds = end.tv_nsec - start.tv_nsec;
+//      diff_t = seconds + nanoseconds*1e-9;
+
+//      return diff_t;
+// }
+
+
+
+
 // pack the entire matrix A into a single contiguous cache-aligned buffer
 double pack_filters(float* A, float* A_p, int M, int K, int p, blk_dims_t* x, cake_cntx_t* cake_cntx) {
+   int Wf = 3, Hf = 3;
 
 	// copy over block dims to local vars to avoid readibility ussiues with x->
 	int m_r = cake_cntx->mr;
@@ -445,8 +552,8 @@ double pack_filters(float* A, float* A_p, int M, int K, int p, blk_dims_t* x, ca
 	int m, k, A_offset = 0, A_p_offset = 0;
 	int m_cb, k_c_t, p_used, core;
 
-	k_c *= 9;
-	k_c1 *= 9;
+	// k_c *= 9;
+	// k_c1 *= 9;
 
 
    clock_gettime(CLOCK_REALTIME, &start);
@@ -468,7 +575,7 @@ double pack_filters(float* A, float* A_p, int M, int K, int p, blk_dims_t* x, ca
             k_c_t = k_c1;
          }
 
-         A_offset = m*p*m_c*K + k*k_c;
+         A_offset = m*p*m_c*K + k*k_c*Wf*Hf;
 
          #pragma omp parallel for private(core)
          for(core = 0; core < p_used; core++) {
@@ -486,11 +593,11 @@ double pack_filters(float* A, float* A_p, int M, int K, int p, blk_dims_t* x, ca
                pad = 0;
             }
 
-            pack_ob_A_single_buf(&A[A_offset + core*m_c_x*K], &A_p[A_p_offset + core*m_c_x*k_c_t], 
+            pack_ob_A_single_buf_conv(&A[A_offset + core*m_c_x*K], &A_p[A_p_offset + core*m_c_x*k_c_t*Wf*Hf], 
                M, K, m*p*m_c, core*m_c_x, m_c_t, k_c_t, m_r, pad);
          }
 
-         A_p_offset += m_cb*k_c_t;
+         A_p_offset += m_cb*k_c_t*Wf*Hf;
       }
    }
 
@@ -501,7 +608,6 @@ double pack_filters(float* A, float* A_p, int M, int K, int p, blk_dims_t* x, ca
 
      return diff_t;
 }
-
 
 
 
@@ -565,22 +671,22 @@ void schedule_KMN_conv(float* F, float* In, float* Out, int Wf, int Hf,
 					m_c_x = Cm; 
 				}
 
-				for(ho = 0; ho < n_c_t; ho++) {
-					for(hf = 0; hf < Hf; hf++) {
-						for(wf = 0; wf < Wf; wf++) {
-							for(k = 0; k < Kb; k++) {
+				for(k = 0; k < Kb; k++) {
+					for(ho = 0; ho < n_c_t; ho++) {
+						for(hf = 0; hf < Hf; hf++) {
+							for(wf = 0; wf < Wf; wf++) {
 							
 								k_c_t = Ck; 
 								if((k == Kb - 1) && k_pad) {
 									k_c_t = k_c1;
 								}
 				// for(ho = 0; ho < n_c_t; ho++) {
-
 								// filter/input/output feature map index within CB block
+								// int f_ind = m*p*Cm*K + k*m_cb*Ck*Wf*Hf + core*m_c_x*k_c_t*Wf*Hf + m_r*k_c_t*(wf + hf*Wf); 
 								int f_ind = m*p*Cm*K + k*m_cb*Ck*Wf*Hf + core*m_c_x*k_c_t*Wf*Hf + m_r*k_c_t*(wf + hf*Wf); 
 								int in_ind = k*Ck*Hin*Win + n*n_c*Win + ho*Win + hf*Win + wf; 
 								int out_ind = m*p*Cm*Hout*Wout + n*n_c*Wout + core*m_c_x*Hout*Wout + ho*Wout;
-					// printf("f_ind %d, in_ind %d, out_ind %d \n", f_ind, in_ind, out_ind);
+					// printf("f_ind %d, in_ind %d, out_ind %d ", f_ind, in_ind, out_ind);
 
 								for(n_reg = 0; n_reg < (Wout / n_r); n_reg++) {
 									for(m_reg = 0; m_reg < (m_c_t / m_r); m_reg++) {
@@ -697,13 +803,17 @@ double cake_sconv(float* A, float* B, float* C, int Wf, int Hf,
 		}
 
 		pack_filters(A, A_p, Cout, Cin*Wf*Hf, p, x, cake_cntx);
-		// print_mat(A_p, 6, Cin*Wf*Hf);
+		// for(int i = 0; i < cake_cntx->mr*Cin*Wf*Hf; i++) {
+		// 	printf("%f ", A_p[i]);
+		// }
+		// printf("\n\n");
+		// print_mat(A_p, cake_cntx->mr, Cin*Wf*Hf);
 
 		clock_gettime(CLOCK_REALTIME, &end);
 		seconds = end.tv_sec - start.tv_sec;
 		nanoseconds = end.tv_nsec - start.tv_nsec;
 		diff_t = seconds + nanoseconds*1e-9;
-		printf("A pack time: %f \n", diff_t ); 
+		// printf("A pack time: %f \n", diff_t ); 
 	}
 
 	// B_sz = Hin*Win * Cin * sizeof( float );
@@ -726,7 +836,7 @@ double cake_sconv(float* A, float* B, float* C, int Wf, int Hf,
     nanoseconds = end.tv_nsec - start.tv_nsec;
     diff_t = seconds + nanoseconds*1e-9;
 	// if(DEBUG) printf("CONV time: %f \n", diff_t); 	// exit(1);
-	printf("CONV time: %f \n", diff_t); 	// exit(1);
+	// printf("CONV time: %f \n", diff_t); 	// exit(1);
 
 	times = diff_t;
 
@@ -778,27 +888,27 @@ int main( int argc, char** argv ) {
 	// p = atoi(argv[7]);
 
 	// single out channel, single in channel
-	Cin = 3;
-	Cout = 1;
-	Wf = 3;
-	Hf = 3;
-	Hin = 18;
-	Win = 18;
-	Hout = 16;
-	Wout = 16;
-	s = 1;
-	p = 1;
-
-	// Cin = 512;
-	// Cout = 512;
+	// Cin = 3;
+	// Cout = 1;
 	// Wf = 3;
 	// Hf = 3;
-	// Hin = 33;
-	// Win = 33;
-	// Hout = 32;
-	// Wout = 32;
+	// Hin = 18;
+	// Win = 18;
+	// Hout = 16;
+	// Wout = 16;
 	// s = 1;
-	// p = 10;
+	// p = 1;
+
+	Cin = 512;
+	Cout = 512;
+	Wf = 3;
+	Hf = 3;
+	Hin = 33;
+	Win = 33;
+	Hout = 32;
+	Wout = 32;
+	s = 1;
+	p = 10;
 
 	cake_cntx_t* cake_cntx = cake_query_cntx();
 
@@ -806,14 +916,62 @@ int main( int argc, char** argv ) {
 	F = (float*) malloc(Wf*Hf*Cin * Cout * sizeof( float ));
 	In = (float*) malloc(Hin*Win * Cin * sizeof( float ));
 
+
+	float* F1 = (float*) malloc(Wf*Hf*Cin * Cout * sizeof( float ));
+
 	// initialize A and B
     // srand(time(NULL));
 	srand(1);
 	rand_init(In, Cin, Hin*Win);
 	rand_init(F, Cout, Wf*Hf*Cin);
+	// print_filters(F, Wf, Hf, Cin, Cout);
+
+	// printf("original data\n\n");
+	// for(int i = 0; i < Cout*Wf*Hf*Cin; i++) {
+	// 	printf("%f ", F[i]);
+	// }
+	// printf("original data\n\n");
 
 
-	
+	for(int i = 0; i < Cout*Cin*Wf*Hf; i++) {
+		F1[i] = F[i];
+	}
+
+	// int ee = 0;
+	// for(int m = 0; m < Cout; m++) {
+	// 	for(int k = 0; k < Cin; k++)  {
+	// 		for(int j = 0; j < Wf*Hf; j++) {
+	// 			F[ee] = F1[m*Cin*Wf*Hf + j*Cin + k];
+	// 			ee++;
+	// 		}
+	// 	}
+	// }
+
+// F[0] = 0.893281;
+// F[1] = 0.731358;
+// F[2] = 0.437333;
+// F[3] = -0.631868;
+// F[4] = -0.665669;
+// F[5] = 0.252250;
+// F[6] = -0.746662;
+// F[7] = 0.893849;
+// F[8] = -0.678351;
+// F[9] = -0.755348;
+// F[10] = 0.246389;
+// F[11] = 0.849079;
+// F[12] = -0.435432;
+// F[13] = -0.594046;
+// F[14] = -0.647522;
+// F[15] = -0.544896;
+// F[16] = -0.972268;
+// F[17] = -0.760021;
+
+	// printf("after data\n\n");
+	// for(int i = 0; i < Cout*Wf*Hf*Cin; i++) {
+	// 	printf("%f ", F[i]);
+	// }
+	// printf("after data\n\n");
+
 	int ntrials = 1;
 	double ret = 0;
 	clock_gettime(CLOCK_REALTIME, &start);
@@ -831,9 +989,8 @@ int main( int argc, char** argv ) {
 	printf("conv time: %f \n", ret / ntrials); 
 
 	// print_mat(F, Cout, Cin*Wf*Hf);
-	// print_filters(F, Wf, Hf, Cin, Cout);
 	// print_feature_map(In, Win, Hin, Cin);
-	print_feature_map(Out, Wout, Hout, Cout);
+	// print_feature_map(Out, Wout, Hout, Cout);
 
 	// free(Out);
 
@@ -853,8 +1010,12 @@ int main( int argc, char** argv ) {
 
 	printf("\n\nM = %d, K = %d, N = %d, cores = %d\n", M,K,N,p);
 
+
 	float* B = im_2_col(In, Wf, Hf, Win, Hin, Wout, Hout, Cin, Cout, s);
-	// print_mat(B, K, N);
+	// for(int i = 0; i < N*K; i++) {
+	// 	printf("%f ", B[i]);
+	// }
+	// printf("\n\n");
 	// float* A = (float*) calloc(M * K , sizeof( float ));
 	// float* B = (float*) calloc(K * N , sizeof( float ));
 	float* C = (float*) calloc(M * N , sizeof( float ));
@@ -865,20 +1026,26 @@ int main( int argc, char** argv ) {
 	enum sched sch = KMN;
 	blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
 	init_block_dims(M, N, K, p, x, cake_cntx, sch, argv, 0);
+	// init_block_dims_conv(Wf, Hf, Win, Hin, Wout, Hout, 
+		// Cin, Cout, s, p, x, cake_cntx, sch, argv, 0);
+
 	int A_sz = cake_sgemm_packed_A_size(M, K, p, x, cake_cntx, sch);	
 	if(posix_memalign((void**) &A_p, 64, A_sz)) {
 		printf("posix memalign error\n");
 		exit(1);
 	}
-	pack_A(F, A_p, M, K, p, x, cake_cntx, sch);
+	// pack_filters(F, A_p, Cout, Cin*Wf*Hf, p, x, cake_cntx);
+	pack_A(F1, A_p, M, K, p, x, cake_cntx, sch);
+	printf("HEYYYY\n");
 
 
+
+	// init_block_dims(M, N, K, p, x, cake_cntx, sch, argv, 0);
     int B_sz = cake_sgemm_packed_B_size(K, N, p, x, cake_cntx);
 	if(posix_memalign((void**) &B_p, 64, B_sz)) {
 		printf("posix memalign error\n");
 		exit(1);
 	}
-	
 	pack_B(B, B_p, K, N, p, x, cake_cntx, sch);
 
 	ret = 0;
@@ -894,8 +1061,67 @@ int main( int argc, char** argv ) {
     diff_t = seconds + nanoseconds*1e-9;
 	printf("sgemm time: %f \n", ret / ntrials); 
 
-	print_mat(C, M, N);
+
+	// print_mat(C, M, N);
 	conv_gemm_checker(Out, C, M, N);
+
+
+
+
+
+
+
+	// M = 312;
+	// K = 312;
+	// N = 312;
+
+	// float* A = (float*) calloc(M * K , sizeof( float ));
+	// float* B = (float*) calloc(K * N , sizeof( float ));
+	// float* C = (float*) calloc(M * N , sizeof( float ));
+	
+	// rand_init(A, M, K);
+	// rand_init(B, K, N);
+	// // float *A_p, *B_p;
+	// // enum sched sch = KMN;
+	// // blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
+	// // init_block_dims(M, N, K, p, x, cake_cntx, sch, argv, 0);
+	// // int A_sz = cake_sgemm_packed_A_size(M, K, p, x, cake_cntx, sch);	
+	// // if(posix_memalign((void**) &A_p, 64, A_sz)) {
+	// // 	printf("posix memalign error\n");
+	// // 	exit(1);
+	// // }
+	// // pack_A(A, A_p, M, K, p, x, cake_cntx, sch);
+
+
+ // //    int B_sz = cake_sgemm_packed_B_size(K, N, p, x, cake_cntx);
+	// // if(posix_memalign((void**) &B_p, 64, B_sz)) {
+	// // 	printf("posix memalign error\n");
+	// // 	exit(1);
+	// // }
+	
+	// // pack_B(B, B_p, K, N, p, x, cake_cntx, sch);
+
+	// ret = 0;
+ //    clock_gettime(CLOCK_REALTIME, &start);
+
+	// for(int i = 0; i < ntrials; i++) {
+	// 	// ret += cake_sgemm(A_p, B_p, C, M, N, K, p, cake_cntx, NULL, 1, 1, 1, 0, KMN);
+	// 	ret += cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
+
+	// }
+
+ //    clock_gettime(CLOCK_REALTIME, &end);
+ //     seconds = end.tv_sec - start.tv_sec;
+ //     nanoseconds = end.tv_nsec - start.tv_nsec;
+ //    diff_t = seconds + nanoseconds*1e-9;
+	// printf("sgemm time: %f \n", diff_t / ntrials); 
+
+
+
+
+
+
+
 
 	free(F);
 	free(In);
@@ -961,10 +1187,10 @@ float* im_2_col(float* In, int Wf, int Hf, int Win, int Hin,
 
 	for(int h1 = 0; h1 < Hout; h1++) {
 		for(int w1 = 0; w1 < Wout; w1++) {
+					for(int k = 0; k < Cin; k++) {
 
 			for(int h = 0; h < Hf; h++) {
 				for(int  w = 0; w < Wf; w++) {
-					for(int k = 0; k < Cin; k++) {
 						tmp[ind] = In[k*Hin*Win + w1 + h1*Win + w + h*Win];
 						ind++;
 					}
