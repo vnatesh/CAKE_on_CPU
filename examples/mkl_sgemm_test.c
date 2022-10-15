@@ -26,9 +26,7 @@ int main(int argc, char* argv[])  {
         exit(1);
     }
 
-     //int p = atoi(argv[1]);
-    // mkl_set_num_threads(atoi(argv[1]));
-    int p = 10;
+    int p = atoi(argv[4]);
     mkl_set_num_threads(p);
 
     float *A, *B, *C;

@@ -338,6 +338,7 @@ def plot_internal_bw_cpu(cpu):
 	int_bw_intel = get_LLC_pmbw('ScanWrite64PtrUnrollLoop', 2**24, 'stats.txt', 10)
 	int_bw_arm = get_LLC_pmbw('ScanWrite64PtrUnrollLoop', 2**18, 'stats_arm.txt', 4)
 	int_bw_amd = get_LLC_pmbw('ScanWrite64PtrUnrollLoop', 2**24, 'stats_amd.txt', 16)
+	int_bw_server = get_LLC_pmbw('ScanWrite64PtrUnrollLoop', 2**25, 'stats_fas.txt', 10)
 	#
 	if 'Intel' in cpu:
 		NUM_CPUs = list(range(1,11))

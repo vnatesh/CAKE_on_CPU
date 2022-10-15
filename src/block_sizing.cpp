@@ -117,8 +117,23 @@ int get_num_physical_cores() {
 	}
 	
 
+	char ret3[16];
+	char command3[128];
+
+	sprintf(command3, "lscpu | grep Socket -m 1 | tr -dc '0-9'");
+	fp = popen(command3, "r");
+
+	if (fp == NULL) {
+		printf("Failed to run lscpu1 command\n" );
+		exit(1);
+	}
+
+	if(fgets(ret3, sizeof(ret3), fp) == NULL) {
+		printf("lscpu error\n");
+	}
+
 	pclose(fp);
-	return atoi(ret1) / atoi(ret2);
+	return atoi(ret1) / (atoi(ret2)*atoi(ret3));
 }
 
 
@@ -158,6 +173,8 @@ int get_cache_size(int level) {
 				return (512 * (1 << 10));
 			case 69:
 				return (256 * (1 << 10));
+			case 85:
+				return (1024 * (1 << 10));
 			case 142:
 				return (256 * (1 << 10));
 			case 165:
@@ -177,6 +194,8 @@ int get_cache_size(int level) {
 				return (128 * (1 << 20));
 			case 69:
 				return (4 * (1 << 20));
+			case 85:
+				return (36608 * (1 << 10));
 			case 142:
 				return (8 * (1 << 20));
 			case 165:
