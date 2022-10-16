@@ -171,6 +171,8 @@ int get_cache_size(int level) {
 				return (32 * (1 << 10));
 			case 17:
 				return (512 * (1 << 10));
+			case 33:
+				return (512 * (1 << 10));
 			case 49:
 				return (512 * (1 << 10));
 			case 69:
@@ -194,6 +196,8 @@ int get_cache_size(int level) {
 				return (1 * (1 << 20));
 			case 17:
 				return (4 * (1 << 20));
+			case 33:
+				return (64 * (1 << 20));
 			case 49:
 				return (128 * (1 << 20));
 			case 69:
