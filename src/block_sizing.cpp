@@ -430,8 +430,8 @@ enum sched derive_schedule(int M, int N, int K, int p,
 	N_cut_M = M / (1.0 + (M * ((1.0/n) - (1.0/m))));
 	M_cut_N = N / (1.0 + (N * ((1.0/m) - (1.0/n))));
 
-	printf("K_cut_M %f K_cut_N %f N_cut_M %f M_cut_N %f\n",K_cut_M,
-	 K_cut_N,N_cut_M,M_cut_N);
+	// printf("K_cut_M %f K_cut_N %f N_cut_M %f M_cut_N %f\n",K_cut_M,
+	//  K_cut_N,N_cut_M,M_cut_N);
 	// IO optimal schedule based on input parameters M,K,N,m,k,n
 	if((N <= N_cut_M) && (K <= K_cut_M)) {
 		return MKN;
