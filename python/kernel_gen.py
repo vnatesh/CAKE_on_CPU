@@ -405,21 +405,21 @@ void cake_sgemm_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k);
 									''' % (arch, i*2,j*fact, arch, i*2,j*fact)	
 	sparse_arr = []
 	dense_arr = []
-	for i in range(1,11):
+	for i in range(1,m_lim//2 + 1):
 		sparse_arr.append('''
 	{'''+','.join(['cake_sp_sgemm_%s_%dx%d' % (arch, i*2,j*fact) for j in range(1,n_lim//fact + 1)]) + '}')
 		dense_arr.append('''
 	{'''+','.join(['cake_sgemm_%s_%dx%d' % (arch, i*2,j*fact) for j in range(1,n_lim//fact + 1)]) + '}')	
 	ret += '''
-static cake_sp_sgemm_%s* kernel_map_sp[10][6] = 
+static cake_sp_sgemm_%s* kernel_map_sp[%d][%d] = 
 {
-	''' % arch
+	''' % (arch, m_lim//2, n_lim//fact)
 	ret += ','.join(sparse_arr) + '''
 };'''
 	ret += '''
-static cake_sgemm_%s* kernel_map[10][6] = 
+static cake_sgemm_%s* kernel_map[%d][%d] = 
 {
-	''' % arch
+	''' % (arch, m_lim//2, n_lim//fact)
 	ret += ','.join(dense_arr) + '''
 };'''
 	f = open("include/kernels.h", 'r+')
