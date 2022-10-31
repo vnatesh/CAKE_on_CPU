@@ -2,7 +2,7 @@
 
 
 
-int cake_sgemm_packed_A_size(int M, int K, int p, blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch) {
+size_t cake_sgemm_packed_A_size(int M, int K, int p, blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch) {
 
 	int mr_rem, M_padded;
 
@@ -37,7 +37,7 @@ int cake_sgemm_packed_A_size(int M, int K, int p, blk_dims_t* x, cake_cntx_t* ca
 
 
 
-int cake_sgemm_packed_B_size(int K, int N, int p, blk_dims_t* x, cake_cntx_t* cake_cntx) {
+size_t cake_sgemm_packed_B_size(int K, int N, int p, blk_dims_t* x, cake_cntx_t* cake_cntx) {
 	
 	int nr_rem = (int) ceil( ((double) (N % x->n_c) / cake_cntx->nr)) ;
 	int n_c1 = nr_rem * cake_cntx->nr;
@@ -48,7 +48,7 @@ int cake_sgemm_packed_B_size(int K, int N, int p, blk_dims_t* x, cake_cntx_t* ca
 
 
 
-int cake_sgemm_packed_C_size(int M, int N, int p, blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch) {
+size_t cake_sgemm_packed_C_size(int M, int N, int p, blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch) {
 
 	int mr_rem, M_padded;
 

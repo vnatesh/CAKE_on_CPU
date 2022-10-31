@@ -350,15 +350,17 @@ void rand_gaussian(float* mat, int r, int c) {
 
 // randomized sparse Normal(0,1) matrix with sparsity % of values determined by sigma (std dev)
 void rand_sparse_gaussian(float* mat, int r, int c, float mu, float sigma) {
-
+	int nnz = 0;
 	for(int i = 0; i < r*c; i++) {
 		float x = normalRandom()*sigma+mu;
 		if(fabs(x) <= 2) { // 2 sigmas i.e. 95% sparse
 			mat[i] = 0;
 		} else {
 			mat[i] =  x;
+			nnz++;
 		}
 	}	
+	printf("nnz = %d\n", nnz);
 }
 
 

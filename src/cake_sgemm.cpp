@@ -18,7 +18,7 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	// 	return 1;
 	// }
 
-	int A_sz, B_sz, C_sz;	
+	size_t A_sz, B_sz, C_sz;	
 	struct timespec start, end, start1, end1;
 	long seconds, nanoseconds;
 	double diff_t, times;
@@ -147,7 +147,7 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	float alpha, float beta, enum sched sch) {
 
 
-	int A_sz, B_sz, C_sz;	
+	size_t A_sz, B_sz, C_sz;	
 	struct timespec start, end, start1, end1;
 	long seconds, nanoseconds;
 	double diff_t, times;
@@ -283,7 +283,7 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 bool cake_gemm_small(float* A, float* B, float* C, int M, int N, int K, int p, 
 	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, char* argv[]) {
 
-	// int A_sz, B_sz, C_sz;	
+	// size_t A_sz, B_sz, C_sz;	
 	// struct timespec start, end;
 	// long seconds, nanoseconds;
 	// double diff_t;
