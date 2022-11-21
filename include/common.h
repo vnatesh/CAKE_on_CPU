@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #ifdef USE_BLIS
 #include "blis.h"
@@ -23,7 +25,7 @@
 #endif
 
 
-#define DEBUG 0
+#define DEBUG 1
 #define ARR_PRINT 0
 #define CHECK_PRINT 0
 

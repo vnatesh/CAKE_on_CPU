@@ -333,10 +333,10 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 		printf("sparsity-aware tiling\n");
 		double a_coeff = (density/cake_cntx->mr) * ((int) ceil(density * cake_cntx->mr)) ;
 
-		mc_L2 = (int)  ((-b + sqrt(b*b + 4*a_coeff*(((double) cake_cntx->L2) / (sizeof(float))))) / (2.0*a_coeff)) ;
+		mc_L2 = (int)  ((-b + sqrt(b*b + 4*a_coeff*(((double) cake_cntx->L2) / (type_size)))) / (2.0*a_coeff)) ;
 		mc_L2 -= (mc_L2 % cake_cntx->mr);
 
-		mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (sizeof(float)))  
+		mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (type_size))  
 		/ (max_threads * (a_coeff + cake_cntx->alpha_n + cake_cntx->alpha_n*max_threads)));
 		mc_L3 -= (mc_L3 % cake_cntx->mr);
 

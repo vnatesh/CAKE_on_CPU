@@ -280,6 +280,152 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 
 
+
+
+
+
+double cake_sgemm_test(float* A, float* B, float* C, int M, int N, int K, int p, 
+	cake_cntx_t* cake_cntx, char* argv[], bool packedA, bool packedB, float alpha, float beta, enum sched sch) {
+
+	sch = KMN;
+
+	if(cake_cntx == NULL) {
+		cake_cntx = cake_query_cntx();
+	}
+
+	blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
+	omp_set_num_threads(p);
+
+	// if(cake_gemm_small(A, B, C, M, N, K, p, x, cake_cntx, sch)) {
+	// 	return 1;
+	// }
+
+	size_t A_sz, B_sz, C_sz;	
+	struct timespec start, end, start1, end1;
+	long seconds, nanoseconds;
+	double diff_t, times;
+	float *A_p, *B_p, *C_p;
+
+
+	clock_gettime(CLOCK_REALTIME, &start1);
+
+	init_block_dims(M, N, K, p, x, cake_cntx, sch, argv, 0);
+	sch = x->sch;
+
+    if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
+    if(DEBUG) printf("mc = %d, kc = %d, nc = %d, alpha_n = %f\n", x->m_c, x->k_c, x->n_c, cake_cntx->alpha_n);
+    if(DEBUG) print_schedule(sch);
+
+	if(packedA) {
+		A_p = A;
+	} else {
+
+		clock_gettime(CLOCK_REALTIME, &start);
+
+		A_sz = cake_sgemm_packed_A_size(M, K, p, x, cake_cntx, sch);
+		if(posix_memalign((void**) &A_p, 64, A_sz)) {
+			printf("posix memalign error\n");
+			exit(1);
+		}
+
+		pack_A_single_buf_k_first_blis(A, A_p, M, K, p, x, cake_cntx);
+
+		clock_gettime(CLOCK_REALTIME, &end);
+		seconds = end.tv_sec - start.tv_sec;
+		nanoseconds = end.tv_nsec - start.tv_nsec;
+		diff_t = seconds + nanoseconds*1e-9;
+		if(DEBUG) printf("A pack time blis: %f \n", diff_t ); 
+	}
+
+	if(packedB) {
+		B_p = B;
+	} else {
+
+		clock_gettime(CLOCK_REALTIME, &start);
+
+	    B_sz = cake_sgemm_packed_B_size(K, N, p, x, cake_cntx);
+		if(posix_memalign((void**) &B_p, 64, B_sz)) {
+			printf("posix memalign error\n");
+			exit(1);
+		}
+
+		pack_B_k_first_blis(B, B_p, K, N, x, cake_cntx);
+
+	    clock_gettime(CLOCK_REALTIME, &end);
+	    seconds = end.tv_sec - start.tv_sec;
+	    nanoseconds = end.tv_nsec - start.tv_nsec;
+	    diff_t = seconds + nanoseconds*1e-9;
+		if(DEBUG) printf("B pack time blis: %f \n", diff_t ); 
+	}
+
+
+	// C = alpha*A*B + beta*C. If beta is !=0, we must explicitly pack C, 
+	// otherwise just allocate an empty C_p buffer
+	if(beta != 0) {
+
+		clock_gettime(CLOCK_REALTIME, &start);
+
+	    C_sz = cake_sgemm_packed_C_size(M, N, p, x, cake_cntx, sch);
+		if(posix_memalign((void**) &C_p, 64, C_sz)) {
+			printf("posix memalign error\n");
+			exit(1);
+		}
+
+		pack_C(C, C_p, M, N, p, x, cake_cntx, sch);
+
+	    clock_gettime(CLOCK_REALTIME, &end);
+	    seconds = end.tv_sec - start.tv_sec;
+	    nanoseconds = end.tv_nsec - start.tv_nsec;
+	    diff_t = seconds + nanoseconds*1e-9;
+		if(DEBUG) printf("C pack time: %f \n", diff_t ); 
+
+	} else {
+	    C_sz = cake_sgemm_packed_C_size(M, N, p, x, cake_cntx, sch) / sizeof(float);
+	    C_p = (float*) calloc(C_sz, sizeof(float));
+	}
+
+	clock_gettime(CLOCK_REALTIME, &start);
+
+	// schedule_KMN_C_unpacked(A_p, B_p, C_p, M, N, K, p, cake_cntx, x);
+	schedule(A_p, B_p, C_p, M, N, K, p, cake_cntx, x, sch, 0, 0);
+
+    clock_gettime(CLOCK_REALTIME, &end);
+    seconds = end.tv_sec - start.tv_sec;
+    nanoseconds = end.tv_nsec - start.tv_nsec;
+    diff_t = seconds + nanoseconds*1e-9;
+	if(DEBUG) printf("GEMM time: %f \n", diff_t); 	// exit(1);
+
+	times = diff_t;
+
+	clock_gettime(CLOCK_REALTIME, &start);
+
+	unpack_C(C, C_p, M, N, p, x, cake_cntx, sch); 
+    // cake_sgemm_checker(A, B, C_p, N, M, K);
+
+    clock_gettime(CLOCK_REALTIME, &end);
+    seconds = end.tv_sec - start.tv_sec;
+    nanoseconds = end.tv_nsec - start.tv_nsec;
+    diff_t = seconds + nanoseconds*1e-9;
+	if(DEBUG) printf("unpacking time: %f \n", diff_t); 	// exit(1);
+
+    clock_gettime(CLOCK_REALTIME, &end1);
+    seconds = end1.tv_sec - start1.tv_sec;
+    nanoseconds = end1.tv_nsec - start1.tv_nsec;
+    diff_t = seconds + nanoseconds*1e-9;
+	if(DEBUG) printf("full gemm time: %f \n", diff_t); 	// exit(1);
+
+	if(!packedA) free(A_p);
+	if(!packedB) free(B_p);
+	free(C_p);
+	free(x);
+
+
+	return times;
+}
+
+
+
+
 bool cake_gemm_small(float* A, float* B, float* C, int M, int N, int K, int p, 
 	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, char* argv[]) {
 
