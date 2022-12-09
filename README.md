@@ -6,9 +6,9 @@ This repository contains an implementation of the CAKE algorithm for CPUs. The l
 ```bash
 git clone https://github.com/vnatesh/CAKE_on_CPU.git
 cd CAKE_on_CPU
-make install
 source env.sh
-make build
+./install.sh
+make
 sudo ldconfig $CAKE_HOME
 ```
 
