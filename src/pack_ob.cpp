@@ -421,6 +421,52 @@ void pack_ob_B_single_buf(float* B, float* B_p, int K, int N, int n1,
 
 
 
+
+
+
+
+void pack_ob_B_parallel(float* B, float* B_p, int K, int N, int n1,
+            int k_c, int n_c, int n_r, bool pad_n) {
+
+
+   int ind_ob, n2;
+
+   if(pad_n) {
+      #pragma omp parallel for private(n2, ind_ob)
+      for(n2 = 0; n2 < n_c; n2 += n_r) {
+         ind_ob = 0;
+         for(int i = 0; i < k_c; i++) {
+            for(int j = 0; j < n_r; j++) {
+               if((n1 + n2 + j) >=  N) {
+                  B_p[n2*k_c + ind_ob] = 0.0;
+               } else {
+            // B_p[ind1 + local_ind + (k1/k_c)*k_c*n_c1] = B[n1 + k1*N + n2 + i*N + j];
+                  B_p[n2*k_c + ind_ob] = B[n2 + i*N + j];
+               }
+               ind_ob++;
+            }
+         }
+      }
+   }
+
+   else {
+      #pragma omp parallel for private(n2, ind_ob)
+      for(n2 = 0; n2 < n_c; n2 += n_r) {
+         ind_ob = 0;
+         for(int i = 0; i < k_c; i++) {
+            for(int j = 0; j < n_r; j++) {
+               B_p[n2*k_c + ind_ob] = B[n2 + i*N + j];
+               ind_ob++;
+            }
+
+   // _mm256_store_ps (&B_p[ind_ob], _mm256_load_ps(&B[n2 + i*N]));
+   // _mm256_store_ps (&B_p[ind_ob + 8], _mm256_load_ps(&B[n2 + i*N + 8]));
+   // ind_ob += n_r;
+         }
+      }
+   }
+}
+
 // void pack_ob_C_single_buf(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
 //             int m_c, int n_c, int m_r, int n_r, bool pad_m, bool pad_n) {
 

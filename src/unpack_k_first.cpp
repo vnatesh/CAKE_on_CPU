@@ -35,11 +35,11 @@ void unpack_C_single_buf_k_first(float* C, float* C_p, int M, int N, int p, blk_
          if((m == Mb - 1) && m_pad) {
             p_used = p_l;
             m_cb = m_r*mr_rem ; 
-			m1 = (M - (M % (p*m_c)));
+			   m1 = (M - (M % (p*m_c)));
          } else {
             p_used = p;
             m_cb = p_used*m_c;
-			m1 = m*p*m_c;
+			   m1 = m*p*m_c;
          }
 
          C_offset = m*p*m_c*N + n*n_c;

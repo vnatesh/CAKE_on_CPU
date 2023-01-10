@@ -43,6 +43,8 @@ void pack_ob_C_single_buf(float* C, float* C_p, int M, int N, int m1, int n1, in
 void pack_ob_A_multiple_buf(float* A, float* A_p, int M, int K, int m1, int k1, int m2, int m_c, int k_c, int m_r, bool pad) ;
 void pack_ob_C_multiple_buf(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
 				int m_c, int n_c, int m_r, int n_r, bool pad);
+void pack_ob_B_parallel(float* B, float* B_p, int K, int N, int n1,
+            int k_c, int n_c, int n_r, bool pad_n);
 
 
 

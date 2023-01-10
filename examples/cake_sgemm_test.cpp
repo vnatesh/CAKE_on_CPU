@@ -1,5 +1,6 @@
-#include "cake.h"
 
+
+#include "cake.h"
 
 
 
@@ -13,6 +14,7 @@ int main( int argc, char** argv ) {
 
 	int M, K, N, p;
 	struct timespec start, end;
+    long seconds, nanoseconds;
 	double diff_t;
 
 	M = atoi(argv[1]);
@@ -38,30 +40,83 @@ int main( int argc, char** argv ) {
 	rand_init(B, K, N);
 
 	cake_cntx_t* cake_cntx = cake_query_cntx();
-	
+		update_mr_nr(cake_cntx, 20, 96);
+
 //	cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
 	
 	clock_gettime(CLOCK_REALTIME, &start);
 
-	cake_sp_sgemm(A, B, C, M, N, K, p, cake_cntx, 1-sparsity);
-
-    clock_gettime(CLOCK_REALTIME, &end);
-    long seconds = end.tv_sec - start.tv_sec;
-    long nanoseconds = end.tv_nsec - start.tv_nsec;
-    diff_t = seconds + nanoseconds*1e-9;
-	printf("sp_sgemm time: %f \n", diff_t); 
-
-
-	clock_gettime(CLOCK_REALTIME, &start);
-
-	cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
+	// cake_sp_sgemm(A, B, C, M, N, K, p, cake_cntx, 1-sparsity);
 
     clock_gettime(CLOCK_REALTIME, &end);
      seconds = end.tv_sec - start.tv_sec;
      nanoseconds = end.tv_nsec - start.tv_nsec;
     diff_t = seconds + nanoseconds*1e-9;
-	printf("sgemm time: %f \n", diff_t); 
+	printf("sp_sgemm time: %f \n", diff_t); 
 
+
+
+
+	update_mr_nr(cake_cntx, 6, 16);
+
+    int ntrials = atoi(argv[5]);
+    float ressss;
+    float tttmp[18];
+    int flushsz=100000000;
+    diff_t = 0.0;
+
+
+    for(int i = 0; i < ntrials; i++) {
+
+
+        float *dirty = (float *)malloc(flushsz * sizeof(float));
+        #pragma omp parallel for
+        for (int dirt = 0; dirt < flushsz; dirt++){
+            dirty[dirt] += dirt%100;
+            tttmp[dirt%18] += dirty[dirt];
+        }
+
+        for(int ii =0; ii<18;ii++){
+            ressss+= tttmp[ii];
+        }
+
+
+		clock_gettime(CLOCK_REALTIME, &start);
+
+		// diff_t += cake_sgemm(A, B, C, M, N, K, p, cake_cntx, argv, 0, 0, 1, 0, KMN);
+		// diff_t += cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
+		// cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
+		// cake_sgemm(A, B, C, M, N, K, p, cake_cntx, argv, 0, 0, 1, 0, KMN);
+		cake_sgemm_online_test(A, B, C, M, N, K, p, cake_cntx, argv, 0, 0, 1, 0, KMN);
+		// cake_sgemm_online_test(A, B, C, M, N, K, p, cake_cntx);
+
+		// cake_sgemm_small_test(A, B, C, M, N, K, p, cake_cntx, argv, 0, 0, 1, 0, KMN);
+
+	    clock_gettime(CLOCK_REALTIME, &end);
+         seconds = end.tv_sec - start.tv_sec;
+         nanoseconds = end.tv_nsec - start.tv_nsec;
+        diff_t = seconds + nanoseconds*1e-9;
+	    printf("cake_sgemm_online_test time: %f \n", diff_t); 
+
+
+		clock_gettime(CLOCK_REALTIME, &start);
+
+		cake_sgemm(A, B, C, M, N, K, p, cake_cntx, argv, 0, 0, 1, 0, KMN);
+		// cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
+
+		
+	    clock_gettime(CLOCK_REALTIME, &end);
+         seconds = end.tv_sec - start.tv_sec;
+         nanoseconds = end.tv_nsec - start.tv_nsec;
+        diff_t = seconds + nanoseconds*1e-9;
+	    printf("cake_sgemm time: %f \n", diff_t); 
+
+
+        free(dirty);
+    }
+
+
+    printf("cake_sgemm time: %f \n", diff_t / ntrials); 
 
 	cake_sgemm_checker(A, B, C, N, M, K);
 	
