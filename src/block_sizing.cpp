@@ -414,7 +414,7 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 			int div = M / p;
 			blk_ret->m_c = (div % cake_cntx->mr) ? (div + (cake_cntx->mr - (div % cake_cntx->mr))) : div;
 
-			int kc_max = ((32768/4) - 96) / (cake_cntx->mr + cake_cntx->nr);
+			int kc_max = ((32768 / type_size) - cake_cntx->mr*cake_cntx->nr) / (cake_cntx->mr + cake_cntx->nr);
 			blk_ret->k_c = K < kc_max ? K : kc_max;
 			blk_ret->n_c = (N % cake_cntx->nr) ? (N + (cake_cntx->nr - (N % cake_cntx->nr))) : N;
 		}
