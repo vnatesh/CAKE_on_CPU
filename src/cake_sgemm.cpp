@@ -112,7 +112,7 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
     diff_t = seconds + nanoseconds*1e-9;
 	if(DEBUG) printf("GEMM time: %f \n", diff_t); 	// exit(1);
 
-	times = diff_t;
+	// times = diff_t;
 
 	clock_gettime(CLOCK_REALTIME, &start);
 
@@ -135,8 +135,8 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	free(C_p);
 	free(x);
 
-
-	return times;
+	return diff_t;
+	// return times;
 }
 
 
@@ -279,9 +279,7 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 
 
-
-
-double cake_sgemm_online_test(float* A, float* B, float* C, int M, int N, int K, int p, 
+double cake_sgemm_online(float* A, float* B, float* C, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, char* argv[], bool packedA, bool packedB, float alpha, float beta, enum sched sch) {
 
 
@@ -334,7 +332,7 @@ double cake_sgemm_online_test(float* A, float* B, float* C, int M, int N, int K,
 	
 	clock_gettime(CLOCK_REALTIME, &start);
 
-	schedule_KMN_online_pack(A, B, C, A_p, B_p, C_p, M, N, K, p, cake_cntx, x);
+	schedule_KMN_online(A, B, C, A_p, B_p, C_p, M, N, K, p, cake_cntx, x);
 
     clock_gettime(CLOCK_REALTIME, &end);
     seconds = end.tv_sec - start.tv_sec;
@@ -344,28 +342,12 @@ double cake_sgemm_online_test(float* A, float* B, float* C, int M, int N, int K,
 
 	times = diff_t;
 
-	clock_gettime(CLOCK_REALTIME, &start);
 
-	// unpack_C(C, C_p, M, N, p, x, cake_cntx, sch); 
-
-    clock_gettime(CLOCK_REALTIME, &end);
-    seconds = end.tv_sec - start.tv_sec;
-    nanoseconds = end.tv_nsec - start.tv_nsec;
-    diff_t = seconds + nanoseconds*1e-9;
-	if(DEBUG) printf("unpacking time: %f \n", diff_t); 	// exit(1);
-
-    clock_gettime(CLOCK_REALTIME, &end1);
-    seconds = end1.tv_sec - start1.tv_sec;
-    nanoseconds = end1.tv_nsec - start1.tv_nsec;
-    diff_t = seconds + nanoseconds*1e-9;
-	if(DEBUG) printf("full gemm time: %f \n", diff_t); 	// exit(1);
-
-
-	for(int i = 0; i < p; i++)
+	for(int i = 0; i < p; i++) {
 		free(A_p[i]);
-	free(B_p);
-	for(int i = 0; i < p; i++)
 		free(C_p[i]);
+	}
+	free(B_p);
 	free(x);
 
 	return times;

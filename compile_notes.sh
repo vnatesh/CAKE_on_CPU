@@ -43,6 +43,9 @@ echo "Linking blis_test against '/tmp/CAKE_on_CPU/blis/lib/haswell/libblis.a  -l
 g++ blis_test.o /tmp/CAKE_on_CPU/blis/lib/haswell/libblis.a  -lm -lpthread -fopenmp -lrt -o blis_test
 
 
+g++ blis_test.o /tmp/CAKE_on_CPU/blis/lib/haswell/libblis-mt.a  -lm -lpthread -fopenmp -lrt -o blis_test
+
+
 # compile blis on raspberry pi 3b+ (coretx a53)
 gcc -g -O2 -std=c99 -Wall -Wno-unused-function -Wfatal-errors -fPIC  -D_POSIX_C_SOURCE=200112L -fopenmp -I/home/ubuntu/CAKE_on_CPU/include/blis -DBLIS_VERSION_STRING=\"0.8.1-67\" -I. -c blis_test.c -o blis_test.o
 echo "Linking blis_test against '/home/ubuntu/CAKE_on_CPU/blis/lib/cortexa53/libblis.a  -lm -lpthread -fopenmp -lrt'"

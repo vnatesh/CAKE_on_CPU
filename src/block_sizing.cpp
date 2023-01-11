@@ -403,7 +403,23 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 		blk_ret->m_c = mc_ret;
 		blk_ret->k_c = mc_ret;
 		blk_ret->n_c = nc_ret;
+
+		// blk_ret->m_c = mc_ret;
+		// blk_ret->k_c = 200;
+		// blk_ret->n_c = 1024;
+
+
+		if(cake_cntx->L3 >= 4*(M*K + K*N + M*N)) {
+
+			int div = M / p;
+			blk_ret->m_c = (div % cake_cntx->mr) ? (div + (cake_cntx->mr - (div % cake_cntx->mr))) : div;
+
+			int kc_max = ((32768/4) - 96) / (cake_cntx->mr + cake_cntx->nr);
+			blk_ret->k_c = K < kc_max ? K : kc_max;
+			blk_ret->n_c = (N % cake_cntx->nr) ? (N + (cake_cntx->nr - (N % cake_cntx->nr))) : N;
+		}
 	}
+
 
 
 	return blk_ret;

@@ -135,7 +135,7 @@ CFLAGS 	:= $(filter-out -std=c99, $(CFLAGS_tmp))
 
 LIBS ?=
 #LIBDIR += -L. -L$(SYSTEMC_HOME)/lib-linux64 -L$(BOOST_HOME)/lib
-LIBS += $(BLIS_INSTALL_PATH)/lib/libblis.a 
+LIBS += $(BLIS_INSTALL_PATH)/lib/libblis-mt.a 
 
 #
 # --- Targets/rules ------------------------------------------------------------
