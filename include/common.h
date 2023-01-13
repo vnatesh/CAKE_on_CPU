@@ -25,7 +25,7 @@
 #endif
 
 
-#define DEBUG 1
+#define DEBUG 0
 #define ARR_PRINT 0
 #define CHECK_PRINT 0
 
@@ -46,6 +46,8 @@ typedef struct blk_dims_t {
 	int nr_rem;
 	int k_rem;
 	int p_l;
+	int pm;
+	int pn;
 	int m_pad;
 	int k_pad;
 	int n_pad;

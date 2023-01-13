@@ -587,6 +587,65 @@ void init_block_dims(int M, int N, int K, int p,
 
 
 
+void init_block_dims_2d(int M, int N, int K, int p, 
+	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
+	char* argv[], float density, float type_size) {
+
+	int m_r = cake_cntx->mr;
+	int n_r = cake_cntx->nr;
+
+	// int pn = (int) ceil(sqrt(((double) p*N) / M));
+	// int pm = p / pn;
+	int pn = 5;
+	int pm = 2;
+
+	// int pn = 2;
+	// int pm = 2;
+
+	int M_padded = (M % m_r) ? (M + (m_r - (M % m_r))) : M;
+	int N_padded = (N % n_r) ? (N + (n_r - (N % n_r))) : N;
+	int kc_max = ((32768 / type_size) - m_r*n_r) / (m_r + n_r); // based on L1 cache size 32K on i9
+
+
+	int m_c = (M_padded / pm);
+	m_c += (m_r - (m_c % m_r));
+	int n_c = (N_padded / pn);
+	n_c += (n_r - (n_c % n_r));
+	int k_c = K < kc_max ? K : kc_max;
+
+	// int m_c = m_r;
+	int k_c = 200;
+	// int n_c = n_r;
+
+	int m_c1 = M_padded - (pm - 1)*m_c;
+	int n_c1 = N_padded - (pn - 1)*n_c;
+	int k_c1 = K % k_c;
+
+	// printf("m_c1 = %d, n_c1 = %d, k_c1 = %d\n",m_c1,n_c1,k_c1);
+
+	x->M_padded = M_padded;
+	x->N_padded = N_padded;
+
+
+    x->m_c = m_c;
+	x->k_c = k_c;
+    x->n_c = n_c;
+
+    x->m_c1 = m_c1;
+	x->k_c1 = k_c1;
+    x->n_c1 = n_c1;
+
+	x->k_pad = (K % x->k_c) ? 1 : 0; 
+	x->n_pad = (N % x->n_c) ? 1 : 0; 
+	x->m_pad = (M % x->m_c) ? 1 : 0; 
+	x->Kb = (K / x->k_c) + x->k_pad;
+
+	x->pm = pm;
+	x->pn = pn;
+	x->sch = sch;
+}
+
+
 // least common multiple
 int lcm(int n1, int n2) {
 	int max = (n1 > n2) ? n1 : n2;

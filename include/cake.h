@@ -27,12 +27,17 @@ void schedule_KMN_online(float* A, float* B, float* C, float** A_p, float* B_p, 
 	cake_cntx_t* cake_cntx, blk_dims_t* x);
 void schedule_KMN_C_unpacked(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, blk_dims_t* x);
+void schedule_KMN_2d(float* A, float* B, float* C, float* A_p, float* B_p, float** C_p, int M, int N, int K, int p, 
+	cake_cntx_t* cake_cntx, blk_dims_t* x);
 
 
 double cake_sgemm_online(float* A, float* B, float* C, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, char* argv[] = NULL, bool packedA = 0, bool packedB = 0, 
 	float alpha = 1, float beta = 0, enum sched sch = NA);
 double cake_sgemm_test(float* A, float* B, float* C, int M, int N, int K, int p, 
+	cake_cntx_t* cake_cntx, char* argv[] = NULL, bool packedA = 0, bool packedB = 0, 
+	float alpha = 1, float beta = 0, enum sched sch = NA);
+double cake_sgemm_2d(float* A, float* B, float* C, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, char* argv[] = NULL, bool packedA = 0, bool packedB = 0, 
 	float alpha = 1, float beta = 0, enum sched sch = NA);
 

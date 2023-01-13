@@ -279,6 +279,158 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 
 
+
+
+
+
+
+double cake_sgemm_2d(float* A, float* B, float* C, int M, int N, int K, int p, 
+	cake_cntx_t* cake_cntx, char* argv[], bool packedA, bool packedB, float alpha, float beta, enum sched sch) {
+
+
+	if(cake_cntx == NULL) {
+		cake_cntx = cake_query_cntx();
+	}
+
+	blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
+	omp_set_num_threads(p);
+
+	// if(cake_gemm_small(A, B, C, M, N, K, p, x, cake_cntx, sch)) {
+	// 	return 1;
+	// }
+
+	size_t A_sz, B_sz, C_sz;	
+	struct timespec start, end, start1, end1;
+	long seconds, nanoseconds;
+	double diff_t, times;
+	float *A_p, *B_p, *C_p[p];
+
+	sch = KMN;
+
+	clock_gettime(CLOCK_REALTIME, &start1);
+
+	init_block_dims_2d(M, N, K, p, x, cake_cntx, sch, argv, 0);
+	sch = x->sch;
+
+    if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
+    if(DEBUG) printf("mc = %d, kc = %d, nc = %d, alpha_n = %f\n", x->m_c, x->k_c, x->n_c, cake_cntx->alpha_n);
+    if(DEBUG) print_schedule(sch);
+
+	if(posix_memalign((void**) &A_p, 64, x->M_padded * x->k_c * sizeof(float))) {
+		printf("posix memalign error\n");
+		exit(1);
+	}
+	
+
+	if(posix_memalign((void**) &B_p, 64, x->k_c * x->N_padded * sizeof(float))) {
+		printf("posix memalign error\n");
+		exit(1);
+	}
+
+
+	for(int i = 0; i < p; i++) {
+		C_p[i] = (float*) calloc(x->m_c * x->n_c, sizeof(float));
+	}
+	
+	clock_gettime(CLOCK_REALTIME, &start);
+
+	schedule_KMN_2d(A, B, C, A_p, B_p, C_p, M, N, K, p, cake_cntx, x);
+
+    clock_gettime(CLOCK_REALTIME, &end);
+    seconds = end.tv_sec - start.tv_sec;
+    nanoseconds = end.tv_nsec - start.tv_nsec;
+    diff_t = seconds + nanoseconds*1e-9;
+	if(DEBUG) printf("GEMM time: %f \n", diff_t); 	// exit(1);
+
+	times = diff_t;
+
+	free(A_p);
+	for(int i = 0; i < p; i++) {
+		free(C_p[i]);
+	}
+	free(B_p);
+	free(x);
+
+	return times;
+}
+
+
+
+// double cake_sgemm_2d(float* A, float* B, float* C, int M, int N, int K, int p, 
+// 	cake_cntx_t* cake_cntx, char* argv[], bool packedA, bool packedB, float alpha, float beta, enum sched sch) {
+
+
+// 	if(cake_cntx == NULL) {
+// 		cake_cntx = cake_query_cntx();
+// 	}
+
+// 	blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
+// 	omp_set_num_threads(p);
+
+// 	// if(cake_gemm_small(A, B, C, M, N, K, p, x, cake_cntx, sch)) {
+// 	// 	return 1;
+// 	// }
+
+// 	size_t A_sz, B_sz, C_sz;	
+// 	struct timespec start, end, start1, end1;
+// 	long seconds, nanoseconds;
+// 	double diff_t, times;
+// 	float *A_p[p], *B_p[p], *C_p[p];
+
+// 	sch = KMN;
+
+// 	clock_gettime(CLOCK_REALTIME, &start1);
+
+// 	init_block_dims_2d(M, N, K, p, x, cake_cntx, sch, argv, 0);
+// 	sch = x->sch;
+
+//     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
+//     if(DEBUG) printf("mc = %d, kc = %d, nc = %d, alpha_n = %f\n", x->m_c, x->k_c, x->n_c, cake_cntx->alpha_n);
+//     if(DEBUG) print_schedule(sch);
+
+// 	for(int i = 0; i < p; i++) {
+// 		if(posix_memalign((void**) &A_p[i], 64, x->m_c * x->k_c * sizeof(float))) {
+// 			printf("posix memalign error\n");
+// 			exit(1);
+// 		}
+// 		// A_p[i] = (float*) malloc(m_c * k_c * sizeof(float));
+// 	}
+
+// 	for(int i = 0; i < p; i++) {
+// 		if(posix_memalign((void**) &B_p[i], 64, x->k_c * x->n_c * sizeof(float))) {
+// 			printf("posix memalign error\n");
+// 			exit(1);
+// 		}
+// 	}
+
+// 	for(int i = 0; i < p; i++) {
+// 		C_p[i] = (float*) calloc(x->m_c * x->n_c, sizeof(float));
+// 	}
+	
+// 	clock_gettime(CLOCK_REALTIME, &start);
+
+// 	schedule_KMN_2d(A, B, C, A_p, B_p, C_p, M, N, K, p, cake_cntx, x);
+
+//     clock_gettime(CLOCK_REALTIME, &end);
+//     seconds = end.tv_sec - start.tv_sec;
+//     nanoseconds = end.tv_nsec - start.tv_nsec;
+//     diff_t = seconds + nanoseconds*1e-9;
+// 	if(DEBUG) printf("GEMM time: %f \n", diff_t); 	// exit(1);
+
+// 	times = diff_t;
+
+
+// 	for(int i = 0; i < p; i++) {
+// 		free(A_p[i]);
+// 		free(C_p[i]);
+// 		free(B_p[i]);
+// 	}
+// 	free(x);
+
+// 	return times;
+// }
+
+
 double cake_sgemm_online(float* A, float* B, float* C, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, char* argv[], bool packedA, bool packedB, float alpha, float beta, enum sched sch) {
 
