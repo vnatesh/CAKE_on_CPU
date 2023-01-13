@@ -32,14 +32,19 @@
 
 #if defined(__clang__)
 #define PRAGMA_NOUNROLL _Pragma("nounroll")
+#define PRAGMA_UNROLL_2 _Pragma("unroll 2")
 #define PRAGMA_UNROLL_4 _Pragma("unroll 4")
 #elif defined(__GNUC__)
 #define PRAGMA_NOUNROLL _Pragma("GCC unroll 1")
+#define PRAGMA_UNROLL_2 _Pragma("GCC unroll 2")
 #define PRAGMA_UNROLL_4 _Pragma("GCC unroll 4")
 #else
 #define PRAGMA_NOUNROLL
 #define PRAGMA_UNROLL_4
+#define PRAGMA_UNROLL_2
 #endif
+
+
 
 void bli_spackm_armv8a_int_8xk
      (
@@ -51,9 +56,9 @@ void bli_spackm_armv8a_int_8xk
      )
 {
   // This is the panel dimension assumed by the packm kernel.
-  const dim_t    mnr    = 8;
+  const int    mnr    = 8;
 
-  // Typecast local copies of integers in case dim_t and inc_t are a
+  // Typecast local copies of integers in case int and inc_t are a
   // different size than is expected by load instructions.
   uint64_t       k_iter = k0 / 4;
   uint64_t       k_left = k0 % 4;
@@ -84,7 +89,7 @@ void bli_spackm_armv8a_int_8xk
       // No need to use k-loops here.
       // Simply let compiler to expand loops.
       PRAGMA_UNROLL_4
-      for ( dim_t ik = k_iter * 4 + k_left; ik > 0; --ik )
+      for ( int ik = k_iter * 4 + k_left; ik > 0; --ik )
       {
         float32x4_t v0 = vld1q_f32( a_loc +  0 );
         float32x4_t v1 = vld1q_f32( a_loc +  4 );
@@ -195,13 +200,13 @@ void bli_spackm_armv8a_int_12xk
        int               k0,
        float*      kappa,
        float*      a, int inca0, int lda0,
-       float*      p,              int ldp0,
+       float*      p,              int ldp0
      )
 {
   // This is the panel dimension assumed by the packm kernel.
-  const dim_t    mnr    = 12;
+  const int    mnr    = 12;
 
-  // Typecast local copies of integers in case dim_t and inc_t are a
+  // Typecast local copies of integers in case int and inc_t are a
   // different size than is expected by load instructions.
   uint64_t       k_iter = k0 / 4;
   uint64_t       k_left = k0 % 4;
@@ -231,7 +236,7 @@ void bli_spackm_armv8a_int_12xk
       // No need to use k-loops here.
       // Simply let compiler to expand loops.
       PRAGMA_UNROLL_2
-      for ( dim_t ik = k_iter * 4 + k_left; ik > 0; --ik )
+      for ( int ik = k_iter * 4 + k_left; ik > 0; --ik )
       {
         float32x4_t v0 = vld1q_f32( a_loc +  0 );
         float32x4_t v1 = vld1q_f32( a_loc +  4 );
