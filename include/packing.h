@@ -1,7 +1,6 @@
 #include "common.h"
 
 
-
 // Dense Packing
 
 void pack_C(float* C, float* C_p, int M, int N, int p, 
@@ -84,28 +83,6 @@ size_t cake_sgemm_packed_A_size(int M, int K, int p, blk_dims_t* x, cake_cntx_t*
 size_t cake_sgemm_packed_B_size(int K, int N, int p, blk_dims_t* x, cake_cntx_t* cake_cntx);
 size_t cake_sgemm_packed_C_size(int M, int N, int p, blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch);
 
-
-
-
-// blis packing kernels
-void bli_spackm_haswell_asm_6xk
-     (
-       int               cdim0,
-       int               k0,
-       float*      kappa,
-       float*      a, int inca0, int lda0,
-       float*      p,              int ldp0
-     );
-
-
-void bli_spackm_haswell_asm_16xk
-     (
-       int               cdim0,
-       int               k0,
-       float*      kappa,
-       float*      a, int inca0, int lda0,
-       float*      p,              int ldp0
-     );
 
 
 
