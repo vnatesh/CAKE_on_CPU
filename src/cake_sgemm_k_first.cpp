@@ -159,7 +159,7 @@ void schedule_KMN_2d(float* A, float* B, float* C, float* A_p, float* B_p, float
 	// } else {
     	#pragma omp parallel for private(n2)
       	for(n2 = 0; n2 < N_padded; n2 += n_r) {
-         	bli_spackm_haswell_asm_16xk(n_r, k_c_t, &kappa, &B[k*k_c*N + n2], lda, N, 
+         	blis_B_packing_kernel(n_r, k_c_t, &kappa, &B[k*k_c*N + n2], lda, N, 
                                     &B_p[n2*k_c_t], n_r);
       	}
    	// }
@@ -169,7 +169,7 @@ void schedule_KMN_2d(float* A, float* B, float* C, float* A_p, float* B_p, float
    	// } else {          
     	#pragma omp parallel for private(m3)
 		for(m3 = 0; m3 < M_padded; m3 += m_r) {
-			bli_spackm_haswell_asm_6xk(m_r, k_c_t, &kappa, &A[k*k_c + m3*K], K, lda, 
+			blis_A_packing_kernel(m_r, k_c_t, &kappa, &A[k*k_c + m3*K], K, lda, 
 				&A_p[m3*k_c_t], m_r);
 		}     
    	// }
@@ -475,7 +475,7 @@ void schedule_KMN_online(float* A, float* B, float* C, float** A_p, float* B_p, 
 				      	for(n2 = 0; n2 < n_c; n2 += n_r) {
 				        	 // bli_spackm_haswell_asm_16xk(n_r, k_c, &kappa, &B[n1 + k1*N + n2], lda, N, 
 				         	//                            &B_p[ind1 + (k1/k_c)*k_c*n_c + n2*k_c], n_r);
-				         	bli_spackm_haswell_asm_16xk(n_r, k_c_t, &kappa, &B[n1 + k*k_c*N + n2], lda, N, 
+				         	blis_B_packing_kernel(n_r, k_c_t, &kappa, &B[n1 + k*k_c*N + n2], lda, N, 
 				                                    &B_p[n2*k_c_t], n_r);
 				      	}
 				   	}
@@ -513,7 +513,7 @@ void schedule_KMN_online(float* A, float* B, float* C, float** A_p, float* B_p, 
 				               M, K, m*p*m_c, core*m_c_x, m_c_t, k_c_t, m_r, pad);
 			           	} else {          
 							for(int m3 = 0; m3 < m_c_t; m3 += m_r) {
-								bli_spackm_haswell_asm_6xk(m_r, k_c_t, &kappa, &A[A_offset + core*m_c_x*K + m3*K], K, lda, 
+								blis_A_packing_kernel(m_r, k_c_t, &kappa, &A[A_offset + core*m_c_x*K + m3*K], K, lda, 
 									&A_p[core][m3*k_c_t], m_r);
 							}     
 			           	}

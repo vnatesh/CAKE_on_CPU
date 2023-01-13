@@ -4,7 +4,6 @@
 #include "util.h"
 #include "tiling.h"
 #include "packing.h"
-#include "bli_x86_asm_macros.h"
 
 
 
@@ -90,28 +89,6 @@ bool cake_gemm_small(float* A, float* A_p, float* B, float* B_p, float* C, float
 
 // choose cake schedule based on M,N,K values
 enum sched set_schedule(enum sched sch, int M, int N, int K);
-
-
-
-// blis packing kernels
-void bli_spackm_haswell_asm_6xk
-     (
-       int               cdim0,
-       int               k0,
-       float*      kappa,
-       float*      a, int inca0, int lda0,
-       float*      p,              int ldp0
-     );
-
-
-void bli_spackm_haswell_asm_16xk
-     (
-       int               cdim0,
-       int               k0,
-       float*      kappa,
-       float*      a, int inca0, int lda0,
-       float*      p,              int ldp0
-     );
 
 
 

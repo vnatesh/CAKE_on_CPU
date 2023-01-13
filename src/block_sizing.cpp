@@ -614,7 +614,7 @@ void init_block_dims_2d(int M, int N, int K, int p,
 	int k_c = K < kc_max ? K : kc_max;
 
 	// int m_c = m_r;
-	int k_c = 200;
+	// int k_c = 200;
 	// int n_c = n_r;
 
 	int m_c1 = M_padded - (pm - 1)*m_c;
