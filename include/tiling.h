@@ -1,8 +1,5 @@
 #include "common.h"
 
-static bool grid_dims[10] = {1,1,0,0,1,0,0,0,0,1};
-
-
 
 // retrieve system parameter information
 cake_cntx_t* cake_query_cntx();
