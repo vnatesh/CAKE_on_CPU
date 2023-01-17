@@ -116,10 +116,10 @@ SRC_FILES := $(filter-out $(CAKE_HOME)/src/linear.cpp, $(SRC_FILES))
 ifeq ($(UNAME_M),aarch64)
 	KERNELS = $(CAKE_SRC)/kernels/armv8/*.cpp
 	TARGETS = cake_armv8
-	CFLAGS_tmp += -O3
+	CFLAGS_tmp += -O3 -mtune=cortex-a53
 else ifeq ($(UNAME_M),x86_64)
 	KERNELS = $(CAKE_SRC)/kernels/haswell/*.cpp
-	CFLAGS_tmp += -mavx -mfma
+	CFLAGS_tmp += -mavx -mfma -mtune=haswell
 	TARGETS = cake_haswell
 	CFLAGS_tmp += -O2
 else
