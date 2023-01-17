@@ -633,7 +633,7 @@ void init_block_dims_2d(int M, int N, int K, int p,
 	pn = (pn == 0) ? 1 : pn;
 	pn = (pn > p) ? p : pn;
 
-	// index into static table of divisors to quickly find divisor of p that is closest to optimal pn
+	// index into static table of factors to quickly find factor of p that is closest to optimal pn
 	// table is created at library creation
 	if(grid_dims[pn-1]) {
 		pm = p / pn;
@@ -704,7 +704,7 @@ void init_block_dims_2d(int M, int N, int K, int p,
 	x->N_padded = N_padded;
 	x->sch = sch;
 
-	printf("k_c = %d, k_c1 = %d, pm = %d, pn = %d, mc = %d, nc = %d, mc1 = %d, nc1 = %d\n", k_c, k_c1, pm, pn, m_c, n_c, m_c1, n_c1);
+	// printf("k_c = %d, k_c1 = %d, pm = %d, pn = %d, mc = %d, nc = %d, mc1 = %d, nc1 = %d\n", k_c, k_c1, pm, pn, m_c, n_c, m_c1, n_c1);
 	// exit(1);
 }
 

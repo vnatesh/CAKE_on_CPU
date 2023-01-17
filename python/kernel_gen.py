@@ -452,6 +452,7 @@ def gen_all_kernels(arch, m_lim, n_lim):
 
 
 if __name__ == '__main__':
+	print("Generating CAKE Haswell Dense and Sparse Kernels")
 	gen_kernel_headers(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))
 	gen_all_kernels(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))
 
