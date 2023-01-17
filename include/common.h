@@ -116,6 +116,7 @@ typedef struct cake_cntx_t{
 	int nr;
 	int m_map;
 	int n_map;
+	int L1;
 	int L2;
 	int L3;
 	int ncores;

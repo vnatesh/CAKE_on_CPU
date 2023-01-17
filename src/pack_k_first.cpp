@@ -160,7 +160,7 @@ double pack_A_single_buf_k_first(float* A, float* A_p, int M, int K, int p, blk_
 
 
 
-void pack_test1(float* A, float* A_p, int M, int K, int p, blk_dims_t* x, cake_cntx_t* cake_cntx) {
+void pack_test1(float* A, float* A_p, int M, int K, int p, cake_cntx_t* cake_cntx) {
 
    float kappa = 1.0;
    int lda = 1;
@@ -394,7 +394,7 @@ void pack_B_k_first_blis(float* B, float* B_p, int K, int N, blk_dims_t* x, cake
             blis_B_packing_kernel(n_r, k_c, &kappa, &B[n1 + k1*N + n2], lda, N, 
                   &B_p[ind1 + (k1/k_c)*k_c*n_c + n2*k_c], n_r);
 
-            // bli_spackm_haswell_asm_16xk(n_r, k_c, &kappa, &B[n1 + k1*N + n2], K, lda, 
+            // blis_B_packing_kernel(n_r, k_c, &kappa, &B[n1 + k1*N + n2], K, lda, 
             //       &B_p[ind1 + (k1/k_c)*k_c*n_c], n_r);
 
             // for(int i = 0; i < k_c; i++) {
@@ -413,7 +413,7 @@ void pack_B_k_first_blis(float* B, float* B_p, int K, int N, blk_dims_t* x, cake
          #pragma omp parallel for private(n2,local_ind)
          for(n2 = 0; n2 < n_c; n2 += n_r) {
             // local_ind = 0;
-            // bli_spackm_haswell_asm_16xk(n_r, k_c1, &kappa, &B[n1 + k1*N + n2], K, lda, 
+            // blis_B_packing_kernel(n_r, k_c1, &kappa, &B[n1 + k1*N + n2], K, lda, 
             //       &B_p[ind1 + n2*k_c1], n_r);
             blis_B_packing_kernel(n_r, k_c1, &kappa, &B[n1 + k1*N + n2], lda, N, 
                   &B_p[ind1 + n2*k_c1], n_r);
