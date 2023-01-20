@@ -808,13 +808,15 @@ void init_block_dims_2d(int M, int N, int K, int p,
 
 
 
+
+
 void init_block_dims_2d_small(int M, int N, int K, int p, 
 	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
 	char* argv[], float density, float type_size) {
 
-	int m_r, n_r, ncores, pm, pn, low, high, add_on, 
-		m_c, k_c, n_c, m_c1, k_c1, n_c1, 
-		kc_max, k_pad, M_padded, N_padded, 
+	int m_r, n_r, ncores, pm, pn, 
+		m_c, k_c, n_c, m_c1, k_c1, n_c1,
+		kc_max, m_pad, k_pad, n_pad, M_padded, N_padded, 
 		Mb, Kb, Nb;
 
 	m_r = cake_cntx->mr;
@@ -827,54 +829,40 @@ void init_block_dims_2d_small(int M, int N, int K, int p,
 
 	M_padded = (M % m_r) ? (M + (m_r - (M % m_r))) : M;
 	N_padded = (N % n_r) ? (N + (n_r - (N % n_r))) : N;
+	
+	m_c = (M_padded / pm);
+	m_c += (m_r - (m_c % m_r));
+
+	n_c = (N_padded / pn);
+	n_c += (n_r - (n_c % n_r));
 
 	// based on mr*kc + kc*nr + mr*nr <= L1 
 	kc_max = ((cake_cntx->L1 / type_size) - m_r*n_r) / (m_r + n_r); 
-
-	// based on mc*kc + nr*kc + mc*nc <= L2
-	m_c = (int) ((-n_r + sqrt(1.0*n_r*n_r + 4.0*2*(((double) cake_cntx->L2) / 4.0))) / (2.0*2));
-	m_c -= (m_c % m_r);
-
-	Mb = M_padded / (pm*m_c);
-	Nb = N_padded / (pn*m_c); // we want mc = nc since square tile maximizes AI
-
-	// modify tile shape slightly to get rid of small leftover regions
-	add_on = (N_padded % (pn*m_c)) / Nb;
-	n_c = (pn*m_c + add_on) / pn;
-	n_c += ((n_c % n_r) ? (n_r - (n_c % n_r)) : 0);
-	n_c1 = N_padded - (pn*(Nb - 1) + (pn - 1))*n_c;
-
-	add_on = (M_padded % (pm*m_c)) / Mb;
-	m_c = (pm*m_c + add_on) / pm;
-	m_c += ((m_c % m_r) ? (m_r - (m_c % m_r)) : 0);
-	m_c1 = M_padded - (pm*(Mb - 1) + (pm - 1))*m_c;
-
-	// k_c dims
+	k_c = K < kc_max ? K : kc_max;
 	k_c = (m_c > kc_max) ? kc_max : m_c;
-	k_pad = (K % k_c) ? 1 : 0;
-	k_c1 = K % k_c;
-	Kb = (K / k_c) + k_pad;
 
+	m_c1 = M_padded - (pm - 1)*m_c;
+	n_c1 = N_padded - (pn - 1)*n_c;
+	k_c1 = K % k_c;
+
+	// printf("Kb = %d, k_c = %d, k_c1 = %d, pm = %d, pn = %d, mc = %d, nc = %d, mc1 = %d, nc1 = %d\n", 
+	// 	Mb, k_c, k_c1, pm, pn, m_c, n_c, m_c1, n_c1);
+
+	x->M_padded = M_padded;
+	x->N_padded = N_padded;
     x->m_c = m_c;
 	x->k_c = k_c;
     x->n_c = n_c;
     x->m_c1 = m_c1;
 	x->k_c1 = k_c1;
     x->n_c1 = n_c1;
+	x->k_pad = (K % x->k_c) ? 1 : 0; 
+	x->n_pad = (N % x->n_c) ? 1 : 0; 
+	x->m_pad = (M % x->m_c) ? 1 : 0; 
+	x->Kb = (K / x->k_c) + x->k_pad;
 	x->pm = pm;
 	x->pn = pn;
-	x->m_pad = (M % x->m_c) ? 1 : 0; 
-	x->k_pad = k_pad; 
-	x->n_pad = (N % x->n_c) ? 1 : 0; 
-	x->Mb = Mb;
-	x->Kb = Kb;
-	x->Nb = Nb;
-	x->M_padded = M_padded;
-	x->N_padded = N_padded;
 	x->sch = sch;
-
-	// printf("k_c = %d, k_c1 = %d, pm = %d, pn = %d, mc = %d, nc = %d, mc1 = %d, nc1 = %d\n", k_c, k_c1, pm, pn, m_c, n_c, m_c1, n_c1);
-	// exit(1);
 }
 
 
