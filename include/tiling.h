@@ -34,9 +34,9 @@ void init_block_dims_2d(int M, int N, int K, int p, blk_dims_t* x,
 	cake_cntx_t* cake_cntx, enum sched sch, char* argv[], 
 	float density = 0, float type_size = 4);
 
-void init_block_dims_2d_small(int M, int N, int K, int p, 
-	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
-	char* argv[], float density, float type_size);
+void init_block_dims_2d_small(int M, int N, int K, int p, blk_dims_t* x, 
+	cake_cntx_t* cake_cntx, enum sched sch, char* argv[], 
+	float density = 0, float type_size = 4);
 
 int grid_dims_2d(int M, int N, int K, int p, int ncores);
 
