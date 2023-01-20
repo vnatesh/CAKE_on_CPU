@@ -88,11 +88,14 @@ typedef struct blk_dims_t {
 	int k_c1;
 	int n_c1;
 	int m_c1_last_core;
+	int n_c1_last_core;
 	int k_c1_last_core;
 	int mr_rem;
 	int nr_rem;
 	int k_rem;
 	int p_l;
+	int pm_l;
+	int pn_l;
 	int pm;
 	int pn;
 	int m_pad;

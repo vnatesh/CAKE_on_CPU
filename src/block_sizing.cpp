@@ -617,44 +617,213 @@ void init_block_dims(int M, int N, int K, int p,
 
 
 
-void init_block_dims_2d(int M, int N, int K, int p, 
-	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
-	char* argv[], float density, float type_size) {
+int grid_dims_2d(int M, int N, int K, int p, int ncores) {
 
-	int pm, pn, low, high, add_on, 
-		m_c, k_c, n_c, m_c1, k_c1, n_c1, 
-		kc_max, k_pad, M_padded, N_padded, 
-		Mb, Kb, Nb;
-	int m_r = cake_cntx->mr;
-	int n_r = cake_cntx->nr;
-
+	int pn, low, high, pn_ret;
+	
 	// optimal pn
 	pn = (int) roundf(sqrt(((double) p*N) / M));
 	pn = (pn == 0) ? 1 : pn;
 	pn = (pn > p) ? p : pn;
 
+
 	// index into static table of factors to quickly find factor of p that is closest to optimal pn
 	// table is created at library creation
-	if(grid_dims[pn-1]) {
-		pm = p / pn;
+	if(grid_dims[ncores - p][pn-1]) {
+		pn_ret = pn;
+		// pm = p / pn;
 	} else {
 		for(int i = pn; i < p; i++) {
-			if(grid_dims[i]) {
+			if(grid_dims[ncores - p][i]) {
 				high = i;
 				break;
 			}
 		}
 
 		for(int i = (pn - 2); i > 0; i--) {
-			if(grid_dims[i]) {
+			if(grid_dims[ncores - p][i]) {
 				low = i;
 				break;
 			}
 		}
 
-		pn = ((high - (pn-1)) < ((pn-1) - low)) ? high + 1: low + 1;
-		pm = p / pn;
+		pn_ret = ((high - (pn-1)) < ((pn-1) - low)) ? high + 1: low + 1;
+		// pm = p / pn;
 	}
+
+	return (pn_ret < p ? pn_ret : p);
+}
+
+
+
+
+void init_block_dims_2d(int M, int N, int K, int p, 
+	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
+	char* argv[], float density, float type_size) {
+
+	int m_r, n_r, ncores, pm, pn, low, high, 
+		m_c, k_c, n_c, m_c1, k_c1, n_c1,
+		mr_rem, nr_rem, m_c1_last_core, n_c1_last_core, pm_l, pn_l,
+		kc_max, m_pad, k_pad, n_pad, M_padded, N_padded, 
+		Mb, Kb, Nb, a, left_M, left_N, thresh_M, thresh_N;
+
+	m_r = cake_cntx->mr;
+	n_r = cake_cntx->nr;
+	ncores = cake_cntx->ncores;
+
+	// optimal pn
+	pn = grid_dims_2d(M, N, K, p, ncores);
+	pm = p / pn;
+
+	M_padded = (M % m_r) ? (M + (m_r - (M % m_r))) : M;
+	N_padded = (N % n_r) ? (N + (n_r - (N % n_r))) : N;
+
+	// based on mr*kc + kc*nr + mr*nr <= L1 
+	kc_max = ((cake_cntx->L1 / type_size) - m_r*n_r) / (m_r + n_r); 
+
+	// based on mc*kc + nr*kc + mc*nc <= L2
+	m_c = (int) ((-n_r + sqrt(1.0*n_r*n_r + 4.0*2*(((double) cake_cntx->L2) / 4.0))) / (2.0*2));
+	m_c -= (m_c % m_r);
+
+	// printf("Mb = %d, Nb = %d, k_c = %d, k_c1 = %d, pm = %d, pn = %d, mc = %d, nc = %d, mc1 = %d, nc1 = %d\n", 
+	// 	Mb, Nb, k_c, k_c1, pm, pn, m_c, n_c, m_c1, n_c1);
+
+
+	if(M_padded == pm*cake_cntx->mr) {
+		m_c = cake_cntx->mr;
+		pm = 1;
+	} else if(M_padded < pm*m_c) {
+		
+		a = M_padded / pm;
+		if(a < cake_cntx->mr) {
+			m_c = cake_cntx->mr;
+			pm = M_padded / cake_cntx->mr;
+		} else {
+			a += ((a % cake_cntx->mr) ? (cake_cntx->mr - (a % cake_cntx->mr)) : 0);
+			m_c = a;
+		}
+	}
+
+	// printf("Mb = %d, Nb = %d, k_c = %d, k_c1 = %d, pm = %d, pn = %d, mc = %d, nc = %d, mc1 = %d, nc1 = %d\n", 
+	// 	Mb, Nb, k_c, k_c1, pm, pn, m_c, n_c, m_c1, n_c1);
+
+
+	// we want mc = nc since square tile maximizes AI
+	n_c = ((m_c % n_r) ? (m_c + (n_r - (m_c % n_r))) : m_c); 
+	// k_c = (m_c > kc_max) ? kc_max : m_c;
+	k_c = kc_max;
+	k_c1 = K % k_c;
+
+
+	if(N_padded == pn*cake_cntx->nr) {
+		n_c = cake_cntx->nr;
+		pn = 1;
+	} else if(N_padded < pn*n_c) {
+		
+		a = N_padded / pn;
+		if(a < cake_cntx->nr) {
+			n_c = cake_cntx->nr;
+			pn = N_padded / cake_cntx->nr;
+		} else {
+			a += ((a % cake_cntx->nr) ? (cake_cntx->nr - (a % cake_cntx->nr)) : 0);
+			n_c = a;
+		}
+	}
+
+	// printf("Mb = %d, Nb = %d, k_c = %d, k_c1 = %d, pm = %d, pn = %d, mc = %d, nc = %d, mc1 = %d, nc1 = %d\n", 
+	// 	Mb, Nb, k_c, k_c1, pm, pn, m_c, n_c, m_c1, n_c1);
+
+
+	n_pad = (N % (pn*n_c)) ? 1 : 0; 
+	m_pad = (M % (pm*m_c)) ? 1 : 0; 
+
+	mr_rem = (int) ceil( ((double) (M % (pm*m_c))) / m_r) ;
+	int mr_per_core = (int) ceil( ((double) mr_rem) / pm );
+	
+	if(mr_per_core) 
+		pm_l = (int) ceil( ((double) mr_rem) / mr_per_core);
+	else
+		pm_l = 0;
+
+	m_c1 = mr_per_core * m_r;
+	m_c1_last_core = (mr_per_core - (pm_l*mr_per_core - mr_rem)) * m_r;
+
+
+// printf("m_c1_last_core = %d mr_rem = %d, mr_per_core = %d\n", m_c1_last_core, mr_rem, mr_per_core);
+
+
+	nr_rem = (int) ceil( ((double) (N % (pn*n_c))) / n_r) ;
+	int nr_per_core = (int) ceil( ((double) nr_rem) / pn );
+	
+	if(nr_per_core) 
+		pn_l = (int) ceil( ((double) nr_rem) / nr_per_core);
+	else
+		pn_l = 0;
+
+	n_c1 = nr_per_core * n_r;
+	n_c1_last_core = (nr_per_core - (pn_l*nr_per_core - nr_rem)) * n_r;
+
+// printf("n_c1_last_core = %d nr_rem = %d, nr_per_core = %d\n", n_c1_last_core, nr_rem, nr_per_core);
+	m_pad = (M % (pm*m_c)) ? 1 : 0; 
+	k_pad = (K % k_c) ? 1 : 0;
+	n_pad = (N % (pn*n_c)) ? 1 : 0; 
+
+
+	//number of CB blocks in the M, N, and K dims
+	Mb = (M / (pm*m_c)) + m_pad;
+	Nb = (N / (pn*n_c)) + n_pad;
+	Kb = (K / k_c) + k_pad;
+
+	M_padded = (m_r*mr_rem + (M / (pm*m_c))*pm*m_c);
+	N_padded = (n_r*nr_rem + (N / (pn*n_c))*pn*n_c);
+
+    x->m_c = m_c;
+	x->k_c = k_c;
+    x->n_c = n_c;
+    x->m_c1 = m_c1;
+	x->k_c1 = k_c1;
+    x->n_c1 = n_c1;
+    x->m_c1_last_core = m_c1_last_core;
+	x->n_c1_last_core = n_c1_last_core;
+	x->mr_rem = mr_rem;
+	x->nr_rem = nr_rem;
+	x->pm_l = pm_l;
+	x->pn_l = pn_l;
+	x->pm = pm;
+	x->pn = pn;
+	x->m_pad = m_pad; 
+	x->k_pad = k_pad; 
+	x->n_pad = n_pad; 
+	x->Mb = Mb;
+	x->Kb = Kb;
+	x->Nb = Nb;
+	x->M_padded = M_padded;
+	x->N_padded = N_padded;
+	x->sch = sch;
+
+	printf("Mb = %d, Nb = %d, k_c = %d, k_c1 = %d, pm = %d, pn = %d, mc = %d, nc = %d, mc1 = %d, nc1 = %d\n", 
+		Mb, Nb, k_c, k_c1, pm, pn, m_c, n_c, m_c1, n_c1);
+	// exit(1);
+}
+
+
+
+void init_block_dims_2d_small(int M, int N, int K, int p, 
+	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
+	char* argv[], float density, float type_size) {
+
+	int m_r, n_r, ncores, pm, pn, low, high, add_on, 
+		m_c, k_c, n_c, m_c1, k_c1, n_c1, 
+		kc_max, k_pad, M_padded, N_padded, 
+		Mb, Kb, Nb;
+
+	m_r = cake_cntx->mr;
+	n_r = cake_cntx->nr;
+	ncores = cake_cntx->ncores;
+
+	// optimal pn
+	pn = grid_dims_2d(M, N, K, p, ncores);
+	pm = p / pn;
 
 	M_padded = (M % m_r) ? (M + (m_r - (M % m_r))) : M;
 	N_padded = (N % n_r) ? (N + (n_r - (N % n_r))) : N;
