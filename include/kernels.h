@@ -24,7 +24,7 @@ inline void cake_sgemm_ukernel(float* A_p, float* B_p, float* C_p,
     // rsc = 1; csc = m_r;
 	auxinfo_t def_data;
 
-	bli_sgemm_haswell_asm_6x16(k_c_t, &alpha_blis, A_p, B_p, &beta_blis, C_p, 
+	bli_sgemm_haswell_asm_6x16(m_r, n_r, k_c_t, &alpha_blis, A_p, B_p, &beta_blis, C_p, 
 		(inc_t) n_r, (inc_t) 1, &def_data, (cntx_t*) cake_cntx->blis_cntx);
 
 #elif USE_CAKE_HASWELL

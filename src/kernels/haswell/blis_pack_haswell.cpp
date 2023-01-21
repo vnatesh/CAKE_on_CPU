@@ -34,7 +34,7 @@
 
 
 
-void bli_spackm_haswell_asm_6xk
+void bli_spackm_haswell_asm_6xk_new
      (
        int               cdim0,
        int               k0,
@@ -369,7 +369,7 @@ void bli_spackm_haswell_asm_6xk
 
 
 
-void bli_spackm_haswell_asm_16xk
+void bli_spackm_haswell_asm_16xk_new
      (
        int               cdim0,
        int               k0,

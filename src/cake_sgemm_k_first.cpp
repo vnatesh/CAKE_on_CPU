@@ -205,12 +205,20 @@ void schedule_KMN_2d_small(float* A, float* B, float* C, float* A_p, float* B_p,
 			for(n_reg = 0; n_reg < (n_c_t / n_r); n_reg++) {
 				for(m_reg = 0; m_reg < (m_c_t / m_r); m_reg++) {	
 
-					kernel_map[m_map][n_map](
+					// kernel_map[m_map][n_map](
+					// 	&A_p[(core / pn)*m_c*k_c_t + m_reg*m_r*k_c_t], 
+					// 	&B_p[(core % pn)*n_c*k_c_t + n_reg*k_c_t*n_r], 
+					// 	&C_p[core][n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
+					// 	m_r, n_r, k_c_t
+					// );
+
+					cake_sgemm_ukernel(
 						&A_p[(core / pn)*m_c*k_c_t + m_reg*m_r*k_c_t], 
 						&B_p[(core % pn)*n_c*k_c_t + n_reg*k_c_t*n_r], 
 						&C_p[core][n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
-						m_r, n_r, k_c_t
+						m_r, n_r, k_c_t, cake_cntx
 					);
+
        // printf("core = %d, n_c_t = %d, m_c_t = %d\n",core, n_c_t, m_c_t );
 
 					// cake_sgemm_ukernel(&A_p[core][m_reg*m_r*k_c_t], 
@@ -689,19 +697,13 @@ void schedule_KMN_online(float* A, float* B, float* C, float** A_p, float* B_p, 
 				 	// skip packing at the corner turns
 					// printf("reuse B\n");
 				} else {
-
-					// pack_ob_B_parallel(&B[n1 + k*k_c*N], B_p, K, N, n1, k_c_t, n_c_t, n_r, pad_n);
-					if(pad_n) {
-						pack_ob_B_parallel(&B[n1 + k*k_c*N], B_p, K, N, n1, k_c_t, n_c_t, n_r, pad_n);
-					} else {
-				    	#pragma omp parallel for private(n2)
-				      	for(n2 = 0; n2 < n_c_t; n2 += n_r) {
-				        	 // bli_spackm_haswell_asm_16xk(n_r, k_c, &kappa, &B[n1 + k1*N + n2], lda, N, 
-				         	//                            &B_p[ind1 + (k1/k_c)*k_c*n_c + n2*k_c], n_r);
-				         	blis_B_packing_kernel(n_r, k_c_t, &kappa, &B[n1 + k*k_c*N + n2], lda, N, 
-				                                    &B_p[n2*k_c_t], n_r);
-				      	}
-				   	}
+			    	#pragma omp parallel for private(n2)
+			      	for(n2 = 0; n2 < n_c_t; n2 += n_r) {
+			        	 // bli_spackm_haswell_asm_16xk(n_r, k_c, &kappa, &B[n1 + k1*N + n2], lda, N, 
+			         	//                            &B_p[ind1 + (k1/k_c)*k_c*n_c + n2*k_c], n_r);
+			         	blis_B_packing_kernel(n_r, k_c_t, &kappa, &B[n1 + k*k_c*N + n2], lda, N, 
+			                                    &B_p[n2*k_c_t], n_r);
+			      	}
 				}
 
 
@@ -731,15 +733,10 @@ void schedule_KMN_online(float* A, float* B, float* C, float** A_p, float* B_p, 
 					if((k == k_start) && (m == m_start) && (n != 0))  {
 						// printf("reuse A\n");
 					} else {
-			            if(pad) {
-				            pack_ob_A_single_buf(&A[A_offset + core*m_c_x*K], A_p[core], 
-				               M, K, m*p*m_c, core*m_c_x, m_c_t, k_c_t, m_r, pad);
-			           	} else {          
-							for(int m3 = 0; m3 < m_c_t; m3 += m_r) {
-								blis_A_packing_kernel(m_r, k_c_t, &kappa, &A[A_offset + core*m_c_x*K + m3*K], K, lda, 
-									&A_p[core][m3*k_c_t], m_r);
-							}     
-			           	}
+						for(int m3 = 0; m3 < m_c_t; m3 += m_r) {
+							blis_A_packing_kernel(m_r, k_c_t, &kappa, &A[A_offset + core*m_c_x*K + m3*K], K, lda, 
+								&A_p[core][m3*k_c_t], m_r);
+						}     
 		            }
 
 
@@ -752,6 +749,7 @@ void schedule_KMN_online(float* A, float* B, float* C, float** A_p, float* B_p, 
 							// 	&C_p[core][n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
 							// 	m_r, n_r, k_c_t
 							// );
+
 
 							cake_sgemm_ukernel(
 								&A_p[core][m_reg*m_r*k_c_t], 

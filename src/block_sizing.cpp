@@ -10,7 +10,7 @@ cake_cntx_t* cake_query_cntx_torch(int L2, int L3) {
  
     // query block size for the microkernel
 #ifdef USE_BLIS
-    cntx_t* blis_cntx = bli_gks_query_cntx();
+    const cntx_t* blis_cntx = bli_gks_query_cntx();
     ret->blis_cntx = (void*) blis_cntx;
     ret->mr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, blis_cntx);
     ret->nr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, blis_cntx);
@@ -46,7 +46,7 @@ cake_cntx_t* cake_query_cntx() {
 
     // query block size for the microkernel
 #ifdef USE_BLIS
-    cntx_t* blis_cntx = bli_gks_query_cntx();
+    const cntx_t* blis_cntx = bli_gks_query_cntx();
     ret->blis_cntx = (void*) blis_cntx;
     ret->mr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_MR, blis_cntx);
     ret->nr = (int) bli_cntx_get_blksz_def_dt(BLIS_FLOAT, BLIS_NR, blis_cntx);
@@ -801,8 +801,8 @@ void init_block_dims_2d(int M, int N, int K, int p,
 	x->N_padded = N_padded;
 	x->sch = sch;
 
-	printf("Mb = %d, Nb = %d, k_c = %d, k_c1 = %d, pm = %d, pn = %d, mc = %d, nc = %d, mc1 = %d, nc1 = %d\n", 
-		Mb, Nb, k_c, k_c1, pm, pn, m_c, n_c, m_c1, n_c1);
+	// printf("Mb = %d, Nb = %d, k_c = %d, k_c1 = %d, pm = %d, pn = %d, mc = %d, nc = %d, mc1 = %d, nc1 = %d\n", 
+	// 	Mb, Nb, k_c, k_c1, pm, pn, m_c, n_c, m_c1, n_c1);
 	// exit(1);
 }
 
