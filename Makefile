@@ -134,6 +134,7 @@ endif
 
 SRC_FILES_BLIS = $(SRC_FILES) $(CAKE_SRC)/kernels/haswell/blis_pack_haswell.cpp
 CFLAGS_BLIS += -I$(CAKE_HOME)/include/blis
+CFLAGS_BLIS := $(filter-out -std=c99, $(CFLAGS_BLIS))
 
 
 
