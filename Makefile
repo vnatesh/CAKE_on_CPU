@@ -100,6 +100,7 @@ CINCFLAGS      := -I$(INC_PATH)
 CFLAGS_tmp := -Wall -Wno-unused-function -Wfatal-errors -fPIC -std=c99 -D_POSIX_C_SOURCE=200112L -lpthread -fopenmp
 CFLAGS_tmp        += -I$(INCLUDE_PATH) 
 CFLAGS_tmp        += -g
+CFLAGS_BLIS := $(CFLAGS_tmp)
 # Add local header paths to CFLAGS
 
 # Locate the libblis library to which we will link.
@@ -113,6 +114,7 @@ UNAME_M := $(shell uname -m)
 SRC_FILES =  $(wildcard $(CAKE_HOME)/src/*.cpp)
 SRC_FILES := $(filter-out $(CAKE_HOME)/src/linear.cpp, $(SRC_FILES)) 
 
+
 ifeq ($(UNAME_M),aarch64)
 	KERNELS = $(CAKE_SRC)/kernels/armv8/*.cpp
 	TARGETS = cake_armv8
@@ -124,9 +126,15 @@ else ifeq ($(UNAME_M),x86_64)
 	CFLAGS_tmp += -O2
 else
 	TARGETS = cake_blis
+	SRC_FILES += $(CAKE_SRC)/kernels/haswell/blis_pack_haswell.cpp
 	CFLAGS_tmp  := $(call get-user-cflags-for,$(CONFIG_NAME))
 	CFLAGS_tmp += -I$(CAKE_HOME)/include/blis -I$(CAKE_HOME)/include
 endif
+
+
+SRC_FILES_BLIS = $(SRC_FILES) $(CAKE_SRC)/kernels/haswell/blis_pack_haswell.cpp
+CFLAGS_BLIS += -I$(CAKE_HOME)/include/blis
+
 
 
 
@@ -135,7 +143,7 @@ CFLAGS 	:= $(filter-out -std=c99, $(CFLAGS_tmp))
 
 LIBS ?=
 #LIBDIR += -L. -L$(SYSTEMC_HOME)/lib-linux64 -L$(BOOST_HOME)/lib
-LIBS += $(BLIS_INSTALL_PATH)/lib/libblis-mt.a 
+LIBS += $(BLIS_INSTALL_PATH)/lib/libblis.a 
 
 #
 # --- Targets/rules ------------------------------------------------------------
@@ -165,7 +173,7 @@ endif
 # 	dpcpp -fp-speculation=fast g++ $(CFLAGS) $(CAKE_SRC)/block_sizing.cpp $(CAKE_SRC)/cake_sgemm.cpp \
 
 cake_blis: $(wildcard *.h) $(wildcard *.c) 
-	g++ $(CFLAGS) $(CFLAGS) $(SRC_FILES) $(LIBS) \
+	g++ $(CFLAGS_BLIS) $(SRC_FILES_BLIS) $(LIBS) \
 	$(LDFLAGS) -DUSE_BLIS -shared -o $(LIBCAKE)
 
 cake_haswell: $(wildcard *.h) $(wildcard *.c)

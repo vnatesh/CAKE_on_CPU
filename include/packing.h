@@ -100,9 +100,12 @@ inline void blis_A_packing_kernel
 
 
 #ifdef USE_CAKE_HASWELL
-	bli_spackm_haswell_asm_6xk(cdim0, k0, kappa, a, inca0, lda0, p, ldp0);
+	// printf("HEYYY\n");
+	bli_spackm_haswell_asm_6xk_new(cdim0, k0, kappa, a, inca0, lda0, p, ldp0);
 #elif USE_CAKE_ARMV8
 	bli_spackm_armv8a_int_8xk(cdim0, k0, kappa, a, inca0, lda0, p, ldp0);
+#elif USE_BLIS
+	bli_spackm_haswell_asm_6xk_new(cdim0, k0, kappa, a, inca0, lda0, p, ldp0);
 #endif
 
 }
@@ -120,9 +123,11 @@ inline void blis_B_packing_kernel
 
 
 #ifdef USE_CAKE_HASWELL
-	bli_spackm_haswell_asm_16xk(cdim0, k0, kappa, a, inca0, lda0, p, ldp0);
+	bli_spackm_haswell_asm_16xk_new(cdim0, k0, kappa, a, inca0, lda0, p, ldp0);
 #elif USE_CAKE_ARMV8
 	bli_spackm_armv8a_int_12xk(cdim0, k0, kappa, a, inca0, lda0, p, ldp0);
+#elif USE_BLIS
+	bli_spackm_haswell_asm_16xk_new(cdim0, k0, kappa, a, inca0, lda0, p, ldp0);
 #endif
 
 }

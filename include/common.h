@@ -15,6 +15,29 @@
 
 #ifdef USE_BLIS
 #include "blis.h"
+#include "bli_x86_asm_macros.h"
+
+
+
+// blis packing kernels
+void bli_spackm_haswell_asm_6xk_new
+     (
+       int               cdim0,
+       int               k0,
+       float*      kappa,
+       float*      a, int inca0, int lda0,
+       float*      p,              int ldp0
+     );
+
+
+void bli_spackm_haswell_asm_16xk_new
+     (
+       int               cdim0,
+       int               k0,
+       float*      kappa,
+       float*      a, int inca0, int lda0,
+       float*      p,              int ldp0
+     );
 
 #elif USE_CAKE_ARMV8
 #include <arm_neon.h>
@@ -49,7 +72,7 @@ void bli_spackm_armv8a_int_12xk
 
 
 // blis packing kernels
-void bli_spackm_haswell_asm_6xk
+void bli_spackm_haswell_asm_6xk_new
      (
        int               cdim0,
        int               k0,
@@ -59,7 +82,7 @@ void bli_spackm_haswell_asm_6xk
      );
 
 
-void bli_spackm_haswell_asm_16xk
+void bli_spackm_haswell_asm_16xk_new
      (
        int               cdim0,
        int               k0,
