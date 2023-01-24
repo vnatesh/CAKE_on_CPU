@@ -101,15 +101,16 @@ void schedule_KMN(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p
 					for(n_reg = 0; n_reg < (n_c_t / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_c_t / m_r); m_reg++) {	
 
-							cake_sgemm_ukernel(&A_p[a_ind + m_reg*m_r*k_c_t], 
-											&B_p[b_ind + n_reg*k_c_t*n_r], 
-											&C_p[c_ind + n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
-											m_r, n_r, k_c_t, cake_cntx);
-
-							// kernel_map[m_map][n_map](&A_p[a_ind + m_reg*m_r*k_c_t], 
+							// cake_sgemm_ukernel(&A_p[a_ind + m_reg*m_r*k_c_t], 
 							// 				&B_p[b_ind + n_reg*k_c_t*n_r], 
 							// 				&C_p[c_ind + n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
-							// 				m_r, n_r, k_c_t);
+							// 				m_r, n_r, k_c_t, cake_cntx);
+
+
+							kernel_map[m_map][n_map](&A_p[a_ind + m_reg*m_r*k_c_t], 
+											&B_p[b_ind + n_reg*k_c_t*n_r], 
+											&C_p[c_ind + n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
+											m_r, n_r, k_c_t);
 						}
 					}
 				}
@@ -157,7 +158,7 @@ void schedule_KMN_2d_small(float* A, float* B, float* C, float* A_p, float* B_p,
 	// } else {
     	#pragma omp parallel for private(n2)
       	for(n2 = 0; n2 < N_padded; n2 += n_r) {
-         	blis_B_packing_kernel(n_r, k_c_t, &kappa, &B[k*k_c*N + n2], lda, N, 
+         	B_packing_kernel(n_r, k_c_t, &kappa, &B[k*k_c*N + n2], lda, N, 
                                     &B_p[n2*k_c_t], n_r);
       	}
    	// }
@@ -167,7 +168,7 @@ void schedule_KMN_2d_small(float* A, float* B, float* C, float* A_p, float* B_p,
    	// } else {          
     	#pragma omp parallel for private(m3)
 		for(m3 = 0; m3 < M_padded; m3 += m_r) {
-			blis_A_packing_kernel(m_r, k_c_t, &kappa, &A[k*k_c + m3*K], K, lda, 
+			A_packing_kernel(m_r, k_c_t, &kappa, &A[k*k_c + m3*K], K, lda, 
 				&A_p[m3*k_c_t], m_r);
 		}     
    	// }
@@ -355,7 +356,7 @@ void schedule_KMN_2d(float* A, float* B, float* C, float* A_p, float* B_p, float
 				} else {
 			    	#pragma omp parallel for private(n2)
 			      	for(n2 = 0; n2 < n_cb; n2 += n_r) {
-			         	blis_B_packing_kernel(n_r, k_c_t, &kappa, &B[B_offset + n2], lda, N, 
+			         	B_packing_kernel(n_r, k_c_t, &kappa, &B[B_offset + n2], lda, N, 
 			                                    &B_p[n2*k_c_t], n_r);
 			      	}
 				}
@@ -366,7 +367,7 @@ void schedule_KMN_2d(float* A, float* B, float* C, float* A_p, float* B_p, float
 				} else {
 			    	#pragma omp parallel for private(m3)
 					for(m3 = 0; m3 < m_cb; m3 += m_r) {
-						blis_A_packing_kernel(m_r, k_c_t, &kappa, &A[A_offset + m3*K], K, lda, 
+						A_packing_kernel(m_r, k_c_t, &kappa, &A[A_offset + m3*K], K, lda, 
 							&A_p[m3*k_c_t], m_r);
 					}     
 				}
@@ -543,13 +544,13 @@ void schedule_KMN_2d(float* A, float* B, float* C, float* A_p, float* B_p, float
 
 // 		    	#pragma omp parallel for private(n2)
 // 		      	for(n2 = 0; n2 < n_cb; n2 += n_r) {
-// 		         	blis_B_packing_kernel(n_r, k_c_t, &kappa, &B[B_offset + n2], lda, N, 
+// 		         	B_packing_kernel(n_r, k_c_t, &kappa, &B[B_offset + n2], lda, N, 
 // 		                                    &B_p[n2*k_c_t], n_r);
 // 		      	}
 	
 // 		    	#pragma omp parallel for private(m3)
 // 				for(m3 = 0; m3 < m_cb; m3 += m_r) {
-// 					blis_A_packing_kernel(m_r, k_c_t, &kappa, &A[A_offset + m3*K], K, lda, 
+// 					A_packing_kernel(m_r, k_c_t, &kappa, &A[A_offset + m3*K], K, lda, 
 // 						&A_p[m3*k_c_t], m_r);
 // 				}     
 
@@ -711,11 +712,10 @@ void schedule_KMN_online(float* A, float* B, float* C, float** A_p, float* B_p, 
 			      	for(n2 = 0; n2 < n_c_t; n2 += n_r) {
 			        	 // bli_spackm_haswell_asm_16xk(n_r, k_c, &kappa, &B[n1 + k1*N + n2], lda, N, 
 			         	//                            &B_p[ind1 + (k1/k_c)*k_c*n_c + n2*k_c], n_r);
-			         	blis_B_packing_kernel(n_r, k_c_t, &kappa, &B[n1 + k*k_c*N + n2], lda, N, 
+			         	B_packing_kernel(n_r, k_c_t, &kappa, &B[n1 + k*k_c*N + n2], lda, N, 
 			                                    &B_p[n2*k_c_t], n_r);
 			      	}
 				}
-
 
 				// pragma omp here (i_c loop)
 				#pragma omp parallel for private(core)
@@ -744,7 +744,7 @@ void schedule_KMN_online(float* A, float* B, float* C, float** A_p, float* B_p, 
 						// printf("reuse A\n");
 					} else {
 						for(int m3 = 0; m3 < m_c_t; m3 += m_r) {
-							blis_A_packing_kernel(m_r, k_c_t, &kappa, &A[A_offset + core*m_c_x*K + m3*K], K, lda, 
+							A_packing_kernel(m_r, k_c_t, &kappa, &A[A_offset + core*m_c_x*K + m3*K], K, lda, 
 								&A_p[core][m3*k_c_t], m_r);
 						}     
 		            }
@@ -753,20 +753,20 @@ void schedule_KMN_online(float* A, float* B, float* C, float** A_p, float* B_p, 
 					for(n_reg = 0; n_reg < (n_c_t / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_c_t / m_r); m_reg++) {	
 
-							// kernel_map[m_map][n_map](
-							// 	&A_p[core][m_reg*m_r*k_c_t], 
-							// 	&B_p[n_reg*k_c_t*n_r], 
-							// 	&C_p[core][n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
-							// 	m_r, n_r, k_c_t
-							// );
 
-
-							cake_sgemm_ukernel(
+							kernel_map[m_map][n_map](
 								&A_p[core][m_reg*m_r*k_c_t], 
 								&B_p[n_reg*k_c_t*n_r], 
 								&C_p[core][n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
-								m_r, n_r, k_c_t, cake_cntx
+								m_r, n_r, k_c_t
 							);
+
+							// cake_sgemm_ukernel(
+							// 	&A_p[core][m_reg*m_r*k_c_t], 
+							// 	&B_p[n_reg*k_c_t*n_r], 
+							// 	&C_p[core][n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
+							// 	m_r, n_r, k_c_t, cake_cntx
+							// );
 
 						}
 					}
@@ -913,7 +913,7 @@ void schedule_KMN_online(float* A, float* B, float* C, float** A_p, float* B_p, 
 // 			      	for(n2 = 0; n2 < n_c_t; n2 += n_r) {
 // 			        	 // bli_spackm_haswell_asm_16xk(n_r, k_c, &kappa, &B[n1 + k1*N + n2], lda, N, 
 // 			         	//                            &B_p[ind1 + (k1/k_c)*k_c*n_c + n2*k_c], n_r);
-// 			         	blis_B_packing_kernel(n_r, k_c_t, &kappa, &B[n1 + k*k_c*N + n2], lda, N, 
+// 			         	B_packing_kernel(n_r, k_c_t, &kappa, &B[n1 + k*k_c*N + n2], lda, N, 
 // 			                                    &B_p[n2*k_c_t], n_r);
 // 			      	}
 // 				}
@@ -946,7 +946,7 @@ void schedule_KMN_online(float* A, float* B, float* C, float** A_p, float* B_p, 
 // 						// printf("reuse A\n");
 // 					} else {
 // 						for(int m3 = 0; m3 < m_c_t; m3 += m_r) {
-// 							blis_A_packing_kernel(m_r, k_c_t, &kappa, &A[A_offset + core*m_c_x*K + m3*K], K, lda, 
+// 							A_packing_kernel(m_r, k_c_t, &kappa, &A[A_offset + core*m_c_x*K + m3*K], K, lda, 
 // 								&A_p[core][m3*k_c_t], m_r);
 // 						}     
 // 		            }

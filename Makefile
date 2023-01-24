@@ -179,11 +179,11 @@ cake_blis: $(wildcard *.h) $(wildcard *.c)
 
 cake_haswell: $(wildcard *.h) $(wildcard *.c)
 	g++  $(CFLAGS) $(SRC_FILES) $(KERNELS) \
-	$(LDFLAGS) -DUSE_CAKE_HASWELL -shared -o $(LIBCAKE)
+	$(LDFLAGS) -DUSE_CAKE_HASWELL -DUSE_CAKE_PACK -shared -o $(LIBCAKE)
 
 cake_armv8: $(wildcard *.h) $(wildcard *.c)
 	g++ $(CFLAGS) $(SRC_FILES) $(KERNELS) \
-	$(LDFLAGS) -DUSE_CAKE_ARMV8  -shared -o $(LIBCAKE)
+	$(LDFLAGS) -DUSE_CAKE_ARMV8 -DBLIS_ARMV8_PACK -shared -o $(LIBCAKE)
 
 # -- Clean rules --
 

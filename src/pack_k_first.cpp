@@ -167,7 +167,7 @@ void pack_test1(float* A, float* A_p, int M, int K, int p, cake_cntx_t* cake_cnt
 
    #pragma omp parallel for
    for(int m3 = 0; m3 < M; m3 += 6) {
-      blis_A_packing_kernel(6, K, &kappa, &A[m3*K], K, lda, 
+      A_packing_kernel(6, K, &kappa, &A[m3*K], K, lda, 
          &A_p[m3*K], 6);
    }     
 }
@@ -239,7 +239,7 @@ double pack_A_single_buf_k_first_blis(float* A, float* A_p, int M, int K, int p,
             int lda = 1;
 
             for(int m3 = 0; m3 < m_c_t; m3 += m_r) {
-               blis_A_packing_kernel(m_r, k_c_t, &kappa, &A[A_offset + core*m_c_x*K + m3*K], K, lda, 
+               A_packing_kernel(m_r, k_c_t, &kappa, &A[A_offset + core*m_c_x*K + m3*K], K, lda, 
                   &A_p[A_p_offset + core*m_c_x*k_c_t + m3*k_c_t], m_r);
             }     
 
@@ -391,10 +391,10 @@ void pack_B_k_first_blis(float* B, float* B_p, int K, int N, blk_dims_t* x, cake
          // local_ind = 0;
 
          for(int n2 = 0; n2 < n_c; n2 += n_r) {
-            blis_B_packing_kernel(n_r, k_c, &kappa, &B[n1 + k1*N + n2], lda, N, 
+            B_packing_kernel(n_r, k_c, &kappa, &B[n1 + k1*N + n2], lda, N, 
                   &B_p[ind1 + (k1/k_c)*k_c*n_c + n2*k_c], n_r);
 
-            // blis_B_packing_kernel(n_r, k_c, &kappa, &B[n1 + k1*N + n2], K, lda, 
+            // B_packing_kernel(n_r, k_c, &kappa, &B[n1 + k1*N + n2], K, lda, 
             //       &B_p[ind1 + (k1/k_c)*k_c*n_c], n_r);
 
             // for(int i = 0; i < k_c; i++) {
@@ -413,9 +413,9 @@ void pack_B_k_first_blis(float* B, float* B_p, int K, int N, blk_dims_t* x, cake
          #pragma omp parallel for private(n2,local_ind)
          for(n2 = 0; n2 < n_c; n2 += n_r) {
             // local_ind = 0;
-            // blis_B_packing_kernel(n_r, k_c1, &kappa, &B[n1 + k1*N + n2], K, lda, 
+            // B_packing_kernel(n_r, k_c1, &kappa, &B[n1 + k1*N + n2], K, lda, 
             //       &B_p[ind1 + n2*k_c1], n_r);
-            blis_B_packing_kernel(n_r, k_c1, &kappa, &B[n1 + k1*N + n2], lda, N, 
+            B_packing_kernel(n_r, k_c1, &kappa, &B[n1 + k1*N + n2], lda, N, 
                   &B_p[ind1 + n2*k_c1], n_r);
 
             // for(int i = 0; i < k_c1; i++) {

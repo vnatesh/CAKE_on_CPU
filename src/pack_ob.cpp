@@ -421,7 +421,32 @@ void pack_ob_B_single_buf(float* B, float* B_p, int K, int N, int n1,
 
 
 
+// B row stored, B_p also row stored (k_c rows with n_r contiguous elements each)
+void pack_B_nr_x_kc(float* B, float* B_p, int N, int k_c, int n_r) {
 
+   int ind_ob = 0;
+
+   for(int i = 0; i < k_c; i++) {
+      for(int j = 0; j < n_r; j++) {
+         B_p[ind_ob] = B[i*N + j];
+         ind_ob++;
+      }
+   }
+}
+
+
+// A row stored, A_p contains k_c cols of mr contiguous elements
+void pack_A_mr_x_kc(float* A, float* A_p, int K, int k_c, int m_r) {
+
+   int ind_ob = 0;
+
+   for(int i = 0; i < k_c; i++) {
+      for(int j = 0; j < m_r; j++) {
+         A_p[ind_ob] = A[i + j*K];
+         ind_ob++;
+      }
+   }       
+}
 
 
 

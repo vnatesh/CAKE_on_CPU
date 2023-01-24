@@ -86,10 +86,12 @@ size_t cake_sgemm_packed_B_size(int K, int N, int p, blk_dims_t* x, cake_cntx_t*
 size_t cake_sgemm_packed_C_size(int M, int N, int p, blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch);
 
 
+void pack_A_mr_x_kc(float* A, float* A_p, int K, int k_c, int m_r);
+void pack_B_nr_x_kc(float* B, float* B_p, int N, int k_c, int n_r);
 
 
 // kernel helper functions
-inline void blis_A_packing_kernel
+inline void A_packing_kernel
 (       
 	int               cdim0,
 	int               k0,
@@ -99,20 +101,21 @@ inline void blis_A_packing_kernel
 ) {
 
 
-#ifdef USE_CAKE_HASWELL
-	// printf("HEYYY\n");
-	bli_spackm_haswell_asm_6xk_new(cdim0, k0, kappa, a, inca0, lda0, p, ldp0);
-#elif USE_CAKE_ARMV8
+#ifdef USE_CAKE_PACK
+	pack_A_mr_x_kc(a, p, inca0, k0, cdim0);
+#elif USE_BLIS_ARMV8_PACK
 	bli_spackm_armv8a_int_8xk(cdim0, k0, kappa, a, inca0, lda0, p, ldp0);
-#elif USE_BLIS
+#elif USE_BLIS_HASWELL_PACK
 	bli_spackm_haswell_asm_6xk_new(cdim0, k0, kappa, a, inca0, lda0, p, ldp0);
+#else
+	pack_A_mr_x_kc(a, p, inca0, k0, cdim0);
 #endif
 
 }
 
 
 
-inline void blis_B_packing_kernel
+inline void B_packing_kernel
 (       
 	int               cdim0,
 	int               k0,
@@ -122,12 +125,14 @@ inline void blis_B_packing_kernel
 ) {
 
 
-#ifdef USE_CAKE_HASWELL
-	bli_spackm_haswell_asm_16xk_new(cdim0, k0, kappa, a, inca0, lda0, p, ldp0);
-#elif USE_CAKE_ARMV8
+#ifdef USE_CAKE_PACK
+	pack_B_nr_x_kc(a, p, lda0, k0, cdim0);
+#elif USE_BLIS_ARMV8_PACK
 	bli_spackm_armv8a_int_12xk(cdim0, k0, kappa, a, inca0, lda0, p, ldp0);
-#elif USE_BLIS
+#elif USE_BLIS_HASWELL_PACK
 	bli_spackm_haswell_asm_16xk_new(cdim0, k0, kappa, a, inca0, lda0, p, ldp0);
+#else
+	pack_B_nr_x_kc(a, p, lda0, k0, cdim0);
 #endif
 
 }
