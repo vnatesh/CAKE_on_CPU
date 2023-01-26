@@ -60,27 +60,49 @@ int main(int argc, char* argv[])  {
     rand_init(A, m, k);
     rand_init(B, k, n);
 
-    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-                m, n, k, alpha, A, k, B, n, beta, C, n);
 
-    clock_gettime(CLOCK_REALTIME, &start);
+    int ntrials = atoi(argv[5]);
+    float ressss;
+    float tttmp[18];
+    int flushsz=100000;
+    diff_t = 0.0;
 
-    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-                m, n, k, alpha, A, k, B, n, beta, C, n);
+
+    for(int i = 0; i < ntrials; i++) {
+
+        float *dirty = (float *)malloc(flushsz * sizeof(float));
+        #pragma omp parallel for
+        for (int dirt = 0; dirt < flushsz; dirt++){
+            dirty[dirt] += dirt%100;
+            tttmp[dirt%18] += dirty[dirt];
+        }
+
+        for(int ii =0; ii<18;ii++){
+            ressss+= tttmp[ii];
+        }
+
+        clock_gettime(CLOCK_REALTIME, &start);
+
+        cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+        m, n, k, alpha, A, k, B, n, beta, C, n);
 
 
-    clock_gettime(CLOCK_REALTIME, &end);
-    long seconds = end.tv_sec - start.tv_sec;
-    long nanoseconds = end.tv_nsec - start.tv_nsec;
-    diff_t = seconds + nanoseconds*1e-9;
-    printf("sgemm time: %f \n", diff_t); 
+        clock_gettime(CLOCK_REALTIME, &end);
+        long seconds = end.tv_sec - start.tv_sec;
+        long nanoseconds = end.tv_nsec - start.tv_nsec;
+        diff_t += seconds + nanoseconds*1e-9;
 
+        free(dirty);
+    }
+
+
+    // printf("sgemm time: %f \n", diff_t / ntrials); 
 
     char fname[50];
     snprintf(fname, sizeof(fname), "results_sq");
     FILE *fp;
     fp = fopen(fname, "a");
-    fprintf(fp, "armpl,%d,%d,%f\n",p,m,diff_t);
+    fprintf(fp, "armpl,%d,%d,%f\n", p, m, diff_t / ntrials);
     fclose(fp);
 
 

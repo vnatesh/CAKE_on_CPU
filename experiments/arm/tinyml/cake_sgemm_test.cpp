@@ -1,0 +1,218 @@
+#include "cake.h"
+
+
+
+int main( int argc, char** argv ) {
+	 // run_tests();
+
+	int M, K, N, p;
+	struct timespec start, end;
+	double diff_t;
+
+
+	int Ms[] = {16,16,32,32,32,64,64,64, 64, 64, 8 ,16 ,32 ,32 ,64 ,64 ,128,128,256,256};
+	int Ks[] = {27 ,144,144,288,16 ,288,576,32 , 40, 64, 27 , 8 , 16 , 32 , 32 , 64 , 64 , 128, 128, 256};
+	int Ns[] = {1024,1024,256,256,256,64,64,64, 122, 125, 2304,2304,576,576,144,144, 36, 36, 9, 9};
+
+	for(int t = 0; t < 20; t++) {
+
+		M = Ms[t];
+		K = Ks[t];
+		N = Ns[t];
+		p = 4;
+
+		printf("M = %d, K = %d, N = %d, cores = %d\n", M,K,N,p);
+
+		float* A = (float*) malloc(M * K * sizeof( float ));
+		float* B = (float*) malloc(K * N * sizeof( float ));
+		float* C = (float*) calloc(M * N , sizeof( float ));
+
+		// initialize A and B
+	    srand(time(NULL));
+		rand_init(A, M, K);
+		rand_init(B, K, N);
+
+		cake_cntx_t* cake_cntx = cake_query_cntx();
+
+	    int ntrials = atoi(argv[1]);
+	    float ressss;
+	    float tttmp[18];
+	    int flushsz=100000;
+	    diff_t = 0.0;
+
+	    for(int i = 0; i < ntrials; i++) {
+
+	        float *dirty = (float *)malloc(flushsz * sizeof(float));
+	        #pragma omp parallel for
+	        for (int dirt = 0; dirt < flushsz; dirt++){
+	            dirty[dirt] += dirt%100;
+	            tttmp[dirt%18] += dirty[dirt];
+	        }
+
+	        for(int ii =0; ii<18;ii++){
+	            ressss+= tttmp[ii];
+	        }
+
+			// diff_t += cake_sgemm(A, B, C, M, N, K, p, cake_cntx, argv, 0, 0, 1, 0, KMN);
+			// diff_t += cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
+			// cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
+			// cake_sgemm(A, B, C, M, N, K, p, cake_cntx, argv, 0, 0, 1, 0, KMN);
+			// cake_sgemm_online_test(A, B, C, M, N, K, p, cake_cntx, argv, 0, 0, 1, 0, KMN);
+			// cake_sgemm_online_test(A, B, C, M, N, K, p, cake_cntx);
+			// cake_sgemm_small_test(A, B, C, M, N, K, p, cake_cntx, argv, 0, 0, 1, 0, KMN);
+
+			// diff_t += cake_sgemm_2d(A, B, C, M, N, K, p, cake_cntx, NULL, 0, 0, 1, 0, KMN);
+			diff_t += cake_sgemm_online(A, B, C, M, N, K, p, cake_cntx, NULL, 0, 0, 1, 0, KMN);
+
+	        free(dirty);
+	    }
+
+	    // printf("cake_sgemm time: %f \n", diff_t / ntrials); 
+		char fname[50];
+		snprintf(fname, sizeof(fname), "results");
+		FILE *fp;
+		fp = fopen(fname, "a");
+		fprintf(fp, "cake_online,%d,%d,%d,%d,%d,%f\n", t+1, p, M, K, N, diff_t / ntrials);
+		fclose(fp);
+
+		free(A);
+		free(B);
+		free(C);
+		free(cake_cntx);
+	}
+
+	
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// #include "cake.h"
+
+
+
+// typedef double cake_sgemm_tester(float* A, float* B, float* C, int M, int N, int K, int p, 
+// 	cake_cntx_t* cake_cntx, char* argv[], bool packedA, bool packedB , 
+// 	float alpha, float beta, enum sched sch);
+
+
+// static cake_sgemm_tester* test_funcs[3] = 
+// {
+// 	cake_sgemm,
+// 	cake_sgemm_online
+// };
+
+
+
+// void square_test(int func, int ntrials, int p, int s, int e, int step) {
+
+// 	int M, K, N;
+// 	struct timespec start, end;
+//     long seconds, nanoseconds;
+// 	double diff_t;
+
+// 	for(int t = s; t < (e + 1); t += step) {
+
+// 		M = t;
+// 		K = t;
+// 		N = t;
+
+// 		printf("M = %d, K = %d, N = %d, cores = %d\n", M,K,N,p);
+
+// 		float* A = (float*) malloc(M * K * sizeof( float ));
+// 		float* B = (float*) malloc(K * N * sizeof( float ));
+// 		float* C = (float*) calloc(M * N , sizeof( float ));
+
+// 		// initialize A and B
+// 	    srand(time(NULL));
+// 		rand_init(A, M, K);
+// 		rand_init(B, K, N);
+
+// 		cake_cntx_t* cake_cntx = cake_query_cntx();
+
+
+// 	    float ressss;
+// 	    float tttmp[18];
+// 	    int flushsz=100000000; // 400 MB of flaots
+// 	    diff_t = 0.0;
+
+
+// 	    for(int i = 0; i < ntrials; i++) {
+
+
+// 	        float *dirty = (float *)malloc(flushsz * sizeof(float));
+// 	        #pragma omp parallel for
+// 	        for (int dirt = 0; dirt < flushsz; dirt++){
+// 	            dirty[dirt] += dirt%100;
+// 	            tttmp[dirt%18] += dirty[dirt];
+// 	        }
+
+// 	        for(int ii =0; ii<18;ii++){
+// 	            ressss+= tttmp[ii];
+// 	        }
+
+// 			diff_t += test_funcs[func](A, B, C, M, N, K, p, cake_cntx, NULL, 0, 0, 1, 0, KMN);
+
+// 	        free(dirty);
+// 	    }
+
+
+// 	    // printf("cake_sgemm time: %f \n", diff_t / ntrials); 
+// 	    // int write_result = atoi(argv[13]);
+// 	    // if(write_result) {
+// 		char fname[50];
+// 		snprintf(fname, sizeof(fname), "results");
+// 		FILE *fp;
+// 		fp = fopen(fname, "a");
+// 		fprintf(fp, "%d,%d,%d,%d,%d,%f\n", func, p, M, K, N, diff_t / ntrials);
+// 		fclose(fp);
+// 	    // }
+
+
+		
+// 		free(A);
+// 		free(B);
+// 		free(C);
+// 		free(cake_cntx);
+	
+// 	}
+// }
+
+
+
+// int main( int argc, char** argv ) {
+
+// 	// run_tests();
+
+// 	int ntrials = atoi(argv[1]);
+// 	int p = atoi(argv[2]);
+// 	int start = atoi(argv[3]);
+// 	int end = atoi(argv[4]);
+// 	int step = atoi(argv[5]);
+
+// 	for(int i = 0; i < 2; i++) {
+// 		square_test(i, ntrials, p, start, end, step);
+// 	}
+
+// 	return 0;
+// }
+

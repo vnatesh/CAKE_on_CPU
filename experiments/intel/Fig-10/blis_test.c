@@ -102,22 +102,46 @@ int main( int argc, char** argv )
 
 
 
-    clock_gettime(CLOCK_REALTIME, &start);
+    int ntrials = atoi(argv[5]);
 
-    for(int i = 0; i < 1; i++) {
+    float ressss;
+    float tttmp[18];
+    int flushsz=100000;
+    diff_t = 0.0;
+
+    for(int i = 0; i < ntrials; i++) {
+
+        float *dirty = (float *)malloc(flushsz * sizeof(float));
+        #pragma omp parallel for
+        for (int dirt = 0; dirt < flushsz; dirt++){
+            dirty[dirt] += dirt%100;
+            tttmp[dirt%18] += dirty[dirt];
+        }
+
+        for(int ii =0; ii<18;ii++){
+            ressss+= tttmp[ii];
+        }
+
+
+		clock_gettime(CLOCK_REALTIME, &start);
+
 		// c := beta * c + alpha * a * b, where 'a', 'b', and 'c' are general.
 		bli_sgemm( BLIS_NO_TRANSPOSE, BLIS_NO_TRANSPOSE,
 		           m, n, k, &alpha, a, rsa, csa, b, rsb, csb,
 		                     &beta, c, rsc, csc );
+		clock_gettime(CLOCK_REALTIME, &end);
+		seconds = end.tv_sec - start.tv_sec;
+		nanoseconds = end.tv_nsec - start.tv_nsec;
+		diff_t += seconds + nanoseconds*1e-9;
+
+		free(dirty);
+
 	}
-
-    clock_gettime(CLOCK_REALTIME, &end);
-
 
     seconds = end.tv_sec - start.tv_sec;
     nanoseconds = end.tv_nsec - start.tv_nsec;
     diff_t = seconds + nanoseconds*1e-9;
-    printf("blis sgemm time: %f \n", diff_t/1); 
+    printf("blis sgemm time: %f \n", diff_t / ntrials); 
 
 	// bli_sprintm( "c: after gemm", m, n, c, rsc, csc, "%4.1f", "" );
 
