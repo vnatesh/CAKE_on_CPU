@@ -66,6 +66,14 @@ void pack_A_sp(float* A, float* A_p, int M, int K, int p,
 
 
 
+void pack_A_csr_to_sp_k_first(csr_t* csr, float* A_p, int M, int K, int nz, int p, 
+   sp_pack_t* sp_pack, blk_dims_t* x, cake_cntx_t* cake_cntx);
+void csr_to_ob_A_sp(float* vals, int* colind_csr, int* rowptr_csr, int* nnz_tiles, int* num_col_tile,
+   char* nnz_outer, int* k_inds, char* loc_m, float* A_p, int M, int m1, int m2, int k1,
+   int m_c, int k_c, int m_r, int nz_in, int col_tile_in, int* ret);
+
+
+
 // unpacking
 void unpack_ob_C_single_buf(float* C, float* C_p, int M, int N, int m1, int n1, int m2,
 				int m_c, int n_c, int m_r, int n_r);

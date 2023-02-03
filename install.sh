@@ -12,9 +12,11 @@ then
    mv sparse.cpp dense.cpp src/kernels/armv8
 else
    python3 python/kernel_gen.py haswell 6 16
-   python3 python/grid_gen.py   
    mv sparse.cpp dense.cpp src/kernels/haswell
 fi
+
+python3 python/grid_gen.py
+
 
 
 if [ "$1" == "blis" ]; 

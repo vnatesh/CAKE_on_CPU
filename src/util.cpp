@@ -187,24 +187,213 @@ int run_tests_sparse() {
 }
 
 
-bool cake_sgemm_checker(float* A, float* B, float* C, int N, int M, int K) {
 
-	float* C_check = (float*) calloc(M * N , sizeof( float ));
 
-	for(int k = 0; k < K; k++) {
-		#pragma omp parallel for
-		for(int m = 0; m < M; m++) {
-			for(int n = 0; n < N; n++) {
-			// C_check[m*N + n] = 0.0;
-			// C_check[m*N + n] = C[m*N + n];
-				C_check[m*N + n] += A[m*K + k] * B[k*N + n];
+int run_tests_sparse_test() {
+
+	printf("sparse testing!!!!!\n");
+	sleep(7);
+	// float *A, *B, *C;
+	int M, K, N, m, k, n, max_threads,p;
+	float *A, *B, *C;
+	cake_cntx_t* cake_cntx = cake_query_cntx();
+	max_threads = cake_cntx->ncores;
+	int num_tests = 6;
+	int Ms[6] = {1,10,96,111,960,2111};
+	int Ks[6] = {1,10,96,111,960,2111};
+	int Ns[6] = {1,10,96,111,960,2111};
+	int cnt = 0;
+
+	printf("starting spMM tests\n");
+
+	for(p = 9; p <= max_threads; p++)  {
+		for(m = 0; m < num_tests; m++) {
+			for(k = 0; k < num_tests; k++) {
+				for(n = 0; n < num_tests; n++) {
+					
+					M = Ms[m];
+					K = Ks[k];
+					N = Ns[n];
+
+					A = (float*) malloc(M * K * sizeof( float ));
+					B = (float*) malloc(K * N * sizeof( float ));
+					C = (float*) calloc(M * N , sizeof( float ));
+				    srand(time(NULL));
+
+				    rand_sparse(A, M, K, 0.5);
+					rand_init(B, K, N);
+
+
+					char fname[50];
+					snprintf(fname, sizeof(fname), "convert_test");
+					int nz = mat_to_csr_file(A, M, K, fname);
+					
+					csr_t* csr = file_to_csr(fname);
+					float density = ((float) csr->rowptr[M]) / ((float) (M*K));
+					blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
+					cake_cntx_t* cake_cntx = cake_query_cntx();
+					init_block_dims(M, N, K, p, x, cake_cntx, KMN, NULL, density);
+				    float* A_p = (float*) calloc(nz, sizeof(float));
+					sp_pack_t* sp_pack = (sp_pack_t*) malloc(sizeof(sp_pack_t));
+					pack_A_csr_to_sp_k_first(csr, A_p, M, K, nz, p, sp_pack, x, cake_cntx);
+					cake_sp_sgemm_testing(A, B, C, M, N, K, p, cake_cntx, density, NULL, fname, 1, 0, 1, 0, KMN);
+					
+					free_csr(csr);
+					free_sp_pack(sp_pack);
+
+					if(cake_sgemm_checker(A, B, C, N, M, K)) {
+						printf("TESTS FAILED on M-first p=%d M=%d K=%d N=%d\n",p,M,K,N);
+						cnt++;
+					}
+
+					free(A);
+					free(B);
+					free(C);
+
+				}
 			}
-			// printf("%f ", C_check[m*N + n]);
 		}
-		// printf("\n");
 	}
-	// printf("\n\n\n\n\n");
-	// exit(1);
+
+	if(cnt) {
+		printf("FAILED\n");
+	} else {
+		printf("ALL SPARSE MM TESTS PASSED!\n");
+	}
+
+	return 0;
+}
+
+
+
+void free_csr(csr_t* x) {
+	free(x->rowptr);
+	free(x->colind);
+	free(x->vals);
+	free(x);
+}
+
+void free_sp_pack(sp_pack_t* x) {
+	free(x->loc_m);
+	free(x->nnz_outer);
+	free(x->k_inds);
+	free(x->A_sp_p);
+	free(x->nnz_tiles);
+	free(x->num_col_tile);
+}
+
+
+// read in CSR matrix from file
+csr_t* file_to_csr(char* fname) {
+
+	int M, K, nz;
+
+	FILE *fptr;
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t nread;
+
+	fptr = fopen(fname, "r");
+	if (fptr == NULL) {
+	   perror("fopen");
+	   exit(EXIT_FAILURE);
+	}
+
+	nread = getline(&line, &len, fptr);
+	M = atoi(strtok(line," "));
+	K = atoi(strtok(NULL, " "));
+	nz = atoi(strtok(NULL, " "));
+	float* vals = (float*) malloc(nz * sizeof(float));
+	int* rowptr = (int*) malloc((M + 1) * sizeof(int));
+	int* colind = (int*) malloc(nz * sizeof(int));
+
+	// printf("M = %d K = %d nz = %d, cores = %d, file = %s\n", M, K, nz, p, argv[9]);
+
+	nread = getline(&line, &len, fptr);
+
+	char* tok;
+	tok = strtok(line," ");
+	rowptr[0] = atoi(tok);
+
+	for(int i = 1; i < M+1; i++) {
+		tok = strtok(NULL, " ");
+		rowptr[i] = atoi(tok);
+	}
+
+	for(int i = 0; i < nz; i++) {
+		tok = strtok(NULL, " ");
+		colind[i] = atoi(tok);
+	}
+
+	for(int i = 0; i < nz; i++) {
+		tok = strtok(NULL, " ");
+		vals[i] = atof(tok);
+	}
+
+   	free(line);
+   	fclose(fptr);
+
+	csr_t* csr_ret = (csr_t*) malloc(sizeof(csr_t));
+	csr_ret->rowptr = rowptr;
+	csr_ret->colind = colind;
+	csr_ret->vals = vals;
+
+   	return csr_ret;
+}
+
+
+
+void csr_to_mat(float* A, int M, int K, int* rowptr, float* vals, int* colind) {
+
+	int ks, ind = 0;
+
+	for(int i = 0; i < M; i++) {
+		ks = rowptr[i+1] - rowptr[i];
+		for(int j = 0; j < ks; j++) {
+			A[i*K + colind[ind]] = vals[ind];
+			ind++;
+		}
+	}
+}
+
+
+void test_csr_convert(int M, int K, float sparsity) {
+
+	char fname[50];
+	snprintf(fname, sizeof(fname), "convert_test");
+	float* A = (float*) malloc(M * K * sizeof( float ));
+	float* A_check = (float*) malloc(M * K * sizeof(float));
+
+	// initialize A and B
+    srand(time(NULL));
+	rand_sparse(A, M, K, ((float) sparsity) / 100.0);
+
+	int nz = mat_to_csr_file(A, M, K, fname);
+	csr_t* csr = file_to_csr(fname);
+	csr_to_mat(A_check, M, K, csr->rowptr, csr->vals, csr->colind);
+	mat_equals(A, A_check, M, K);
+	free(A); free(A_check);
+
+	// for(int i = 0; i < M+1; i++) {
+	// 	printf("%d ", csr->rowptr[i]);
+	// }
+	// printf("\n");
+
+	// for(int i = 0; i < nz; i++) {
+	// 	printf("%d ", csr->colind[i]);
+	// }
+	// printf("\n");
+
+
+	// for(int i = 0; i < nz; i++) {
+	// 	printf("%f ", csr->vals[i]);
+	// }
+	// printf("\n");
+}
+
+
+
+void mat_equals(float* C, float* C_check, int M, int N) {
 
     int CORRECT = 1;
     int cnt = 0;
@@ -228,13 +417,77 @@ bool cake_sgemm_checker(float* A, float* B, float* C, int N, int M, int K) {
 
 	if(CORRECT) {
 		printf("CORRECT!\n");
-		return 0;
 	} else {
 		printf("WRONG!\n");
 		printf("%d\n", cnt);
-		return 1;
+	}
+}
+
+
+
+
+
+int mat_to_csr_file(float* A, int M, int K, char* fname) {
+
+	float* vals = (float*) malloc(M * K * sizeof(float));
+	int* colind = (int*) malloc(M * K * sizeof(int));
+	int* rowptr = (int*) malloc((M+1) * sizeof(int));
+	rowptr[0] = 0;
+
+	FILE *fp = fopen(fname, "w");
+	int row_cnt, nz = 0;
+
+	for(int i = 0; i < M; i++) {
+		row_cnt = 0;
+		for(int j = 0; j < K; j++) {
+			float tmp = A[i*K + j];
+			if(tmp != 0) {
+				vals[nz] = tmp;
+				colind[nz] = j;
+				nz++;
+			}
+		}
+
+		rowptr[i+1] = nz;
 	}
 
+	fprintf(fp, "%d %d %d\n", M, K, nz);
+	for(int i = 0; i < (M+1); i++) {
+		fprintf(fp, "%d ", rowptr[i]);
+	}
+	for(int i = 0; i < nz; i++) {
+		fprintf(fp, "%d ", colind[i]);
+	}
+	for(int i = 0; i < nz; i++) {
+		fprintf(fp, "%f ", vals[i]);
+	}
+
+	fclose(fp);
+	free(rowptr); free(vals); free(colind);
+	return nz;
+}
+
+
+bool cake_sgemm_checker(float* A, float* B, float* C, int N, int M, int K) {
+
+	float* C_check = (float*) calloc(M * N , sizeof( float ));
+
+	for(int k = 0; k < K; k++) {
+		#pragma omp parallel for
+		for(int m = 0; m < M; m++) {
+			for(int n = 0; n < N; n++) {
+			// C_check[m*N + n] = 0.0;
+			// C_check[m*N + n] = C[m*N + n];
+				C_check[m*N + n] += A[m*K + k] * B[k*N + n];
+			}
+			// printf("%f ", C_check[m*N + n]);
+		}
+		// printf("\n");
+	}
+	// printf("\n\n\n\n\n");
+	// exit(1);
+
+	mat_equals(C, C_check, M, N);
 	free(C_check);
 
 	// for (int n1 = 0; n1 < N; n1++) {
