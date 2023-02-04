@@ -161,13 +161,13 @@ typedef struct cache_dims_t{
 // sparse matrix handling
 
 typedef struct sp_pack_t {
-  char* loc_m; // nnz vals (3-5 bits) // M dim C writeback location for each nnz value in A (3-5 bits)
-  char* nnz_outer; // at most nnz vals (3-5 bits) // number of nnz in every outer prod col vec (with len m_r) of A;
-  int* k_inds; // at most nnz vals // density-based reorder indices of A cols within a mrxkcxnr tile
-  int* nnz_outer_blk; // number of nonzeros in each mrxkcxnr outer product blk
-  float* A_sp_p; // nnz vals (32-bit) // sparse packed A (only storing nonzeros)
-  int* nnz_tiles; // (M*K)/(mr*kc) vals // cum-sum number of nnz vals in each mr x kc tile of A
-  int* num_col_tile; // (M*K)/(mr*kc) vals // cum-sum number of outer-product cols in each mr x kc tile that have 1 or more nnz vals 
+   char* loc_m; // nnz vals (3-5 bits) // M dim C writeback location for each nnz value in A (3-5 bits)
+   char* nnz_outer; // at most nnz vals (3-5 bits) // number of nnz in every outer prod col vec (with len m_r) of A;
+   int* k_inds; // at most nnz vals // density-based reorder indices of A cols within a mrxkcxnr tile
+   int* nnz_outer_blk; // number of nonzeros in each mrxkcxnr outer product blk
+   float* A_sp_p; // nnz vals (32-bit) // sparse packed A (only storing nonzeros)
+   int* nnz_tiles; // (M*K)/(mr*kc) vals // cum-sum number of nnz vals in each mr x kc tile of A
+   int* num_col_tile; // (M*K)/(mr*kc) vals // cum-sum number of outer-product cols in each mr x kc tile that have 1 or more nnz vals 
 } sp_pack_t;
 
 

@@ -109,7 +109,7 @@ int get_num_physical_cores() {
 	fp = popen(command2, "r");
 
 	if (fp == NULL) {
-		printf("Failed to run lscpu1 command\n" );
+		printf("Failed to run lscpu | grep Thread command\n" );
 		exit(1);
 	}
 
@@ -125,7 +125,7 @@ int get_num_physical_cores() {
 	fp = popen(command3, "r");
 
 	if (fp == NULL) {
-		printf("Failed to run lscpu1 command\n" );
+		printf("Failed to run lscpu | grep Socket command\n" );
 		exit(1);
 	}
 
@@ -153,7 +153,7 @@ int get_cache_size(int level) {
 	fp = popen(command, "r");
 
 	if (fp == NULL) {
-		printf("Failed to run lscpu2 command\n" );
+		printf("Failed to run lscpu | grep Model command\n" );
 		exit(1);
 	}
 
@@ -261,7 +261,7 @@ int get_cache_size(int level) {
 	}
 
 	if (fp == NULL) {
-		printf("Failed to run lscpu3 command\n" );
+		printf("Failed to run lscpu --caches command\n" );
 		exit(1);
 	}
 
@@ -355,13 +355,15 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 	}
 
 	if(ss) {
+		printf("user-defined tiling\n");
 		blk_ret->m_c = atoi(argv[6]);
 		blk_ret->k_c = atoi(argv[7]);
 		blk_ret->n_c = atoi(argv[8]);
+		printf("%d %d %d\n", blk_ret->m_c, blk_ret->k_c, blk_ret->n_c);
 	// sparsity-aware tiling when A matrix is sparse
 	} else if(density > 0.0000001) {
 		
-		// printf("sparsity-aware tiling\n");
+		printf("sparsity-aware tiling\n");
 		double a_coeff = (density/cake_cntx->mr) * ((int) ceil(density * cake_cntx->mr)) ;
 
 		mc_L2 = (int)  ((-b + sqrt(b*b + 4*a_coeff*(((double) cake_cntx->L2) / (type_size)))) / (2.0*a_coeff)) ;
@@ -435,9 +437,9 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 		blk_ret->k_c = mc_ret;
 		blk_ret->n_c = nc_ret;
 
-		// blk_ret->m_c = mc_ret;
-		// blk_ret->k_c = 200;
-		// blk_ret->n_c = 1024;
+		blk_ret->m_c = 160;
+		blk_ret->k_c = 1000;
+		blk_ret->n_c = 576;
 
 
 		// if(cake_cntx->L3 >= 4*(M*K + K*N + M*N)) {
@@ -503,7 +505,7 @@ void init_block_dims(int M, int N, int K, int p,
     x->n_c = cache_dims->n_c;
     x->sch = cache_dims->sch;
     free(cache_dims);
-    
+
 	switch(x->sch) {
 
 		case KMN: {

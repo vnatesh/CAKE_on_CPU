@@ -269,10 +269,15 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 
 
-	if(!packedA) free(A_p);
+	if(!packedA) {
+		free(A_p);
+		free_sp_pack(sp_pack);
+	}
+
 	if(!packedB) free(B_p);
 	free(C_p);
 	free(x);
+
 
 	return times;
 }
@@ -283,8 +288,8 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 
 
-double cake_sp_sgemm_testing(float* A, float* B, float* C, int M, int N, int K, int p, 
-	cake_cntx_t* cake_cntx, float density, char* argv[], char* fname,
+double cake_sp_sgemm_testing(char* fname, float* B, float* C, int M, int N, int K, int p, 
+	cake_cntx_t* cake_cntx, float density, char* argv[], sp_pack_t* sp_pack,
 	bool packedA, bool packedB, float alpha, float beta, enum sched sch) {
 
 
@@ -294,7 +299,6 @@ double cake_sp_sgemm_testing(float* A, float* B, float* C, int M, int N, int K, 
 	double diff_t, times;
 	float *A_p, *B_p, *C_p;
 	csr_t* csr;
-	sp_pack_t* sp_pack;
 
 	sch = KMN;
 	// sch = set_schedule(sch, M, N, K);
@@ -307,14 +311,17 @@ double cake_sp_sgemm_testing(float* A, float* B, float* C, int M, int N, int K, 
 	init_block_dims(M, N, K, p, x, cake_cntx, sch, argv, density);
 	omp_set_num_threads(p);
 
-    if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
-    if(DEBUG) printf("mc = %d, kc = %d, nc = %d, alpha_n = %f\n", x->m_c, x->k_c, x->n_c, cake_cntx->alpha_n);
+    printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
+    printf("mc = %d, kc = %d, nc = %d, alpha_n = %f\n", x->m_c, x->k_c, x->n_c, cake_cntx->alpha_n);
 
-	csr = file_to_csr(fname);
-	A_p = (float*) calloc(csr->rowptr[M], sizeof(float));
-	sp_pack = (sp_pack_t*) malloc(sizeof(sp_pack_t));
+	if(sp_pack == NULL) {
 
-	pack_A_csr_to_sp_k_first(csr, A_p, M, K, csr->rowptr[M], p, sp_pack, x, cake_cntx);
+		csr = file_to_csr(fname);
+		A_p = (float*) calloc(csr->rowptr[M], sizeof(float));
+		sp_pack = (sp_pack_t*) malloc(sizeof(sp_pack_t));
+		pack_A_csr_to_sp_k_first(csr, A_p, M, K, csr->rowptr[M], p, sp_pack, x, cake_cntx);
+		free_csr(csr);
+	} 
 
 
 	if(packedB) {
@@ -395,13 +402,15 @@ double cake_sp_sgemm_testing(float* A, float* B, float* C, int M, int N, int K, 
 	if(DEBUG) printf("full gemm time: %f \n", diff_t); 	// exit(1);
 
 
+	if(!packedA) {
+		free(A_p);
+		free_sp_pack(sp_pack);
+	}
 
-	if(!packedA) free(A_p);
 	if(!packedB) free(B_p);
+
 	free(C_p);
 	free(x);
-	free_csr(csr);
-	free_sp_pack(sp_pack);
 
 	return times;
 }

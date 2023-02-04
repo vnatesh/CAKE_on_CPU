@@ -64,9 +64,9 @@ void schedule_sp(sp_pack_t* A_p, float* B_p, float* C_p, int M, int N, int K, in
 
 
 
-double cake_sp_sgemm_testing(float* A, float* B, float* C, int M, int N, int K, int p, 
-	cake_cntx_t* cake_cntx, float density = 0, char* argv[] = NULL, char* fname = NULL, bool packedA = 0, 
-	bool packedB = 0, float alpha = 1, float beta = 0, enum sched sch = NA);
+double cake_sp_sgemm_testing(char* fname, float* B, float* C, int M, int N, int K, int p, 
+	cake_cntx_t* cake_cntx, float density = 0, char* argv[] = NULL, sp_pack_t* sp_pack = NULL,
+	bool packedA = 0, bool packedB = 0, float alpha = 1, float beta = 0, enum sched sch = NA);
 void schedule_KMN_sp_test(sp_pack_t* sp_pack, float* B_p, float* C_p, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, blk_dims_t* x);
 

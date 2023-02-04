@@ -90,7 +90,7 @@ void schedule_KMN_sp_test(sp_pack_t* sp_pack, float* B_p, float* C_p, int M, int
 							nnz_tile = nnz_tiles[tile_ind + m_reg];
 							num_col = num_col_tile[tile_ind + m_reg];
 
-							cake_sp_sgemm_haswell_6x16(
+							kernel_map_sp_new[m_map][n_map](
 									&A_p[nnz_tile], 
 									&B_p[b_ind + n_reg*k_c_t*n_r], 
 									&C_p[c_ind + n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
@@ -188,22 +188,22 @@ void schedule_KMN_sp(sp_pack_t* sp_pack, float* B_p, float* C_p, int M, int N, i
 						for(m_reg = 0; m_reg < (m_c_t / m_r); m_reg++) {							
 
 							// A_p_offset = nnz_outer_blk[a_ind + m_reg];
-							// kernel_map_sp[m_map][n_map](&A_p[a_ind + m_reg*m_r*k_c_t], 
-							// 						&B_p[b_ind + n_reg*k_c_t*n_r], 
-							// 						&C_p[c_ind + n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
-							// 						m_r, n_r, k_c_t, 
-							// 						&nnz_outer[out_ind + m_reg*k_c_t],
-							// 						&k_inds[out_ind + m_reg*k_c_t], 
-							// 						&loc_m[a_ind + m_reg*m_r*k_c_t]);
-
-
-							cake_spgemm_ukernel(&A_p[a_ind + m_reg*m_r*k_c_t], 
+							kernel_map_sp[m_map][n_map](&A_p[a_ind + m_reg*m_r*k_c_t], 
 													&B_p[b_ind + n_reg*k_c_t*n_r], 
 													&C_p[c_ind + n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
 													m_r, n_r, k_c_t, 
 													&nnz_outer[out_ind + m_reg*k_c_t],
 													&k_inds[out_ind + m_reg*k_c_t], 
 													&loc_m[a_ind + m_reg*m_r*k_c_t]);
+
+
+							// cake_spgemm_ukernel(&A_p[a_ind + m_reg*m_r*k_c_t], 
+							// 						&B_p[b_ind + n_reg*k_c_t*n_r], 
+							// 						&C_p[c_ind + n_reg*m_c_t*n_r + m_reg*m_r*n_r], 
+							// 						m_r, n_r, k_c_t, 
+							// 						&nnz_outer[out_ind + m_reg*k_c_t],
+							// 						&k_inds[out_ind + m_reg*k_c_t], 
+							// 						&loc_m[a_ind + m_reg*m_r*k_c_t]);
 
 						}
 					}

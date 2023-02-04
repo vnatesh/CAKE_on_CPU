@@ -229,14 +229,14 @@ int run_tests_sparse_test() {
 					int nz = mat_to_csr_file(A, M, K, fname);
 					
 					csr_t* csr = file_to_csr(fname);
-					float density = ((float) csr->rowptr[M]) / ((float) (M*K));
+					float density = ((float) csr->rowptr[M]) / ((float) (((float) M) * ((float) K)));
 					blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
 					cake_cntx_t* cake_cntx = cake_query_cntx();
 					init_block_dims(M, N, K, p, x, cake_cntx, KMN, NULL, density);
 				    float* A_p = (float*) calloc(nz, sizeof(float));
 					sp_pack_t* sp_pack = (sp_pack_t*) malloc(sizeof(sp_pack_t));
 					pack_A_csr_to_sp_k_first(csr, A_p, M, K, nz, p, sp_pack, x, cake_cntx);
-					cake_sp_sgemm_testing(A, B, C, M, N, K, p, cake_cntx, density, NULL, fname, 1, 0, 1, 0, KMN);
+					cake_sp_sgemm_testing(fname, B, C, M, N, K, p, cake_cntx, density, NULL, sp_pack, 1, 0, 1, 0, KMN);
 					
 					free_csr(csr);
 					free_sp_pack(sp_pack);
