@@ -318,35 +318,7 @@ bool cake_sgemm_checker(float* A, float* B, float* C, int N, int M, int K) {
 	// printf("\n\n\n\n\n");
 	// exit(1);
 
-    int CORRECT = 1;
-    int cnt = 0;
-    int ind1 = 0;
-    float eps = 1e-3; // machine precision level
-
-	for(int m = 0; m < M; m++) {
-	    for(int n = 0; n < N; n++) {
-	        // if(C_check[m1*N + n1] != C[ind1]) {
-	        if(fabs(C_check[ind1] - C[ind1]) > eps) {
-	            cnt++;
-	            CORRECT = 0;
-	        }
-
-	        if(CHECK_PRINT) printf("%f\t%f\n", C_check[ind1], C[ind1]);
-	        ind1++; 
-      	}
-    }
-
-    //printf("\n\n");
-
-	if(CORRECT) {
-		printf("CORRECT!\n");
-		return 0;
-	} else {
-		printf("WRONG!\n");
-		printf("%d\n", cnt);
-		return 1;
-	}
-
+	mat_equals(C, C_check, M, N);
 	free(C_check);
 
 	// for (int n1 = 0; n1 < N; n1++) {
