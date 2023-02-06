@@ -168,8 +168,8 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	init_block_dims(M, N, K, p, x, cake_cntx, sch, argv, density);
 	omp_set_num_threads(p);
 
-    if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
-    if(DEBUG) printf("mc = %d, kc = %d, nc = %d, alpha_n = %f\n", x->m_c, x->k_c, x->n_c, cake_cntx->alpha_n);
+	if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
+	if(DEBUG) printf("mc = %d, kc = %d, nc = %d, alpha_n = %f\n", x->m_c, x->k_c, x->n_c, cake_cntx->alpha_n);
 
 
 	if(sp_pack == NULL) {
@@ -270,8 +270,11 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 
 	if(!packedA) {
-		free(A_p);
-		free_sp_pack(sp_pack);
+		free(sp_pack->loc_m); 
+		free(sp_pack->nnz_outer); 
+		free(sp_pack->k_inds); 
+		free(sp_pack->A_sp_p);
+		free(sp_pack);
 	}
 
 	if(!packedB) free(B_p);
@@ -297,7 +300,7 @@ double cake_sp_sgemm_testing(char* fname, float* B, float* C, int M, int N, int 
 	struct timespec start, end, start1, end1;
 	long seconds, nanoseconds;
 	double diff_t, times;
-	float *A_p, *B_p, *C_p;
+	float *B_p, *C_p;
 	csr_t* csr;
 
 	sch = KMN;
@@ -311,15 +314,14 @@ double cake_sp_sgemm_testing(char* fname, float* B, float* C, int M, int N, int 
 	init_block_dims(M, N, K, p, x, cake_cntx, sch, argv, density);
 	omp_set_num_threads(p);
 
-    printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
-    printf("mc = %d, kc = %d, nc = %d, alpha_n = %f\n", x->m_c, x->k_c, x->n_c, cake_cntx->alpha_n);
+    if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
+    if(DEBUG) printf("mc = %d, kc = %d, nc = %d, alpha_n = %f\n", x->m_c, x->k_c, x->n_c, cake_cntx->alpha_n);
 
 	if(sp_pack == NULL) {
 
 		csr = file_to_csr(fname);
-		A_p = (float*) calloc(csr->rowptr[M], sizeof(float));
-		sp_pack = (sp_pack_t*) malloc(sizeof(sp_pack_t));
-		pack_A_csr_to_sp_k_first(csr, A_p, M, K, csr->rowptr[M], p, sp_pack, x, cake_cntx);
+		sp_pack_t* sp_pack = malloc_sp_pack(M, K, csr->rowptr[M], x, cake_cntx);
+		pack_A_csr_to_sp_k_first(csr, M, K, csr->rowptr[M], p, sp_pack, x, cake_cntx);
 		free_csr(csr);
 	} 
 
@@ -403,7 +405,6 @@ double cake_sp_sgemm_testing(char* fname, float* B, float* C, int M, int N, int 
 
 
 	if(!packedA) {
-		free(A_p);
 		free_sp_pack(sp_pack);
 	}
 

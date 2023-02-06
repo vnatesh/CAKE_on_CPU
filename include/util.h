@@ -31,11 +31,5 @@ void rand_sparse_gaussian(float* mat, int r, int c, float mu, float sigma);
 
 
 
-int mat_to_csr_file(float* A, int M, int K, char* fname);
 void mat_equals(float* C, float* C_check, int M, int N);
-void test_csr_convert(int M, int K, float sparsity);
-csr_t* file_to_csr(char* fname);
-void csr_to_mat(float* A, int M, int K, int* rowptr, float* vals, int* colind);
 int run_tests_sparse_test();
-void free_csr(csr_t* x);
-void free_sp_pack(sp_pack_t* x);

@@ -355,7 +355,7 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 	}
 
 	if(ss) {
-		printf("user-defined tiling\n");
+		// printf("user-defined tiling\n");
 		blk_ret->m_c = atoi(argv[6]);
 		blk_ret->k_c = atoi(argv[7]);
 		blk_ret->n_c = atoi(argv[8]);
@@ -363,7 +363,7 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 	// sparsity-aware tiling when A matrix is sparse
 	} else if(density > 0.0000001) {
 		
-		printf("sparsity-aware tiling\n");
+		// printf("sparsity-aware tiling\n");
 		double a_coeff = (density/cake_cntx->mr) * ((int) ceil(density * cake_cntx->mr)) ;
 
 		mc_L2 = (int)  ((-b + sqrt(b*b + 4*a_coeff*(((double) cake_cntx->L2) / (type_size)))) / (2.0*a_coeff)) ;
@@ -437,9 +437,9 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 		blk_ret->k_c = mc_ret;
 		blk_ret->n_c = nc_ret;
 
-		blk_ret->m_c = 160;
-		blk_ret->k_c = 1000;
-		blk_ret->n_c = 576;
+		// blk_ret->m_c = 160;
+		// blk_ret->k_c = 1000;
+		// blk_ret->n_c = 576;
 
 
 		// if(cake_cntx->L3 >= 4*(M*K + K*N + M*N)) {
