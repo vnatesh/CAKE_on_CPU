@@ -267,7 +267,7 @@ int run_tests_sparse_test() {
 
 
 
-void mat_equals(float* C, float* C_check, int M, int N) {
+bool mat_equals(float* C, float* C_check, int M, int N) {
 
     int CORRECT = 1;
     int cnt = 0;
@@ -291,9 +291,11 @@ void mat_equals(float* C, float* C_check, int M, int N) {
 
 	if(CORRECT) {
 		printf("CORRECT!\n");
+		return 0;
 	} else {
 		printf("WRONG!\n");
 		printf("%d\n", cnt);
+		return 1;
 	}
 }
 
@@ -318,8 +320,9 @@ bool cake_sgemm_checker(float* A, float* B, float* C, int N, int M, int K) {
 	// printf("\n\n\n\n\n");
 	// exit(1);
 
-	mat_equals(C, C_check, M, N);
+	bool ret = mat_equals(C, C_check, M, N);
 	free(C_check);
+	return ret;
 
 	// for (int n1 = 0; n1 < N; n1++) {
  //      for (int m1 = 0; m1 < M; m1++) {

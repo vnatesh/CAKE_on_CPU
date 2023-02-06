@@ -14,13 +14,12 @@ void pack_A_csr_to_sp_k_first(csr_t* csr, int M, int K, int nz, int p,
    int mr_rem = x->mr_rem;
    int p_l = x->p_l, m_pad = x->m_pad, k_pad = x->k_pad;
    int Mb = x->Mb, Kb = x->Kb;
-   int M_padded = x->M_padded;
 
    sp_pack->nnz_tiles[0] = 0;
    sp_pack->num_col_tile[0] = 0;
 
    int m, k, m_cb, k_c_t, p_used, core;
-   int nz_curr = 0, val_ind = 0, nz_col_curr = 0, ntiles = 0, v_start = 0;
+   int nz_curr = 0, val_ind = 0, nz_col_curr = 0, ntiles = 0;
    int* ret_tmp = (int*) malloc(2 * sizeof(int));
 
 

@@ -21,7 +21,7 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	size_t A_sz, B_sz, C_sz;	
 	struct timespec start, end, start1, end1;
 	long seconds, nanoseconds;
-	double diff_t, times;
+	double diff_t;
 	float *A_p, *B_p, *C_p;
 
 
@@ -112,7 +112,6 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
     diff_t = seconds + nanoseconds*1e-9;
 	if(DEBUG) printf("GEMM time: %f \n", diff_t); 	// exit(1);
 
-	// times = diff_t;
 
 	clock_gettime(CLOCK_REALTIME, &start);
 
@@ -296,7 +295,7 @@ double cake_sp_sgemm_testing(char* fname, float* B, float* C, int M, int N, int 
 	bool packedA, bool packedB, float alpha, float beta, enum sched sch) {
 
 
-	size_t A_sz, B_sz, C_sz;	
+	size_t B_sz, C_sz;	
 	struct timespec start, end, start1, end1;
 	long seconds, nanoseconds;
 	double diff_t, times;
@@ -434,15 +433,13 @@ double cake_sgemm_2d(float* A, float* B, float* C, int M, int N, int K, int p,
 	// 	return 1;
 	// }
 
-	size_t A_sz, B_sz, C_sz;	
-	struct timespec start, end, start1, end1;
+	struct timespec start, end;
 	long seconds, nanoseconds;
 	double diff_t, times;
 	float *A_p, *B_p, *C_p[p];
 
 	sch = KMN;
 
-	clock_gettime(CLOCK_REALTIME, &start1);
 
 	init_block_dims_2d(M, N, K, p, x, cake_cntx, sch, argv, 0);
 	sch = x->sch;
@@ -508,15 +505,12 @@ double cake_sgemm_2d_small(float* A, float* B, float* C, int M, int N, int K, in
 	// 	return 1;
 	// }
 
-	size_t A_sz, B_sz, C_sz;	
-	struct timespec start, end, start1, end1;
+	struct timespec start, end;
 	long seconds, nanoseconds;
 	double diff_t, times;
 	float *A_p, *B_p, *C_p[p];
 
 	sch = KMN;
-
-	clock_gettime(CLOCK_REALTIME, &start1);
 
 	init_block_dims_2d_small(M, N, K, p, x, cake_cntx, sch, argv, 0);
 	sch = x->sch;
@@ -655,15 +649,13 @@ double cake_sgemm_online(float* A, float* B, float* C, int M, int N, int K, int 
 	// 	return 1;
 	// }
 
-	size_t A_sz, B_sz, C_sz;	
-	struct timespec start, end, start1, end1;
+	struct timespec start, end;
 	long seconds, nanoseconds;
 	double diff_t, times;
 	float *A_p[p], *B_p, *C_p[p];
 
 	sch = KMN;
 
-	clock_gettime(CLOCK_REALTIME, &start1);
 
 	init_block_dims(M, N, K, p, x, cake_cntx, sch, argv, 0);
 	sch = x->sch;

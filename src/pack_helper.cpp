@@ -285,10 +285,9 @@ int mat_to_csr_file(float* A, int M, int K, char* fname) {
 	rowptr[0] = 0;
 
 	FILE *fptr = fopen(fname, "wb");
-	int row_cnt, nz = 0;
+	int nz = 0;
 
 	for(int i = 0; i < M; i++) {
-		row_cnt = 0;
 		for(int j = 0; j < K; j++) {
 			float tmp = A[i*K + j];
 			if(tmp != 0) {
@@ -324,12 +323,7 @@ csr_t* file_to_csr(char* fname) {
 
 	int M, K, nz;
 
-	FILE *fptr;
-	char *line = NULL;
-	size_t len = 0;
-	ssize_t nread;
-
-	fptr = fopen(fname, "rb");
+	FILE *fptr = fopen(fname, "rb");
 	if (fptr == NULL) {
 	   perror("fopen");
 	   exit(EXIT_FAILURE);

@@ -177,30 +177,23 @@ void schedule_KMN_2d_small(float* A, float* B, float* C, float* A_p, float* B_p,
 		#pragma omp parallel for private(core)
 		for(core = 0; core < p_used; core++) {
 
-			int n1, n2, n_c_t;
-			bool pad_n;
+			// These vars must be private to thread, 
+			// otherwise out of bounds memory access possible
+			int m_c_t, n_c_t, m_reg, n_reg, n1;
 
 			if(((core % pn) == (pn - 1)) && n_pad) {
 				n_c_t = n_c1;
 				n1 = (N - (N % n_c));
-				pad_n = 1;
 			} else {
 				n_c_t = n_c;
 				n1 = (core % pn)*n_c;
-				pad_n = 0;
 			}
 
-			// These vars must be private to thread, 
-			// otherwise out of bounds memory access possible
-			int m_c_t, n_reg, m_reg;
-			bool pad; 
 
 			if(((core / pn) == (pm - 1)) && m_pad) {
 				m_c_t = m_c1;
-				pad = 1;
 			} else {
 				m_c_t = m_c;
-				pad = 0;
 			}
 
 			for(n_reg = 0; n_reg < (n_c_t / n_r); n_reg++) {
@@ -272,10 +265,6 @@ void schedule_KMN_2d(float* A, float* B, float* C, float* A_p, float* B_p, float
 	int A_offset, B_offset, C_offset, p_used, p_used_m, p_used_n;
 	float kappa = 1.0;
 	int lda = 1;
-
-
-	int M_padded = x->M_padded;
-	int N_padded = x->N_padded;
 
 
 	for(n = 0; n < Nb; n++) {
@@ -622,13 +611,11 @@ void schedule_KMN_online(float* A, float* B, float* C, float** A_p, float* B_p, 
 	int mr_rem = x->mr_rem;
 	int p_l = x->p_l, m_pad = x->m_pad, k_pad = x->k_pad, n_pad = x->n_pad;
 	int Mb = x->Mb, Kb = x->Kb, Nb = x->Nb;
-	int M_padded = x->M_padded;
  
 	int m, k, n, m_start, m_end, m_inc, k_start, k_end, k_inc;
 	int m_cb, n_c_t, p_used, core;
 
-	int m1, n1, n2, A_offset = 0, C_offset = 0, C_p_offset = 0;
-	bool pad_n;
+	int m1, n1, n2, A_offset = 0, C_offset = 0;
 
 	float kappa = 1.0;
 	int lda = 1;
@@ -651,11 +638,9 @@ void schedule_KMN_online(float* A, float* B, float* C, float** A_p, float* B_p, 
 		if((n == Nb - 1) && n_pad) {
 			n_c_t = n_c1;
 			n1 = (N - (N % n_c));
-			pad_n = 1;
 		} else {
 			n_c_t = n_c;
 			n1 = n*n_c;
-			pad_n = 0;
 		}
 
 		for(m = m_start; m != m_end; m += m_inc) {
@@ -724,16 +709,13 @@ void schedule_KMN_online(float* A, float* B, float* C, float** A_p, float* B_p, 
 					// These vars must be private to thread, 
 					// otherwise out of bounds memory access possible
 					int m_c_t, m_c_x, n_reg, m_reg;
-					bool pad; 
 
 					if((m == Mb - 1) && m_pad) {
 						m_c_t = (core == (p_l - 1) ? m_c1_last_core : m_c1);
 						m_c_x = m_c1;
-						pad = (core == (p_l - 1) ? 1 : 0);
 					} else {
 						m_c_t = m_c;
 						m_c_x = m_c; 
-						pad = 0;
 					}
 
 					A_offset = m*p*m_c*K + k*k_c;

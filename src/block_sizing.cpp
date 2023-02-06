@@ -663,11 +663,11 @@ void init_block_dims_2d(int M, int N, int K, int p,
 	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
 	char* argv[], float density, float type_size) {
 
-	int m_r, n_r, ncores, pm, pn, low, high, 
+	int m_r, n_r, ncores, pm, pn, 
 		m_c, k_c, n_c, m_c1, k_c1, n_c1,
 		mr_rem, nr_rem, m_c1_last_core, n_c1_last_core, pm_l, pn_l,
 		kc_max, m_pad, k_pad, n_pad, M_padded, N_padded, 
-		Mb, Kb, Nb, a, left_M, left_N, thresh_M, thresh_N;
+		Mb, Kb, Nb, a;
 
 	m_r = cake_cntx->mr;
 	n_r = cake_cntx->nr;
@@ -818,8 +818,7 @@ void init_block_dims_2d_small(int M, int N, int K, int p,
 
 	int m_r, n_r, ncores, pm, pn, 
 		m_c, k_c, n_c, m_c1, k_c1, n_c1,
-		kc_max, m_pad, k_pad, n_pad, M_padded, N_padded, 
-		Mb, Kb, Nb;
+		kc_max, M_padded, N_padded;
 
 	m_r = cake_cntx->mr;
 	n_r = cake_cntx->nr;

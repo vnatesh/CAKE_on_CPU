@@ -31,5 +31,5 @@ void rand_sparse_gaussian(float* mat, int r, int c, float mu, float sigma);
 
 
 
-void mat_equals(float* C, float* C_check, int M, int N);
+bool mat_equals(float* C, float* C_check, int M, int N);
 int run_tests_sparse_test();
