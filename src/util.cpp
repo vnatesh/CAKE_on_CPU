@@ -22,6 +22,28 @@ int run_tests() {
 					K = Ks[k];
 					N = Ns[n];
 
+
+					A = (float*) malloc(M * K * sizeof( float ));
+					B = (float*) malloc(K * N * sizeof( float ));
+					C = (float*) calloc(M * N , sizeof( float ));
+				    srand(time(NULL));
+
+					rand_init(A, M, K);
+					rand_init(B, K, N);
+
+					cake_sgemm_2d(A, B, C, M, N, K, p, cake_cntx, NULL, 0,0,1,0,KMN);
+					if(cake_sgemm_checker(A, B, C, N, M, K)) {
+						printf("TESTS FAILED on 2d K-first p=%d M=%d K=%d N=%d\n",p,M,K,N);
+						cnt++;
+					}
+
+					free(A);
+					free(B);
+					free(C);
+
+
+
+
 					A = (float*) malloc(M * K * sizeof( float ));
 					B = (float*) malloc(K * N * sizeof( float ));
 					C = (float*) calloc(M * N , sizeof( float ));
@@ -39,6 +61,28 @@ int run_tests() {
 					free(A);
 					free(B);
 					free(C);
+
+
+
+					A = (float*) malloc(M * K * sizeof( float ));
+					B = (float*) malloc(K * N * sizeof( float ));
+					C = (float*) calloc(M * N , sizeof( float ));
+				    srand(time(NULL));
+
+					rand_init(A, M, K);
+					rand_init(B, K, N);
+
+					cake_sgemm_online(A, B, C, M, N, K, p, cake_cntx, NULL, 0,0,1,0,KMN);
+					if(cake_sgemm_checker(A, B, C, N, M, K)) {
+						printf("TESTS FAILED on online K-first p=%d M=%d K=%d N=%d\n",p,M,K,N);
+						cnt++;
+					}
+
+					free(A);
+					free(B);
+					free(C);
+
+
 
 
 					A = (float*) malloc(M * K * sizeof( float ));
