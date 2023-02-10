@@ -13,16 +13,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define max(x,y) (((x) >= (y)) ? (x) : (y))
-#define min(x,y) (((x) <= (y)) ? (x) : (y))
-
-double clamp(double d, double min, double max) {
-  const double t = d < min ? min : d;
-  return t > max ? max : t;
-}
-
-
-
 
 #ifdef USE_BLIS
 #include "blis.h"

@@ -88,7 +88,7 @@ void update_mr_nr(cake_cntx_t* cake_cntx, int m_r, int n_r) {
 // increase mr,nr from default 6x16 according to sparsity 
 void rosko_mr_nr(cake_cntx_t* cake_cntx, float density) {
 
-	int k_f = clamp(density * cake_cntx->mr, 0, 1);
+	int k_f = clamp_val(density * cake_cntx->mr, 0, 1);
 
 	if(k_f == 1) {
 	    cake_cntx->mr = 20;
@@ -407,7 +407,7 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 		int kc_L2;
 		cake_cntx->alpha_n = 1.0;
 		// 3*d*mr*kc + nr*k_f*kc + mr*nr <= L2 (roughly 3*4 = 12 bytes for each float nnz val due to metadata)
-		// k_f = clamp(density * mr, 0, 1);
+		// k_f = clamp_val(density * mr, 0, 1);
 		// kc_L1 = (int) (((((double) cake_cntx->L1) / (type_size)) - 
 		// 	(mr*nr)) / (3.0*density*mr + k_f*nr));
 
@@ -419,7 +419,7 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 
 
 		// 3*d*p*mr*kc_L1 + nr*k_f*kc_L1 + alpha*p^2*mc^2 <= L3
-		// k_f = clamp(p * density * mr, 0, 1);
+		// k_f = clamp_val(p * density * mr, 0, 1);
 		// mc_L3 = (int) sqrt(((((double) cake_cntx->L3) / (type_size)) - 
 		// 	(3.0*density*p*mr*kc_L1 + nr*k_f*kc_L1)) / (p*p));
 		// mc_L3 -= (mc_L3 % mr);

@@ -461,14 +461,18 @@ def gen_all_kernels(arch, m_lim, n_lim):
 	if arch == 'armv8':
 		arch_class = Armv8
 		fact = 12
+		sm = 8
+		sn = 12
 	else:
 		arch_class = Haswell
 		fact = 16
+		sm = 6
+		sn = 16
 	ret1 = ret1a = ret2 = '''
 #include "cake.h"
 	'''
-	for i in range(1, m_lim//2 + 1):
-		for j in range(1, n_lim//fact + 1):
+	for i in range(sm//2, m_lim//2 + 1):
+		for j in range(sn//fact, n_lim//fact + 1):
 			ret1 += gen_kernel(arch_class, i*2,j*fact, 'sparse', 0)
 			ret1a += gen_kernel(arch_class, i*2,j*fact, 'sparse', 1)
 			ret2 += gen_kernel(arch_class, i*2,j*fact, 'dense', 0)
