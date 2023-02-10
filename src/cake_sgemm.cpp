@@ -112,7 +112,6 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
     diff_t = seconds + nanoseconds*1e-9;
 	if(DEBUG) printf("GEMM time: %f \n", diff_t); 	// exit(1);
 
-
 	clock_gettime(CLOCK_REALTIME, &start);
 
 	unpack_C(C, C_p, M, N, p, x, cake_cntx, sch); 
@@ -135,7 +134,6 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	free(x);
 
 	return diff_t;
-	// return times;
 }
 
 
@@ -267,7 +265,6 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	if(DEBUG) printf("full gemm time: %f \n", diff_t); 	// exit(1);
 
 
-
 	if(!packedA) {
 		free(sp_pack->loc_m); 
 		free(sp_pack->nnz_outer); 
@@ -279,7 +276,6 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	if(!packedB) free(B_p);
 	free(C_p);
 	free(x);
-
 
 	return times;
 }
@@ -439,7 +435,6 @@ double cake_sgemm_2d(float* A, float* B, float* C, int M, int N, int K, int p,
 	float *A_p, *B_p, *C_p[p];
 
 	sch = KMN;
-
 
 	init_block_dims_2d(M, N, K, p, x, cake_cntx, sch, argv, 0);
 	sch = x->sch;
@@ -655,7 +650,6 @@ double cake_sgemm_online(float* A, float* B, float* C, int M, int N, int K, int 
 	float *A_p[p], *B_p, *C_p[p];
 
 	sch = KMN;
-
 
 	init_block_dims(M, N, K, p, x, cake_cntx, sch, argv, 0);
 	sch = x->sch;

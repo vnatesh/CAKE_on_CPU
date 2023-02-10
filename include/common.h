@@ -13,10 +13,20 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define max(x,y) (((x) >= (y)) ? (x) : (y))
+#define min(x,y) (((x) <= (y)) ? (x) : (y))
+
+double clamp(double d, double min, double max) {
+  const double t = d < min ? min : d;
+  return t > max ? max : t;
+}
+
+
+
+
 #ifdef USE_BLIS
 #include "blis.h"
 #include "bli_x86_asm_macros.h"
-
 
 
 // blis packing kernels
@@ -180,6 +190,8 @@ typedef struct csr_t {
   float* vals; // nnz vals (32-bit)
   int* rowptr; // M+1 vals (32-bit)
   int* colind; // nnz vals (32-bit)
+  int M;
+  int K;
 } csr_t;
 
 

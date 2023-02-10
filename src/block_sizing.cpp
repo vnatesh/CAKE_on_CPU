@@ -83,6 +83,31 @@ void update_mr_nr(cake_cntx_t* cake_cntx, int m_r, int n_r) {
 }
 
 
+
+
+// increase mr,nr from default 6x16 according to sparsity 
+void rosko_mr_nr(cake_cntx_t* cake_cntx, float density) {
+
+	int k_f = clamp(density * cake_cntx->mr, 0, 1);
+
+	if(k_f == 1) {
+	    cake_cntx->mr = 20;
+	    cake_cntx->nr = 96;
+	}
+
+#ifdef USE_CAKE_HASWELL
+    cake_cntx->m_map = (cake_cntx->mr/2) - 1;
+    cake_cntx->n_map = (cake_cntx->nr/16) - 1;
+#elif USE_CAKE_ARMV8
+    cake_cntx->m_map = (cake_cntx->mr/2) - 1;
+    cake_cntx->n_map = (cake_cntx->nr/12) - 1;
+#endif
+}
+
+
+
+
+
 int get_num_physical_cores() {
 
 	FILE *fp;
@@ -293,21 +318,27 @@ int get_cache_size(int level) {
 }
 
 
+
+
+
 cache_dims_t* get_cache_dims(int M, int N, int K, int p, 
 			cake_cntx_t* cake_cntx, enum sched sch, 
 			char* argv[], float density, float type_size) {
 
-	int mc, mc_ret, nc_ret, a, mc_L2 = 0, mc_L3 = 0;
+	int mc, mc_ret, nc_ret, a, mc_L2 = 0, mc_L3 = 0, kc_L1 = 0;
 	int max_threads = cake_cntx->ncores; // 2-way hyperthreaded
-	int mn_lcm = lcm(cake_cntx->mr, cake_cntx->nr);
+	// int mn_lcm = lcm(mr, nr);
+	int mr = cake_cntx->mr;
+	int nr = cake_cntx->nr;
+
 	// int mn_lcm = m_r;
 
 	// solve for optimal mc,kc based on L2 size
 	// L2_size >= 2*(mc*kc + kc*nr) + 2*(mc*nr)     (solve for x = m_c = k_c) 
-	int b = 2*cake_cntx->nr;
+	int b = 2*nr;
 	mc_L2 = (int)  ((-b + sqrt(b*b + 4*(((double) cake_cntx->L2) / (2*type_size)))) / 2.0) ;
 	// mc_L2 -= (mc_L2 % mn_lcm);
-	mc_L2 -= (mc_L2 % cake_cntx->mr);
+	mc_L2 -= (mc_L2 % mr);
 	// printf("mc_L2 = %d\n", mc_L2);
 
 
@@ -317,7 +348,7 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 	// and to allow for double buffering of partial results in L3
 	mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (2*type_size))  
 			/ (max_threads * (1 + 1.0 + 1.0*max_threads)));
-	mc_L3 -= (mc_L3 % cake_cntx->mr);
+	mc_L3 -= (mc_L3 % mr);
 	// printf("mc_L3 = %d\n", mc_L3);
 
 	// if mc_L3 is too small, reduce alpha. likewise if mc_L2 is too small, increase alpha
@@ -327,15 +358,15 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 
 
 	mc_ret = mc;
-	if(M < p*cake_cntx->mr) {
-		mc_ret = cake_cntx->mr;
+	if(M < p*mr) {
+		mc_ret = mr;
 	} else if(M < p*mc) {
 		
 		a = (M / p);
-		if(a < cake_cntx->mr) {
-			mc_ret = cake_cntx->mr;
+		if(a < mr) {
+			mc_ret = mr;
 		} else {
-			a += (cake_cntx->mr - (a % cake_cntx->mr));
+			a += (mr - (a % mr));
 			mc_ret = a;
 		}
 	}
@@ -359,42 +390,73 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 		blk_ret->m_c = atoi(argv[6]);
 		blk_ret->k_c = atoi(argv[7]);
 		blk_ret->n_c = atoi(argv[8]);
-		printf("%d %d %d\n", blk_ret->m_c, blk_ret->k_c, blk_ret->n_c);
 	// sparsity-aware tiling when A matrix is sparse
 	} else if(density > 0.0000001) {
 		
 		// printf("sparsity-aware tiling\n");
-		double a_coeff = (density/cake_cntx->mr) * ((int) ceil(density * cake_cntx->mr)) ;
+		// double a_coeff = (density/mr) * ((int) ceil(density * mr)) ;
 
-		mc_L2 = (int)  ((-b + sqrt(b*b + 4*a_coeff*(((double) cake_cntx->L2) / (type_size)))) / (2.0*a_coeff)) ;
-		mc_L2 -= (mc_L2 % cake_cntx->mr);
+		// mc_L2 = (int)  ((-b + sqrt(b*b + 4*a_coeff*(((double) cake_cntx->L2) / (type_size)))) / (2.0*a_coeff)) ;
+		// mc_L2 -= (mc_L2 % mr);
 
+		// mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (type_size))  
+		// / (max_threads * (a_coeff + cake_cntx->alpha_n + cake_cntx->alpha_n*max_threads)));
+		// mc_L3 -= (mc_L3 % mr);
+
+		double k_f; // fraction of row vecs of B that must be loaded for mrxkcxnr outer product
+		int kc_L2;
+		cake_cntx->alpha_n = 1.0;
+		// 3*d*mr*kc + nr*k_f*kc + mr*nr <= L2 (roughly 3*4 = 12 bytes for each float nnz val due to metadata)
+		// k_f = clamp(density * mr, 0, 1);
+		// kc_L1 = (int) (((((double) cake_cntx->L1) / (type_size)) - 
+		// 	(mr*nr)) / (3.0*density*mr + k_f*nr));
+
+
+		// 3*d*mc*kc_L1 + nr*kc_L1 + mc*nr <= L2
+		// mc_L2 = (int) (((((double) cake_cntx->L2) / (type_size)) - 
+		// 	(nr*kc_L1)) / (3.0*density*kc_L1 + nr));
+		// mc_L2 -= (mc_L2 % mr);
+
+
+		// 3*d*p*mr*kc_L1 + nr*k_f*kc_L1 + alpha*p^2*mc^2 <= L3
+		// k_f = clamp(p * density * mr, 0, 1);
+		// mc_L3 = (int) sqrt(((((double) cake_cntx->L3) / (type_size)) - 
+		// 	(3.0*density*p*mr*kc_L1 + nr*k_f*kc_L1)) / (p*p));
+		// mc_L3 -= (mc_L3 % mr);
+
+		// 3*d*p*mc*kc + alpha*p*mc*kc + alpha*p^2*mc^2 <= L3
 		mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (type_size))  
-		/ (max_threads * (a_coeff + cake_cntx->alpha_n + cake_cntx->alpha_n*max_threads)));
-		mc_L3 -= (mc_L3 % cake_cntx->mr);
+		/ (p * (3.0*density + cake_cntx->alpha_n + cake_cntx->alpha_n*p)));
+		mc_L3 -= (mc_L3 % mr);
+
+		// 3*d*mc*kc + kc*nr + mc*nr <= L2
+		kc_L2 = (int) (((((double) cake_cntx->L2) / (type_size)) - 
+			(nr*mc_L3)) / (3.0*density*mc_L3 + nr));
 
 
 		mc_ret = mc_L3;
-		if(M < p*cake_cntx->mr) {
-			mc_ret = cake_cntx->mr;
+		if(M < p*mr) {
+			mc_ret = mr;
 		} else if(M < p*mc) {
 			
 			a = (M / p);
-			if(a < cake_cntx->mr) {
-				mc_ret = cake_cntx->mr;
+			if(a < mr) {
+				mc_ret = mr;
 			} else {
-				a += (cake_cntx->mr - (a % cake_cntx->mr));
+				a += (mr - (a % mr));
 				mc_ret = a;
 			}
 		}
 
 		// spMM is always K-first so using nc_ret from KMN
-		nc_ret = (int) (cake_cntx->alpha_n*p*mc_ret);
-		nc_ret -= (nc_ret % cake_cntx->nr);
-		nc_ret = nc_ret == 0 ? cake_cntx->nr : nc_ret;
+		nc_ret = (int) (p*mc_ret);
+		nc_ret -= (nc_ret % nr);
+		nc_ret = nc_ret == 0 ? nr : nc_ret;
 
-		blk_ret->m_c = mc_L3 < M ? mc_L3 : cake_cntx->mr;
-		blk_ret->k_c = mc_L2 < K ? mc_L2 : K;
+		// blk_ret->m_c = mc_L3 < M ? mc_L3 : mr;
+		// blk_ret->k_c = mc_L2 < K ? mc_L2 : K;
+		blk_ret->m_c = mc_ret;
+		blk_ret->k_c = kc_L2;
 		blk_ret->n_c = nc_ret;
 
 	// CAKE tiling for dense MM 
@@ -404,26 +466,26 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 
 			case KMN: {
 				nc_ret = (int) (cake_cntx->alpha_n*p*mc_ret);
-				nc_ret -= (nc_ret % cake_cntx->nr);
-				nc_ret = nc_ret == 0 ? cake_cntx->nr : nc_ret;
+				nc_ret -= (nc_ret % nr);
+				nc_ret = nc_ret == 0 ? nr : nc_ret;
 				break;
 			}
 
 			case MKN: {
 				nc_ret = (int) (cake_cntx->alpha_n*p*mc_ret);
-				nc_ret -= (nc_ret % cake_cntx->nr);
-				nc_ret = nc_ret == 0 ? cake_cntx->nr : nc_ret;			
+				nc_ret -= (nc_ret % nr);
+				nc_ret = nc_ret == 0 ? nr : nc_ret;			
 				break;
 			}
 
 			case NKM: {
 				nc_ret = (int) mc_ret;
-				nc_ret -= (nc_ret % cake_cntx->nr);
-				nc_ret = nc_ret == 0 ? cake_cntx->nr : nc_ret;
+				nc_ret -= (nc_ret % nr);
+				nc_ret = nc_ret == 0 ? nr : nc_ret;
 
 				mc_ret = (int) (cake_cntx->alpha_n*mc_ret);
-				mc_ret -= (mc_ret % cake_cntx->mr);
-				mc_ret = mc_ret == 0 ? cake_cntx->mr : mc_ret;			
+				mc_ret -= (mc_ret % mr);
+				mc_ret = mc_ret == 0 ? mr : mc_ret;			
 				break;
 			}
 
@@ -445,11 +507,11 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 		// if(cake_cntx->L3 >= 4*(M*K + K*N + M*N)) {
 
 		// 	int div = M / p;
-		// 	blk_ret->m_c = (div % cake_cntx->mr) ? (div + (cake_cntx->mr - (div % cake_cntx->mr))) : div;
+		// 	blk_ret->m_c = (div % mr) ? (div + (mr - (div % mr))) : div;
 
-		// 	int kc_max = ((32768 / type_size) - cake_cntx->mr*cake_cntx->nr) / (cake_cntx->mr + cake_cntx->nr);
+		// 	int kc_max = ((32768 / type_size) - mr*nr) / (mr + nr);
 		// 	blk_ret->k_c = K < kc_max ? K : kc_max;
-		// 	blk_ret->n_c = (N % cake_cntx->nr) ? (N + (cake_cntx->nr - (N % cake_cntx->nr))) : N;
+		// 	blk_ret->n_c = (N % nr) ? (N + (nr - (N % nr))) : N;
 		// }
 	}
 
@@ -663,11 +725,11 @@ void init_block_dims_2d(int M, int N, int K, int p,
 	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
 	char* argv[], float density, float type_size) {
 
-	int m_r, n_r, ncores, pm, pn, 
+	int m_r, n_r, ncores, pm, pn, low, high, 
 		m_c, k_c, n_c, m_c1, k_c1, n_c1,
 		mr_rem, nr_rem, m_c1_last_core, n_c1_last_core, pm_l, pn_l,
 		kc_max, m_pad, k_pad, n_pad, M_padded, N_padded, 
-		Mb, Kb, Nb, a;
+		Mb, Kb, Nb, a, left_M, left_N, thresh_M, thresh_N;
 
 	m_r = cake_cntx->mr;
 	n_r = cake_cntx->nr;
@@ -818,7 +880,8 @@ void init_block_dims_2d_small(int M, int N, int K, int p,
 
 	int m_r, n_r, ncores, pm, pn, 
 		m_c, k_c, n_c, m_c1, k_c1, n_c1,
-		kc_max, M_padded, N_padded;
+		kc_max, m_pad, k_pad, n_pad, M_padded, N_padded, 
+		Mb, Kb, Nb;
 
 	m_r = cake_cntx->mr;
 	n_r = cake_cntx->nr;

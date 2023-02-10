@@ -352,6 +352,8 @@ csr_t* file_to_csr(char* fname) {
 	csr_ret->rowptr = rowptr;
 	csr_ret->colind = colind;
 	csr_ret->vals = vals;
+	csr_ret->M = M;
+	csr_ret->K = K;
 
    	return csr_ret;
 }
