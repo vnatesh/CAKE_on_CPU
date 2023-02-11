@@ -58,17 +58,17 @@ cake_cntx_t* cake_query_cntx() {
 
 #elif USE_CAKE_HASWELL
     ret->blis_cntx = NULL;
-    ret->mr = 6;
-    ret->nr = 16;
-    ret->m_map = (ret->mr/2) - 1;
-    ret->n_map = (ret->nr/16) - 1;
+    ret->mr = MR_MIN;
+    ret->nr = NR_MIN;
+    ret->m_map = (ret->mr/MR_FACT) - (MR_MIN / MR_FACT);
+    ret->n_map = (ret->nr/NR_FACT) - (NR_MIN / NR_FACT);
 
 #elif USE_CAKE_ARMV8
     ret->blis_cntx = NULL;
-    ret->mr = 8;
-    ret->nr = 12;
-    ret->m_map = (ret->mr/2) - 1;
-    ret->n_map = (ret->nr/12) - 1;
+    ret->mr = MR_MIN;
+    ret->nr = NR_MIN;
+    ret->m_map = (ret->mr/MR_FACT) - (MR_MIN / MR_FACT);
+    ret->n_map = (ret->nr/NR_FACT) - (NR_MIN / NR_FACT);
 #endif
 
 	return ret;
