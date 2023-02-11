@@ -4,10 +4,9 @@
 #define max(x,y) (((x) >= (y)) ? (x) : (y))
 #define min(x,y) (((x) <= (y)) ? (x) : (y))
 
-double clamp_val(double d, double min, double max) {
-  const double t = d < min ? min : d;
-  return t > max ? max : t;
-}
+
+double clamp_val(double d, double min, double max);
+
 
 
 // retrieve system parameter information

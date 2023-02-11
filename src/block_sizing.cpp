@@ -1,6 +1,11 @@
 #include "cake.h"
 
 
+double clamp_val(double d, double min, double max) {
+  const double t = d < min ? min : d;
+  return t > max ? max : t;
+}
+
 
 cake_cntx_t* cake_query_cntx_torch(int L2, int L3) {
 
