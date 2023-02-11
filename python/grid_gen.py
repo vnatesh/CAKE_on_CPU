@@ -17,7 +17,7 @@ def factors(n):
 
 
 def gen_factor_table(p, alpha):
-	p_min =int(round(alpha*p))
+	p_min = max(1,int(round(alpha*p)))
 	p_max = p
 	factor_list = [factors(i) for i in range(p_min, p_max+1)]
 	ret = '''
@@ -47,5 +47,5 @@ static bool grid_dims[%d][%d] = \n{\n''' % (len(factor_list), p)
 if __name__ == '__main__':
 	ncores = get_num_cores()
 	print("Generating possible processing grids given %d cores" % ncores)
-	gen_factor_table(ncores, 0.9)
+	gen_factor_table(ncores, 0.1)
 

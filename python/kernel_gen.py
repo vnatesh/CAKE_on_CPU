@@ -401,7 +401,14 @@ int m_cnt, k_ind;'''
 
 
 def gen_kernel_headers(arch, m_lim, n_lim):
-	fact = 12 if arch == 'armv8' else 16
+	if arch == 'armv8':
+		fact = 12
+		sm = 8
+		sn = 12
+	else:
+		fact = 16
+		sm = 6
+		sn = 16
 	ret = '''
 #include "common.h"
 
@@ -411,8 +418,8 @@ typedef void cake_sp_sgemm_new_%s(float* A, float* B, float* C, int m, int n, in
 									char* nnz_outer, int* k_inds, char* loc_m);
 typedef void cake_sgemm_%s(float* A, float* B, float* C, int m, int n, int k);
 ''' % (arch, arch, arch)
-	for i in range(1, m_lim//2 + 1):
-		for j in range(1, n_lim//fact + 1):
+	for i in range(sm//2, m_lim//2 + 1):
+		for j in range(sn//fact, n_lim//fact + 1):
 			ret += '''
 void cake_sp_sgemm_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
 									char* nnz_outer, int* k_inds, char* loc_m);
@@ -423,13 +430,13 @@ void cake_sgemm_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k);
 	sparse_arr = []
 	sparse_arr_new = []
 	dense_arr = []
-	for i in range(1,m_lim//2 + 1):
+	for i in range(sm//2, m_lim//2 + 1):
 		sparse_arr.append('''
-	{'''+','.join(['cake_sp_sgemm_%s_%dx%d' % (arch, i*2,j*fact) for j in range(1,n_lim//fact + 1)]) + '}')
+	{'''+','.join(['cake_sp_sgemm_%s_%dx%d' % (arch, i*2,j*fact) for j in range(sn//fact,n_lim//fact + 1)]) + '}')
 		sparse_arr_new.append('''
-	{'''+','.join(['cake_sp_sgemm_new_%s_%dx%d' % (arch, i*2,j*fact) for j in range(1,n_lim//fact + 1)]) + '}')
+	{'''+','.join(['cake_sp_sgemm_new_%s_%dx%d' % (arch, i*2,j*fact) for j in range(sn//fact,n_lim//fact + 1)]) + '}')
 		dense_arr.append('''
-	{'''+','.join(['cake_sgemm_%s_%dx%d' % (arch, i*2,j*fact) for j in range(1,n_lim//fact + 1)]) + '}')	
+	{'''+','.join(['cake_sgemm_%s_%dx%d' % (arch, i*2,j*fact) for j in range(sn//fact,n_lim//fact + 1)]) + '}')	
 	ret += '''
 static cake_sp_sgemm_%s* kernel_map_sp[%d][%d] = 
 {
