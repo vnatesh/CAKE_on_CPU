@@ -414,7 +414,16 @@ def gen_kernel_headers(arch, m_lim, n_lim):
 	mrs = range(sm, m_lim + 1, fact_m)
 	nrs = range(sn, n_lim + 1, fact_n)
 	ret = '''
-#include "common.h"
+#ifdef USE_BLIS
+#include "blis.h"
+#include "bli_x86_asm_macros.h"
+
+#elif USE_CAKE_ARMV8
+#include <arm_neon.h>
+
+#elif USE_CAKE_HASWELL
+#include <immintrin.h>
+#endif
 
 #define MR_FACT %d
 #define NR_FACT %d
@@ -464,10 +473,7 @@ static cake_sgemm_%s* kernel_map[%d][%d] =
 	''' % (arch, len(mrs), len(nrs))
 	ret += ','.join(dense_arr) + '''
 };'''
-	f = open("include/kernels.h", 'r+')
-	content = f.read()
-	f.seek(0)
-	f.write(ret + content)
+	open("include/kernels.h", 'w').write(ret)
 
 
 

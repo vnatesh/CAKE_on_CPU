@@ -1,6 +1,6 @@
 #pragma once
 
-#include "kernels.h"
+#include "kernel_wrapper.h"
 #include "util.h"
 #include "tiling.h"
 #include "packing.h"

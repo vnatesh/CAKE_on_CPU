@@ -40,6 +40,7 @@ void bli_spackm_haswell_asm_16xk_new
      );
 
 #elif USE_CAKE_ARMV8
+#include "kernels.h"
 #include <arm_neon.h>
 
 
@@ -66,6 +67,7 @@ void bli_spackm_armv8a_int_12xk
 
 
 #elif USE_CAKE_HASWELL
+ #include "kernels.h"
 #include <immintrin.h>
 #include "bli_x86_asm_macros.h"
 

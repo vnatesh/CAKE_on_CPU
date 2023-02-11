@@ -11,7 +11,7 @@ then
    python3 python/kernel_gen.py armv8 20 72
    mv sparse.cpp dense.cpp src/kernels/armv8
 else
-   python3 python/kernel_gen.py haswell 6 16
+   python3 python/kernel_gen.py haswell 8 32
    mv sparse.cpp dense.cpp src/kernels/haswell
 fi
 

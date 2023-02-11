@@ -115,20 +115,23 @@ SRC_FILES =  $(wildcard $(CAKE_HOME)/src/*.cpp)
 SRC_FILES := $(filter-out $(CAKE_HOME)/src/linear.cpp, $(SRC_FILES)) 
 
 
+
 ifeq ($(UNAME_M),aarch64)
-	KERNELS = $(CAKE_SRC)/kernels/armv8/*.cpp
 	TARGETS = cake_armv8
+	SRC_FILES += $(CAKE_SRC)/kernels/armv8/blis_pack_armv8.cpp
 	CFLAGS_tmp += -O3 -mtune=cortex-a53
+	LIBS = -L$(CAKE_HOME) -lcake_kernels
 else ifeq ($(UNAME_M),x86_64)
-	KERNELS = $(CAKE_SRC)/kernels/haswell/*.cpp
-	CFLAGS_tmp += -mavx -mfma -mtune=haswell
 	TARGETS = cake_haswell
-	CFLAGS_tmp += -O2
+	SRC_FILES += $(CAKE_SRC)/kernels/haswell/blis_pack_haswell.cpp
+	CFLAGS_tmp += -mavx -mfma -mtune=haswell -O2
+	LIBS = -L$(CAKE_HOME) -lcake_kernels
 else
 	TARGETS = cake_blis
-	SRC_FILES += $(CAKE_SRC)/kernels/haswell/blis_pack_haswell.cpp
+	SRC_FILES += $(CAKE_SRC)/kernels/haswell/blis_pack_haswell.cpp # TODO NEED TO HANDLE armv8
 	CFLAGS_tmp  := $(call get-user-cflags-for,$(CONFIG_NAME))
 	CFLAGS_tmp += -I$(CAKE_HOME)/include/blis -I$(CAKE_HOME)/include
+	LIBS = $(BLIS_INSTALL_PATH)/lib/libblis.a 
 endif
 
 
@@ -142,13 +145,6 @@ CFLAGS_BLIS := $(filter-out -std=c99, $(CFLAGS_BLIS))
 CFLAGS 	:= $(filter-out -std=c99, $(CFLAGS_tmp))
 
 
-LIBS ?=
-#LIBDIR += -L. -L$(SYSTEMC_HOME)/lib-linux64 -L$(BOOST_HOME)/lib
-LIBS += $(BLIS_INSTALL_PATH)/lib/libblis.a 
-
-#
-# --- Targets/rules ------------------------------------------------------------
-#
 
 # --- Primary targets ---
 
@@ -175,15 +171,15 @@ endif
 
 cake_blis: $(wildcard *.h) $(wildcard *.c) 
 	g++ $(CFLAGS_BLIS) $(SRC_FILES_BLIS) $(LIBS) \
-	$(LDFLAGS) -DUSE_BLIS -shared -o $(LIBCAKE)
+	-DUSE_BLIS -shared -o $(LIBCAKE)
 
 cake_haswell: $(wildcard *.h) $(wildcard *.c)
-	g++  $(CFLAGS) $(SRC_FILES) $(KERNELS) \
-	$(LDFLAGS) -DUSE_CAKE_HASWELL -DUSE_CAKE_PACK -shared -o $(LIBCAKE)
+	g++  $(CFLAGS) $(SRC_FILES) $(LIBS) \
+	-DUSE_CAKE_HASWELL -DUSE_CAKE_PACK -shared -o $(LIBCAKE)
 
 cake_armv8: $(wildcard *.h) $(wildcard *.c)
-	g++ $(CFLAGS) $(SRC_FILES) $(KERNELS) \
-	$(LDFLAGS) -DUSE_CAKE_ARMV8 -DBLIS_ARMV8_PACK -shared -o $(LIBCAKE)
+	g++ $(CFLAGS) $(SRC_FILES) $(LIBS) \
+	-DUSE_CAKE_ARMV8 -DBLIS_ARMV8_PACK -shared -o $(LIBCAKE)
 
 # -- Clean rules --
 
