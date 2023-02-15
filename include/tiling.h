@@ -1,3 +1,20 @@
+
+#include "common.h"
+
+static bool grid_dims[10][10] = 
+{
+	{1,1,0,0,1,0,0,0,0,1},
+	{1,0,1,0,0,0,0,0,1,0},
+	{1,1,0,1,0,0,0,1,0,0},
+	{1,0,0,0,0,0,1,0,0,0},
+	{1,1,1,0,0,1,0,0,0,0},
+	{1,0,0,0,1,0,0,0,0,0},
+	{1,1,0,1,0,0,0,0,0,0},
+	{1,0,1,0,0,0,0,0,0,0},
+	{1,1,0,0,0,0,0,0,0,0},
+	{1,0,0,0,0,0,0,0,0,0},
+};
+
 #include "common.h"
 
 
@@ -32,19 +49,19 @@ enum sched derive_schedule(int M, int N, int K, int p,
 // default type size = 4 bytes for float
 cache_dims_t* get_cache_dims(int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, enum sched sch, char* argv[], 
-	float density = 0, float type_size = 4, int alg = 2);
+	float type_size = 4);
 
 void init_block_dims(int M, int N, int K, int p, blk_dims_t* x, 
 	cake_cntx_t* cake_cntx, enum sched sch, char* argv[], 
-	float density = 0, float type_size = 4, int alg = 2);
+	float type_size = 4);
 
 void init_block_dims_2d(int M, int N, int K, int p, blk_dims_t* x, 
 	cake_cntx_t* cake_cntx, enum sched sch, char* argv[], 
-	float density = 0, float type_size = 4);
+	 float type_size = 4);
 
 void init_block_dims_2d_small(int M, int N, int K, int p, blk_dims_t* x, 
 	cake_cntx_t* cake_cntx, enum sched sch, char* argv[], 
-	float density = 0, float type_size = 4);
+	float type_size = 4);
 
 int grid_dims_2d(int M, int N, int K, int p, int ncores);
 

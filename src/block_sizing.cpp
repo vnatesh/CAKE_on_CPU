@@ -85,21 +85,6 @@ void update_mr_nr(cake_cntx_t* cake_cntx, int m_r, int n_r) {
 
 
 
-// increase mr,nr from default 6x16 according to sparsity 
-void rosko_mr_nr(cake_cntx_t* cake_cntx, float density) {
-
-	int k_f = clamp_val(density * cake_cntx->mr, 0, 1);
-
-	if(k_f == 1) {
-	    cake_cntx->mr = 20;
-	    cake_cntx->nr = 96;
-	}
-
-    cake_cntx->m_map = (cake_cntx->mr/MR_FACT) - (MR_MIN / MR_FACT);
-    cake_cntx->n_map = (cake_cntx->nr/NR_FACT) - (NR_MIN / NR_FACT);
-}
-
-
 
 
 
@@ -318,7 +303,7 @@ int get_cache_size(int level) {
 
 cache_dims_t* get_cache_dims(int M, int N, int K, int p, 
 			cake_cntx_t* cake_cntx, enum sched sch, 
-			char* argv[], float density, float type_size, int alg) {
+			char* argv[], float type_size) {
 
 	int mc, mc_ret, nc_ret, a, mc_L2 = 0, mc_L3 = 0, kc_L1 = 0;
 	int max_threads = cake_cntx->ncores; // 2-way hyperthreaded
@@ -385,114 +370,6 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 		blk_ret->m_c = atoi(argv[6]);
 		blk_ret->k_c = atoi(argv[7]);
 		blk_ret->n_c = atoi(argv[8]);
-	// sparsity-aware tiling when A matrix is sparse
-	} else if(density > 0.0000001) {
-		
-		double k_f; // fraction of row vecs of B that must be loaded for mrxkcxnr outer product
-		int kc_L2;
-		cake_cntx->alpha_n = 1.0;
-		// 3*d*mr*kc + nr*k_f*kc + mr*nr <= L2 (roughly 3*4 = 12 bytes for each float nnz val due to metadata)
-		// k_f = clamp_val(density * mr, 0, 1);
-		// kc_L1 = (int) (((((double) cake_cntx->L1) / (type_size)) - 
-		// 	(mr*nr)) / (3.0*density*mr + k_f*nr));
-
-
-		// 3*d*mc*kc_L1 + nr*kc_L1 + mc*nr <= L2
-		// mc_L2 = (int) (((((double) cake_cntx->L2) / (type_size)) - 
-		// 	(nr*kc_L1)) / (3.0*density*kc_L1 + nr));
-		// mc_L2 -= (mc_L2 % mr);
-
-
-		// 3*d*p*mr*kc_L1 + nr*k_f*kc_L1 + alpha*p^2*mc^2 <= L3
-		// k_f = clamp_val(p * density * mr, 0, 1);
-		// mc_L3 = (int) sqrt(((((double) cake_cntx->L3) / (type_size)) - 
-		// 	(3.0*density*p*mr*kc_L1 + nr*k_f*kc_L1)) / (p*p));
-		// mc_L3 -= (mc_L3 % mr);
-
-
-
-
-
-
-
-
-		// printf("sparsity-aware tiling\n");
-
-		if(alg == 0) {
-			double a_coeff = (density/mr) * ((int) ceil(density * mr)) ;
-
-			mc_L2 = (int)  ((-b + sqrt(b*b + 4*a_coeff*(((double) cake_cntx->L2) / (type_size)))) / (2.0*a_coeff)) ;
-			mc_L2 -= (mc_L2 % mr);
-
-			mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (type_size))  
-			/ (max_threads * (a_coeff + cake_cntx->alpha_n + cake_cntx->alpha_n*max_threads)));
-			mc_L3 -= (mc_L3 % mr);
-		}
-
-
-		if(alg == 1) {
-			// 3*d*p*mc*kc + alpha*p*mc*kc + alpha*p^2*mc^2 <= L3
-			mc_L3 = (int) sqrt((((double) cake_cntx->L3) / (type_size))  
-			/ (p * (3.0*density + cake_cntx->alpha_n + cake_cntx->alpha_n*p)));
-			mc_L3 -= (mc_L3 % mr);
-
-			// 3*d*mc*kc + kc*nr + mc*nr <= L2
-			kc_L2 = (int) (((((double) cake_cntx->L2) / (type_size)) - 
-				(nr*mc_L3)) / (3.0*density*mc_L3 + nr));
-		}
-
-
-		if(alg == 2) {
-			float a_q, b_q, c_q;
-			float d = density;
-			// first find kc assuming all B rows are accessed
-			// d*mr*kc + kc*nr + mr*nr <= L2
-			int kc_tmp = ((((float) cake_cntx->L2) / (type_size*2)) - (mr*nr)) / (d*mr + nr);
-			// kc_tmp / (d*mr)
-
-			kc_L2 = (d*mr < 1) ? kc_tmp / (d*mr) : kc_tmp;
-
-
-			// d*p*mc*kc_L2 + nr*kc_L2 + p^2*mc^2 <= L3 (A/B should be LRU on average, C stationary)
-			a_q = p*p;
-			b_q = 3.0*d*p*kc_L2;
-			c_q = (((float) cake_cntx->L3) / (type_size)) - nr*kc_L2;
-			mc_L3 = (int) ((-b_q + sqrt(b_q*b_q + 4*a_q*c_q)) / (2.0*a_q));
-			mc_L3 -= (mc_L3 % mr);
-		}
-
-
-
-
-		mc_ret = mc_L3;
-		if(M < p*mr) {
-			mc_ret = mr;
-		} else if(M < p*mc) {
-			
-			a = (M / p);
-			if(a < mr) {
-				mc_ret = mr;
-			} else {
-				a += (mr - (a % mr));
-				mc_ret = a;
-			}
-		}
-
-		// spMM is always K-first so using nc_ret from KMN
-		nc_ret = (int) (p*mc_ret);
-		nc_ret -= (nc_ret % nr);
-		nc_ret = nc_ret == 0 ? nr : nc_ret;
-
-
-		if(alg == 0) {
-			blk_ret->m_c = mc_L3 < M ? mc_L3 : mr;
-			blk_ret->k_c = mc_L2 < K ? mc_L2 : K;
-		} else {
-			blk_ret->m_c = mc_ret;
-			blk_ret->k_c = kc_L2;
-		}
-
-		blk_ret->n_c = nc_ret;
 
 	// CAKE tiling for dense MM 
 	} else {
@@ -591,12 +468,12 @@ enum sched derive_schedule(int M, int N, int K, int p,
 
 void init_block_dims(int M, int N, int K, int p, 
 	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
-	char* argv[], float density, float type_size, int alg) {
+	char* argv[], float type_size) {
 
 	int m_r = cake_cntx->mr;
 	int n_r = cake_cntx->nr;
 	cache_dims_t* cache_dims = get_cache_dims(M, N, K, p, 
-									cake_cntx, sch, argv, density, type_size, alg);
+									cake_cntx, sch, argv, type_size);
     x->m_c = cache_dims->m_c;
 	x->k_c = cache_dims->k_c;
     x->n_c = cache_dims->n_c;
@@ -758,7 +635,7 @@ int grid_dims_2d(int M, int N, int K, int p, int ncores) {
 
 void init_block_dims_2d(int M, int N, int K, int p, 
 	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
-	char* argv[], float density, float type_size) {
+	char* argv[], float type_size) {
 
 	int m_r, n_r, ncores, pm, pn, low, high, 
 		m_c, k_c, n_c, m_c1, k_c1, n_c1,
@@ -911,7 +788,7 @@ void init_block_dims_2d(int M, int N, int K, int p,
 
 void init_block_dims_2d_small(int M, int N, int K, int p, 
 	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
-	char* argv[], float density, float type_size) {
+	char* argv[], float type_size) {
 
 	int m_r, n_r, ncores, pm, pn, 
 		m_c, k_c, n_c, m_c1, k_c1, n_c1,
