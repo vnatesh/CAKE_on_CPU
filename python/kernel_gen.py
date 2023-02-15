@@ -114,12 +114,12 @@ void cake_sgemm_haswell_%dx%d(float* A, float* B, float* C, int m, int n, int k)
 		def gen_func_def(self, m, n, compressed):
 			if compressed:
 				return '''
-void cake_sp_sgemm_new_haswell_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
+void rosko_sgemm_new_haswell_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
 									char* nnz_outer, int* k_inds, char* loc_m) {
 			''' % (m,n)
 			else:
 				return '''
-void cake_sp_sgemm_haswell_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
+void rosko_sgemm_haswell_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
 									char* nnz_outer, int* k_inds, char* loc_m) {
 			''' % (m,n)
 
@@ -308,7 +308,7 @@ void cake_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k) {
 
 		def gen_func_def(self, m, n, compressed):
 			return '''
-void cake_sp_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
+void rosko_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
 									char* nnz_outer, int* k_inds, char* loc_m) {
 			''' % (m,n)
 
@@ -430,18 +430,18 @@ def gen_kernel_headers(arch, m_lim, n_lim):
 #define MR_MIN %d
 #define NR_MIN %d
 
-typedef void cake_sp_sgemm_%s(float* A, float* B, float* C, int m, int n, int k, 
+typedef void rosko_sgemm_%s(float* A, float* B, float* C, int m, int n, int k, 
 									char* nnz_outer, int* k_inds, char* loc_m);
-typedef void cake_sp_sgemm_new_%s(float* A, float* B, float* C, int m, int n, int k, 
+typedef void rosko_sgemm_new_%s(float* A, float* B, float* C, int m, int n, int k, 
 									char* nnz_outer, int* k_inds, char* loc_m);
 typedef void cake_sgemm_%s(float* A, float* B, float* C, int m, int n, int k);
 ''' % (fact_m, fact_n, sm, sn, arch, arch, arch)
 	for i in mrs:
 		for j in nrs:
 			ret += '''
-void cake_sp_sgemm_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
+void rosko_sgemm_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
 									char* nnz_outer, int* k_inds, char* loc_m);
-void cake_sp_sgemm_new_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
+void rosko_sgemm_new_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
 									char* nnz_outer, int* k_inds, char* loc_m);
 void cake_sgemm_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k);
 									''' % (arch, i, j, arch, i, j, arch, i, j)	
@@ -450,19 +450,19 @@ void cake_sgemm_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k);
 	dense_arr = []
 	for i in mrs:
 		sparse_arr.append('''
-	{'''+','.join(['cake_sp_sgemm_%s_%dx%d' % (arch, i, j) for j in nrs]) + '}')
+	{'''+','.join(['rosko_sgemm_%s_%dx%d' % (arch, i, j) for j in nrs]) + '}')
 		sparse_arr_new.append('''
-	{'''+','.join(['cake_sp_sgemm_new_%s_%dx%d' % (arch, i, j) for j in nrs]) + '}')
+	{'''+','.join(['rosko_sgemm_new_%s_%dx%d' % (arch, i, j) for j in nrs]) + '}')
 		dense_arr.append('''
 	{'''+','.join(['cake_sgemm_%s_%dx%d' % (arch, i, j) for j in nrs]) + '}')	
 	ret += '''
-static cake_sp_sgemm_%s* kernel_map_sp[%d][%d] = 
+static rosko_sgemm_%s* kernel_map_sp[%d][%d] = 
 {
 	''' % (arch, len(mrs), len(nrs))
 	ret += ','.join(sparse_arr) + '''
 };'''
 	ret += '''
-static cake_sp_sgemm_new_%s* kernel_map_sp_new[%d][%d] = 
+static rosko_sgemm_new_%s* kernel_map_sp_new[%d][%d] = 
 {
 	''' % (arch, len(mrs), len(nrs))
 	ret += ','.join(sparse_arr_new) + '''
