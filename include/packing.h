@@ -102,7 +102,7 @@ void pack_B_nr_x_kc(float* B, float* B_p, int N, int k_c, int n_r);
 sp_pack_t* malloc_sp_pack(int M, int K, int nz, blk_dims_t* x, cake_cntx_t* cake_cntx);
 void free_sp_pack(sp_pack_t* x);
 void sp_pack_to_file(sp_pack_t* sp_pack, char* fname);
-
+void file_to_sp_pack(sp_pack_t* sp_pack, char* fname);
 
 int mat_to_csr_file(float* A, int M, int K, char* fname);
 void test_csr_convert(int M, int K, float sparsity);

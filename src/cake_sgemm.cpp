@@ -286,9 +286,9 @@ double cake_sp_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 
 
-double cake_sp_sgemm_testing(char* fname, float* B, float* C, int M, int N, int K, int p, 
+double cake_sp_sgemm_compressed(char* fname, float* B, float* C, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, float density, char* argv[], sp_pack_t* sp_pack,
-	bool packedA, bool packedB, float alpha, float beta, enum sched sch) {
+	bool packedA, bool packedB, float alpha, float beta, enum sched sch, int alg) {
 
 
 	size_t B_sz, C_sz;	
@@ -306,7 +306,7 @@ double cake_sp_sgemm_testing(char* fname, float* B, float* C, int M, int N, int 
 	}
 
 	blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
-	init_block_dims(M, N, K, p, x, cake_cntx, sch, argv, density);
+	init_block_dims(M, N, K, p, x, cake_cntx, sch, argv, density, 4, alg);
 	omp_set_num_threads(p);
 
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);

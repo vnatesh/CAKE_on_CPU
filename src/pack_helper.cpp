@@ -269,6 +269,31 @@ void sp_pack_to_file(sp_pack_t* sp_pack, char* fname) {
 
 
 
+void file_to_sp_pack(sp_pack_t* sp_pack, char* fname) {
+
+	FILE *fptr = fopen(fname, "rb");
+
+	int tmp[5];
+	fread(&tmp, sizeof(int), 5, fptr);
+	sp_pack->M = tmp[0];
+	sp_pack->K = tmp[1];
+	sp_pack->nnz = tmp[2];
+	sp_pack->nnz_cols = tmp[3];
+	sp_pack->ntiles = tmp[4];
+
+	fread(sp_pack->loc_m, sizeof(char), sp_pack->nnz, fptr);
+	fread(sp_pack->nnz_outer, sizeof(char), sp_pack->nnz_cols, fptr);
+	fread(sp_pack->k_inds, sizeof(int), sp_pack->nnz_cols, fptr);
+	fread(sp_pack->A_sp_p, sizeof(float), sp_pack->nnz, fptr);
+	fread(sp_pack->nnz_tiles, sizeof(int), sp_pack->ntiles, fptr);
+	fread(sp_pack->num_col_tile, sizeof(int), sp_pack->ntiles, fptr);
+	fclose(fptr);
+}
+
+
+
+
+
 void free_csr(csr_t* x) {
 	free(x->rowptr);
 	free(x->colind);
