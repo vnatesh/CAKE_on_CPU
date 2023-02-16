@@ -448,10 +448,10 @@ def gen_sparse_kernel_headers(arch, m_lim, n_lim, sm, sn, fact_m, fact_n):
 	mrs = range(sm, m_lim + 1, fact_m)
 	nrs = range(sn, n_lim + 1, fact_n)
 	ret = '''
-#ifdef USE_CAKE_ARMV8
+#ifdef USE_ROSKO_ARMV8
 #include <arm_neon.h>
 
-#elif USE_CAKE_HASWELL
+#elif USE_ROSKO_HASWELL
 #include <immintrin.h>
 #endif
 
