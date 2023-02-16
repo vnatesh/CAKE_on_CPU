@@ -528,9 +528,10 @@ def gen_all_kernels(arch, m_lim, n_lim, mode):
 		sm = 6
 		sn = 16
 	if mode == 'sparse':
-		ret1 = ret1a = '''
+		ret1 = '''
 #include "rosko_kernels.h"
 	'''
+		ret1a = ''
 		for i in range(sm, m_lim + 1, fact_m):
 			for j in range(sn, n_lim + 1, fact_n):
 					ret1 += gen_kernel(arch_class, i, j, mode, 0)
