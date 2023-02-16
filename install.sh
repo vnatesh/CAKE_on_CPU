@@ -8,11 +8,11 @@
 
 if uname -m | grep -q 'aarch64'; 
 then
-   python3 python/kernel_gen.py armv8 20 72
-   mv sparse.cpp dense.cpp src/kernels/armv8
+   python3 python/kernel_gen.py armv8 20 72 dense
+   mv dense.cpp src/kernels/armv8
 else
-   python3 python/kernel_gen.py haswell 8 32
-   mv sparse.cpp dense.cpp src/kernels/haswell
+   python3 python/kernel_gen.py haswell 8 32 dense
+   mv dense.cpp src/kernels/haswell
 fi
 
 python3 python/grid_gen.py
@@ -48,4 +48,5 @@ fi
 # # build CAKE pytorch extension 
 # cd python
 # python3 setup.py install --user
+
 
