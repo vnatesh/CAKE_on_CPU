@@ -400,17 +400,7 @@ int m_cnt, k_ind;'''
 	return func + sp + var_decls + C_load + outer_prod + leftover + C_store
 
 
-def gen_kernel_headers(arch, m_lim, n_lim):
-	if arch == 'armv8':
-		fact_m = 2
-		fact_n = 12
-		sm = 8
-		sn = 12
-	else:
-		fact_m = 2
-		fact_n = 16
-		sm = 6
-		sn = 16
+def gen_dense_kernel_headers(arch, m_lim, n_lim, sm, sn, fact_m, fact_n):
 	mrs = range(sm, m_lim + 1, fact_m)
 	nrs = range(sn, n_lim + 1, fact_n)
 	ret = '''
@@ -430,43 +420,18 @@ def gen_kernel_headers(arch, m_lim, n_lim):
 #define MR_MIN %d
 #define NR_MIN %d
 
-typedef void rosko_sgemm_%s(float* A, float* B, float* C, int m, int n, int k, 
-									char* nnz_outer, int* k_inds, char* loc_m);
-typedef void rosko_sgemm_new_%s(float* A, float* B, float* C, int m, int n, int k, 
-									char* nnz_outer, int* k_inds, char* loc_m);
 typedef void cake_sgemm_%s(float* A, float* B, float* C, int m, int n, int k);
-''' % (fact_m, fact_n, sm, sn, arch, arch, arch)
+''' % (fact_m, fact_n, sm, sn, arch)
 	for i in mrs:
 		for j in nrs:
 			ret += '''
-void rosko_sgemm_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
-									char* nnz_outer, int* k_inds, char* loc_m);
-void rosko_sgemm_new_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
-									char* nnz_outer, int* k_inds, char* loc_m);
 void cake_sgemm_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k);
-									''' % (arch, i, j, arch, i, j, arch, i, j)	
-	sparse_arr = []
+									''' % (arch, i, j)	
 	sparse_arr_new = []
 	dense_arr = []
 	for i in mrs:
-		sparse_arr.append('''
-	{'''+','.join(['rosko_sgemm_%s_%dx%d' % (arch, i, j) for j in nrs]) + '}')
-		sparse_arr_new.append('''
-	{'''+','.join(['rosko_sgemm_new_%s_%dx%d' % (arch, i, j) for j in nrs]) + '}')
 		dense_arr.append('''
 	{'''+','.join(['cake_sgemm_%s_%dx%d' % (arch, i, j) for j in nrs]) + '}')	
-	ret += '''
-static rosko_sgemm_%s* kernel_map_sp[%d][%d] = 
-{
-	''' % (arch, len(mrs), len(nrs))
-	ret += ','.join(sparse_arr) + '''
-};'''
-	ret += '''
-static rosko_sgemm_new_%s* kernel_map_sp_new[%d][%d] = 
-{
-	''' % (arch, len(mrs), len(nrs))
-	ret += ','.join(sparse_arr_new) + '''
-};'''
 	ret += '''
 static cake_sgemm_%s* kernel_map[%d][%d] = 
 {
@@ -479,7 +444,77 @@ static cake_sgemm_%s* kernel_map[%d][%d] =
 
 
 
-def gen_all_kernels(arch, m_lim, n_lim):
+def gen_sparse_kernel_headers(arch, m_lim, n_lim, sm, sn, fact_m, fact_n):
+	mrs = range(sm, m_lim + 1, fact_m)
+	nrs = range(sn, n_lim + 1, fact_n)
+	ret = '''
+#ifdef USE_CAKE_ARMV8
+#include <arm_neon.h>
+
+#elif USE_CAKE_HASWELL
+#include <immintrin.h>
+#endif
+
+#define MR_FACT %d
+#define NR_FACT %d
+#define MR_MIN %d
+#define NR_MIN %d
+
+typedef void rosko_sgemm_%s(float* A, float* B, float* C, int m, int n, int k, 
+									char* nnz_outer, int* k_inds, char* loc_m);
+typedef void rosko_sgemm_new_%s(float* A, float* B, float* C, int m, int n, int k, 
+									char* nnz_outer, int* k_inds, char* loc_m);
+''' % (fact_m, fact_n, sm, sn, arch, arch)
+	for i in mrs:
+		for j in nrs:
+			ret += '''
+void rosko_sgemm_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
+									char* nnz_outer, int* k_inds, char* loc_m);
+void rosko_sgemm_new_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
+									char* nnz_outer, int* k_inds, char* loc_m);
+									''' % (arch, i, j, arch, i, j)	
+	sparse_arr = []
+	sparse_arr_new = []
+	for i in mrs:
+		sparse_arr.append('''
+	{'''+','.join(['rosko_sgemm_%s_%dx%d' % (arch, i, j) for j in nrs]) + '}')
+		sparse_arr_new.append('''
+	{'''+','.join(['rosko_sgemm_new_%s_%dx%d' % (arch, i, j) for j in nrs]) + '}')
+	ret += '''
+static rosko_sgemm_%s* kernel_map_sp[%d][%d] = 
+{
+	''' % (arch, len(mrs), len(nrs))
+	ret += ','.join(sparse_arr) + '''
+};'''
+	ret += '''
+static rosko_sgemm_new_%s* kernel_map_sp_new[%d][%d] = 
+{
+	''' % (arch, len(mrs), len(nrs))
+	ret += ','.join(sparse_arr_new) + '''
+};'''
+	open("include/rosko_kernels.h", 'w').write(ret)
+
+
+
+
+def gen_kernel_headers(arch, m_lim, n_lim, mode):
+	if arch == 'armv8':
+		fact_m = 2
+		fact_n = 12
+		sm = 8
+		sn = 12
+	else:
+		fact_m = 2
+		fact_n = 16
+		sm = 6
+		sn = 16
+	if mode == 'sparse':
+		gen_sparse_kernel_headers(arch, m_lim, n_lim, sm, sn, fact_m, fact_n)
+	elif mode == 'dense':
+		gen_dense_kernel_headers(arch, m_lim, n_lim, sm, sn, fact_m, fact_n)
+
+
+def gen_all_kernels(arch, m_lim, n_lim, mode):
 	if arch == 'armv8':
 		arch_class = Armv8
 		fact_m = 2
@@ -492,25 +527,30 @@ def gen_all_kernels(arch, m_lim, n_lim):
 		fact_n = 16
 		sm = 6
 		sn = 16
-	ret1 = ret1a = ret2 = '''
-#include "cake.h"
+	if mode == 'sparse':
+		ret1 = ret1a = '''
+#include "common_sp.h"
 	'''
-	for i in range(sm, m_lim + 1, fact_m):
-		for j in range(sn, n_lim + 1, fact_n):
-			ret1 += gen_kernel(arch_class, i, j, 'sparse', 0)
-			ret1a += gen_kernel(arch_class, i, j, 'sparse', 1)
-			ret2 += gen_kernel(arch_class, i, j, 'dense', 0)
-	f1 = open("sparse.cpp", 'w')
-	f1.write(ret1)
-	f1.write(ret1a)
-	f2 = open("dense.cpp", 'w')
-	f2.write(ret2)
+		for i in range(sm, m_lim + 1, fact_m):
+			for j in range(sn, n_lim + 1, fact_n):
+					ret1 += gen_kernel(arch_class, i, j, mode, 0)
+					ret1a += gen_kernel(arch_class, i, j, mode, 1)
+		f1 = open("sparse.cpp", 'w')
+		f1.write(ret1)
+		f1.write(ret1a)
+	elif mode == 'dense':
+		ret2 = ''
+		for i in range(sm, m_lim + 1, fact_m):
+			for j in range(sn, n_lim + 1, fact_n):
+				ret2 += gen_kernel(arch_class, i, j, mode, 0)
+		f2 = open("dense.cpp", 'w')
+		f2.write(ret2)
 
 
 if __name__ == '__main__':
-	print("Generating CAKE Haswell Dense and Sparse Kernels")
-	gen_kernel_headers(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))
-	gen_all_kernels(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))
+	print("Generating CAKE Haswell %s Kernels" % str(sys.argv[4]))
+	gen_kernel_headers(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), str(sys.argv[4]))
+	gen_all_kernels(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), str(sys.argv[4]))
 
 
 # from kernel_gen import *
