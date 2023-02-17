@@ -306,11 +306,19 @@ void cake_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k) {
 			self.nr = armv8.nr
 			self.armv8 = armv8
 
+
 		def gen_func_def(self, m, n, compressed):
-			return '''
+			if compressed:
+				return '''
+void rosko_sgemm_new_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
+									char* nnz_outer, int* k_inds, char* loc_m) {
+				''' % (m,n)
+			else:
+				return '''
 void rosko_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
 									char* nnz_outer, int* k_inds, char* loc_m) {
 			''' % (m,n)
+
 
 		def gen_inner_kernel(self, m, n):
 			nlanes = n//4
@@ -346,6 +354,7 @@ void rosko_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k,
 			'''
 			return ret
 
+
 		def gen_outer_prod_loop(self, m, n, compressed):
 			ret = '''
 
@@ -357,14 +366,20 @@ void rosko_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k,
 	for(int kk = 0; kk < k; kk += 4) { 
 
 		m_cnt = nnz_outer[kk];
-
+			'''
+			if compressed:
+				ret += ''' 
+		k_ind = n*k_inds[kk];
+'''
+			else:
+				ret += '''
 		// skip columns with 0 nonzeros
 		if(!m_cnt) {
 			break;
 		}
 
 		k_ind = n*k_inds[kk];
-			'''
+'''
 			ret += self.gen_inner_kernel(m, n)
 			for i in range(1,4):
 				ret += '''
@@ -376,6 +391,9 @@ void rosko_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k,
 	}
 			'''
 			return ret
+
+
+
 
 
 
@@ -551,7 +569,7 @@ def gen_all_kernels(arch, m_lim, n_lim, mode):
 
 
 if __name__ == '__main__':
-	print("Generating CAKE Haswell %s Kernels" % str(sys.argv[4]))
+	print("Generating CAKE %s Kernels" % str(sys.argv[4]))
 	gen_kernel_headers(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), str(sys.argv[4]))
 	gen_all_kernels(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), str(sys.argv[4]))
 
