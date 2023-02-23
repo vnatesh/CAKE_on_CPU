@@ -735,7 +735,6 @@ void schedule_KMN_online(float* A, float* B, float* C, float** A_p, float* B_p, 
 					for(n_reg = 0; n_reg < (n_c_t / n_r); n_reg++) {
 						for(m_reg = 0; m_reg < (m_c_t / m_r); m_reg++) {	
 
-
 							kernel_map[m_map][n_map](
 								&A_p[core][m_reg*m_r*k_c_t], 
 								&B_p[n_reg*k_c_t*n_r], 

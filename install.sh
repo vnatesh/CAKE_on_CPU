@@ -8,7 +8,7 @@
 
 if uname -m | grep -q 'aarch64'; 
 then
-   python3 python/kernel_gen.py armv8 20 72 dense
+   python3 python/kernel_gen.py armv8 10 24 dense
    mv dense.cpp src/kernels/armv8
 else
    python3 python/kernel_gen.py haswell 8 32 dense

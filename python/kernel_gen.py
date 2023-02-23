@@ -569,7 +569,7 @@ def gen_all_kernels(arch, m_lim, n_lim, mode):
 
 
 if __name__ == '__main__':
-	print("Generating CAKE %s Kernels" % str(sys.argv[4]))
+	print("Generating %s Kernels" % str(sys.argv[4]))
 	gen_kernel_headers(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), str(sys.argv[4]))
 	gen_all_kernels(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), str(sys.argv[4]))
 
