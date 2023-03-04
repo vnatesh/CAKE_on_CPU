@@ -477,12 +477,14 @@ def gen_sparse_kernel_headers(arch, m_lim, n_lim, sm, sn, fact_m, fact_n):
 #define NR_FACT %d
 #define MR_MIN %d
 #define NR_MIN %d
+#define MR_MAX %d
+#define NR_MAX %d
 
 typedef void rosko_sgemm_%s(float* A, float* B, float* C, int m, int n, int k, 
 									char* nnz_outer, int* k_inds, char* loc_m);
 typedef void rosko_sgemm_new_%s(float* A, float* B, float* C, int m, int n, int k, 
 									char* nnz_outer, int* k_inds, char* loc_m);
-''' % (fact_m, fact_n, sm, sn, arch, arch)
+''' % (fact_m, fact_n, sm, sn, m_lim, n_lim, arch, arch)
 	for i in mrs:
 		for j in nrs:
 			ret += '''
