@@ -273,7 +273,7 @@ float normalRandom() {
   
    float v1 = rand_gen();
    float v2 = rand_gen();
-   return cos(2*3.14*v2)*sqrt(-2.*log(v1));
+   return cos(2*M_PI*v2)*sqrt(-2.*log(v1));
 }
 
 

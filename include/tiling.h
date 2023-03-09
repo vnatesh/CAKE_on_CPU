@@ -1,4 +1,6 @@
+
 #include "common.h"
+
 
 
 #define max(x,y) (((x) >= (y)) ? (x) : (y))
@@ -36,7 +38,7 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 
 void init_block_dims(int M, int N, int K, int p, blk_dims_t* x, 
 	cake_cntx_t* cake_cntx, enum sched sch, char* argv[], 
-	float type_size = 4);
+	float type_size = 4, int mcu = 0, int kcu = 0, int ncu = 0);
 
 void init_block_dims_2d(int M, int N, int K, int p, blk_dims_t* x, 
 	cake_cntx_t* cake_cntx, enum sched sch, char* argv[], 

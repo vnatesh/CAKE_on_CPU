@@ -10,7 +10,7 @@
 // Dense MM scheduling
 double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, char* argv[] = NULL, bool packedA = 0, bool packedB = 0, 
-	float alpha = 1, float beta = 0, enum sched sch = NA);
+	float alpha = 1, float beta = 0, enum sched sch = NA, int mcu = 0, int kcu = 0, int ncu = 0);
 void schedule(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, blk_dims_t* x, enum sched sch, bool sparse, bool small);
 void schedule_KMN(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p, 
@@ -34,7 +34,7 @@ void schedule_KMN_2d_small(float* A, float* B, float* C, float* A_p, float* B_p,
 
 double cake_sgemm_online(float* A, float* B, float* C, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, char* argv[] = NULL, bool packedA = 0, bool packedB = 0, 
-	float alpha = 1, float beta = 0, enum sched sch = NA);
+	float alpha = 1, float beta = 0, enum sched sch = NA, int mcu = 0, int kcu = 0, int ncu = 0);
 double cake_sgemm_test(float* A, float* B, float* C, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, char* argv[] = NULL, bool packedA = 0, bool packedB = 0, 
 	float alpha = 1, float beta = 0, enum sched sch = NA);

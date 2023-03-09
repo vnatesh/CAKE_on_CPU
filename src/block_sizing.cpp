@@ -303,7 +303,7 @@ int get_cache_size(int level) {
 
 cache_dims_t* get_cache_dims(int M, int N, int K, int p, 
 			cake_cntx_t* cake_cntx, enum sched sch, 
-			char* argv[], float type_size) {
+			char* argv[], float type_size, int mcu, int kcu, int ncu) {
 
 	int mc, mc_ret, nc_ret, a, mc_L2 = 0, mc_L3 = 0, kc_L1 = 0;
 	int max_threads = cake_cntx->ncores; // 2-way hyperthreaded
@@ -360,16 +360,12 @@ cache_dims_t* get_cache_dims(int M, int N, int K, int p,
 
 
 	// user-defined tile sizes
-	int ss = 0;
-	if(argv) {
-		ss = atoi(argv[5]);
-	}
-
-	if(ss) {
+	if(mcu && ncu && kcu) {
 		// printf("user-defined tiling\n");
-		blk_ret->m_c = atoi(argv[6]);
-		blk_ret->k_c = atoi(argv[7]);
-		blk_ret->n_c = atoi(argv[8]);
+		blk_ret->m_c = mcu;
+		blk_ret->k_c = kcu;
+		blk_ret->n_c = ncu;
+		cake_cntx->alpha_n = 1.0;
 
 	// CAKE tiling for dense MM 
 	} else {
@@ -468,12 +464,12 @@ enum sched derive_schedule(int M, int N, int K, int p,
 
 void init_block_dims(int M, int N, int K, int p, 
 	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
-	char* argv[], float type_size) {
+	char* argv[], float type_size, int mcu, int kcu, int ncu) {
 
 	int m_r = cake_cntx->mr;
 	int n_r = cake_cntx->nr;
 	cache_dims_t* cache_dims = get_cache_dims(M, N, K, p, 
-									cake_cntx, sch, argv, type_size);
+									cake_cntx, sch, argv, type_size, mcu, kcu, ncu);
     x->m_c = cache_dims->m_c;
 	x->k_c = cache_dims->k_c;
     x->n_c = cache_dims->n_c;
