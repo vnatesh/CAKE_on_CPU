@@ -7,8 +7,37 @@
  
 
 
+// intial cache dims with cake tiling params and K-first scheduling
+cache_dims_t* cake_init_sa(int M, int K, int N, int p, cake_cntx_t* cake_cntx) {
+
+	blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
+	init_block_dims(M, N, K, p, x, cake_cntx, KMN, NULL);
+	cache_dims_t* best = (cache_dims_t*) malloc(sizeof(cache_dims_t));
+	best->m_c = x->m_c;
+	best->k_c = x->k_c;
+	best->n_c = x->n_c;
+	best->sch = KMN;
+	free(x);
+	return best;
+}
 
 
+cache_dims_t* cake_init_sa_2d(int M, int K, int N, int p, cake_cntx_t* cake_cntx) {
+
+	blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
+	init_block_dims_2d(M, N, K, p, x, cake_cntx, KMN, NULL);
+	cache_dims_t* best = (cache_dims_t*) malloc(sizeof(cache_dims_t));
+	best->m_c = x->m_c;
+	best->k_c = x->k_c;
+	best->n_c = x->n_c;
+	best->sch = KMN;
+	free(x);
+	return best;
+}
+
+
+// https://github.com/Harvard-CS249R-Fall2020/assignments/tree/master/person_detection
+// https://github.com/srivatsankrishnan/cs249-assignment2/blob/master/hw_deployment/person_detection_arducam_5mp_plus/arduino_image_provider.cpp
 
 double cake_reg_test(float* A, float* B, float* C, 
 	int M, int K, int N, int mc, int kc, int nc, int p, int ntrials) {
@@ -29,6 +58,10 @@ double cake_reg_test(float* A, float* B, float* C,
 		// diff_t += cake_sgemm_online(A, B, C, M, N, K, p, cake_cntx, NULL, 0, 0, 1, 0, KMN, 54, 512, 528);
   //   }
 
+	cache_dims_t* ss = cake_init_sa(M, K, N, p, cake_cntx);
+	// cache_dims_t* ss = cake_init_sa_2d(M, K, N, p, cake_cntx);
+	printf("mc = %d, kc = %d, nc = %d\n", ss->m_c, ss->k_c, ss->n_c);
+
     for(int i = 0; i < ntrials; i++) {
 
         float *dirty = (float *)malloc(flushsz * sizeof(float));
@@ -42,9 +75,9 @@ double cake_reg_test(float* A, float* B, float* C,
             ressss+= tttmp[ii];
         }
 
-		// diff_t += cake_sgemm(A, B, C, M, N, K, p, cake_cntx, NULL, 0, 0, 1, 0, KMN);
+		// diff_t += cake_sgemm_online(A, B, C, M, N, K, p, cake_cntx, NULL, 0, 0, 1, 0, KMN);
 		diff_t += cake_sgemm_online(A, B, C, M, N, K, p, cake_cntx, NULL, 0, 0, 1, 0, KMN, mc, kc, nc);
-		// diff_t += cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
+		// diff_t += cake_sgemm_2d(A, B, C, M, N, K, p, cake_cntx);
 		// diff_t += cake_sgemm(A, B, C, M, N, K, p, cake_cntx, NULL, 0, 0, 1, 0, KMN, mc, kc, nc);
 
         free(dirty);
@@ -55,6 +88,7 @@ double cake_reg_test(float* A, float* B, float* C,
 	free(cake_cntx);
 	return diff_t / ntrials;
 }
+
 
 
 double cake_run(float* A, float* B, float* C, int M, int N, int K, int p, 
@@ -92,21 +126,6 @@ double cake_run(float* A, float* B, float* C, int M, int N, int K, int p,
 
 
 
-// intial cache dims with cake tiling params and K-first scheduling
-cache_dims_t* cake_init_sa(int M, int K, int N, int p, cake_cntx_t* cake_cntx) {
-
-	blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
-	init_block_dims(M, N, K, p, x, cake_cntx, KMN, NULL);
-	cache_dims_t* best = (cache_dims_t*) malloc(sizeof(cache_dims_t));
-	best->m_c = x->m_c;
-	best->k_c = x->k_c;
-	best->n_c = x->n_c;
-	best->sch = KMN;
-	free(x);
-	return best;
-}
-
-
 
 void assign_cache_dims(cache_dims_t* a, cache_dims_t* b) {
 	a->m_c = b->m_c;
@@ -129,6 +148,7 @@ int get_random_step(int step) {
 	return ret * step;
 }
 
+
 // candidate = curr + randn(len(bounds)) * step_size
 void get_candidate(int M, int K, int N, int p, cake_cntx_t* cake_cntx,
 	cache_dims_t* cand, cache_dims_t* curr) {
@@ -140,18 +160,18 @@ void get_candidate(int M, int K, int N, int p, cake_cntx_t* cake_cntx,
 	int kc_max = K;
 	int nc_max = N + (nr - (N % nr));
 
-	printf("bef1 %d %d %d\n", curr->m_c, curr->k_c, curr->n_c);
+	// printf("bef1 %d %d %d\n", curr->m_c, curr->k_c, curr->n_c);
 
 	int mcu = curr->m_c + get_random_step(mc_step);
 	int kcu = curr->k_c + get_random_step(kc_step);
 	int ncu = curr->n_c + get_random_step(nc_step);
 
 	// printf("%d\n", curr->m_c +   normalRandom() * mc_step);
-	printf("bef %d %d %d\n", mcu, kcu, ncu);
+	// printf("bef %d %d %d\n", mcu, kcu, ncu);
 	mcu = clamp_val_int(mcu, mc_step, mc_max);
 	kcu = clamp_val_int(kcu, kc_step, kc_max);
 	ncu = clamp_val_int(ncu, nc_step, nc_max);
-	printf("%d %d %d\n\n", mcu, kcu, ncu);
+	// printf("%d %d %d\n\n", mcu, kcu, ncu);
 
 	cand->m_c = mcu;
 	cand->k_c = kcu;
@@ -164,7 +184,7 @@ void get_candidate(int M, int K, int N, int p, cake_cntx_t* cake_cntx,
 // Simulated annealing procedure to autotune for optimal (lowest runtime) sgemm parameters 
 // (mc,kc,nc,sched) given an intial starting point of cake tiling and K-first scheduling
 cache_dims_t* cake_autotune_sa(float* A, float* B, float* C, 
-	int M, int K, int N, int p, int ntrials, int iters) {
+	int M, int K, int N, int p, int ntrials, int iters, int restarts) {
 	
 	double diff, original_runtime, curr_eval, best_eval, candidate_eval, metropolis;
 	float t, temp = 1.0;
@@ -190,44 +210,48 @@ cache_dims_t* cake_autotune_sa(float* A, float* B, float* C,
 	printf("iter %d, sch = %d, mc = %d, kc = %d, nc = %d\n", 
 		-1, curr->sch, curr->m_c, curr->k_c, curr->n_c);
 
+	// restart for annealing process
+	for(int r = 0; r < restarts; r++) {
 
-    for(int i = 0; i < iters; i++) {
+		// anneal for iters
+	    for(int i = 0; i < iters; i++) {
 
-    	printf("iter %d\n",i);
-    	// select a valid, random (mc, kc, nc, sch) tuple by taking a random step with 
-    	// a Gaussian distribution where the mean is our current solution and 
-    	// the standard deviation is defined by the step_size
-		// candidate = curr + randn(len(bounds)) * step_size
-		get_candidate(M, K, N, p, cake_cntx, cand, curr);
-		candidate_eval = cake_run(A, B, C, M, N, K, p, cake_cntx, ntrials, 
-									cand->m_c, cand->k_c, cand->n_c, cand->sch);
+	    	// printf("iter %d\n",i);
+	    	// fflush(stdout);
+	    	// select a valid, random (mc, kc, nc, sch) tuple by taking a random step with 
+	    	// a Gaussian distribution where the mean is our current solution and 
+	    	// the standard deviation is defined by the step_size
+			// candidate = curr + randn(len(bounds)) * step_size
+			get_candidate(M, K, N, p, cake_cntx, cand, curr);
+			candidate_eval = cake_run(A, B, C, M, N, K, p, cake_cntx, ntrials, 
+										cand->m_c, cand->k_c, cand->n_c, cand->sch);
 
-    	if(candidate_eval < best_eval) {
-		    best_eval = candidate_eval;
-		    assign_cache_dims(best, cand);
-			printf("iter %d, sch = %d, mc = %d, kc = %d, nc = %d\n", 
-				i, cand->sch, cand->m_c, cand->k_c, cand->n_c);
-    	}
+	    	if(candidate_eval < best_eval) {
+			    best_eval = candidate_eval;
+			    assign_cache_dims(best, cand);
+				printf("iter %d, sch = %d, mc = %d, kc = %d, nc = %d\n", 
+					i, cand->sch, cand->m_c, cand->k_c, cand->n_c);
+	    	}
 
-    	// diff = (candidate_eval - curr_eval) / curr_eval;
-    	diff = candidate_eval - curr_eval;
-    	t = temp / ((float) (i + 1)); // temperature cooling
-   		metropolis = exp(-diff / t); // we will update curr guess to candidate if this value is large 
-   		printf("%f %f %f\n", diff, metropolis, t);
-		// check if we should keep the candidate solution
-		if((diff < 0) || (rand_gen() < metropolis)) {
-			curr_eval = candidate_eval;
-			assign_cache_dims(curr, cand);
-		}
-    }
+	    	// diff = (candidate_eval - curr_eval) / curr_eval;
+	    	diff = candidate_eval - curr_eval;
+	    	// t = temp / ((float) (i + 1)); // temperature cooling
+			t = temp - ((float) (i+1)) / ((float) iters); // linear cooling
+	   		metropolis = exp(-diff / t); // we will update curr guess to candidate if this value is large 
+	   		// printf("%f %f %f\n", diff, metropolis, t);
+			// check if we should keep the candidate solution
+			if((diff < 0) || (rand_gen() < metropolis)) {
+				curr_eval = candidate_eval;
+				assign_cache_dims(curr, cand);
+			}
+	    }
+	}
 
     free(curr);
     free(cand);
     free(cake_cntx);
 	printf("original param = %d,%d,%d\n new param = %d,%d,%d\n", mco,kco,nco, best->m_c, best->k_c, best->n_c);
 	printf("original runtime = %f\n new runtime = %f\n", original_runtime, best_eval);
-
-
 	double t1 = cake_reg_test(A, B, C, M, K, N, mco, kco, nco, p, ntrials);    
 	double t2 = cake_reg_test(A, B, C, M, K, N, best->m_c, best->k_c, best->n_c, p, ntrials);    
 	printf("original test = %f\n new test = %f\n", t1, t2);
@@ -246,7 +270,7 @@ cache_dims_t* cake_autotune_sa(float* A, float* B, float* C,
 //         exit(1);
 //     }
 
-// 	int M, K, N, p, ntrials, iters;
+// 	int M, K, N, p, ntrials, iters, restarts = 10;
 // 	struct timespec start, end;
 // 	double diff_t = 0.0;
 
@@ -270,8 +294,8 @@ cache_dims_t* cake_autotune_sa(float* A, float* B, float* C,
 
 // 	clock_gettime(CLOCK_REALTIME, &start);
 
-// 	cake_autotune_sa(A, B, C, M, K, N, p, ntrials, iters);    
-// 	// cake_reg_test(A, B, C, M, K, N, 234, 152, 224, p, ntrials);    
+// 	cake_autotune_sa(A, B, C, M, K, N, p, ntrials, iters, restarts);    
+// 	// cake_reg_test(A, B, C, M, K, N, 72,250,80, p, ntrials);    
 
 //     clock_gettime(CLOCK_REALTIME, &end);
 //     long seconds = end.tv_sec - start.tv_sec;

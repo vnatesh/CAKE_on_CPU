@@ -631,7 +631,7 @@ int grid_dims_2d(int M, int N, int K, int p, int ncores) {
 
 void init_block_dims_2d(int M, int N, int K, int p, 
 	blk_dims_t* x, cake_cntx_t* cake_cntx, enum sched sch, 
-	char* argv[], float type_size) {
+	char* argv[], float type_size, int mcu, int kcu, int ncu) {
 
 	int m_r, n_r, ncores, pm, pn, low, high, 
 		m_c, k_c, n_c, m_c1, k_c1, n_c1,
@@ -653,9 +653,20 @@ void init_block_dims_2d(int M, int N, int K, int p,
 	// based on mr*kc + kc*nr + mr*nr <= L1 
 	kc_max = ((cake_cntx->L1 / type_size) - m_r*n_r) / (m_r + n_r); 
 
-	// based on mc*kc + nr*kc + mc*nc <= L2
-	m_c = (int) ((-n_r + sqrt(1.0*n_r*n_r + 4.0*2*(((double) cake_cntx->L2) / 4.0))) / (2.0*2));
-	m_c -= (m_c % m_r);
+
+	if(mcu && ncu && kcu) {
+		// printf("user-defined tiling\n");
+		m_c = mcu;
+		k_c = kcu;
+		n_c = ncu;
+		cake_cntx->alpha_n = 1.0;
+	} else {
+		// based on mc*kc + nr*kc + mc*nc <= L2
+		m_c = (int) ((-n_r + sqrt(1.0*n_r*n_r + 4.0*2*(((double) cake_cntx->L2) / 4.0))) / (2.0*2));
+		m_c -= (m_c % m_r);
+		k_c = kc_max;
+		k_c1 = K % k_c;
+	}
 
 	// printf("Mb = %d, Nb = %d, k_c = %d, k_c1 = %d, pm = %d, pn = %d, mc = %d, nc = %d, mc1 = %d, nc1 = %d\n", 
 	// 	Mb, Nb, k_c, k_c1, pm, pn, m_c, n_c, m_c1, n_c1);
@@ -683,8 +694,6 @@ void init_block_dims_2d(int M, int N, int K, int p,
 	// we want mc = nc since square tile maximizes AI
 	n_c = ((m_c % n_r) ? (m_c + (n_r - (m_c % n_r))) : m_c); 
 	// k_c = (m_c > kc_max) ? kc_max : m_c;
-	k_c = kc_max;
-	k_c1 = K % k_c;
 
 
 	if(N_padded == pn*cake_cntx->nr) {

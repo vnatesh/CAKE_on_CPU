@@ -141,7 +141,8 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 
 double cake_sgemm_2d(float* A, float* B, float* C, int M, int N, int K, int p, 
-	cake_cntx_t* cake_cntx, char* argv[], bool packedA, bool packedB, float alpha, float beta, enum sched sch) {
+	cake_cntx_t* cake_cntx, char* argv[], bool packedA, bool packedB, 
+	float alpha, float beta, enum sched sch, int mcu, int kcu, int ncu) {
 
 
 	if(cake_cntx == NULL) {
@@ -162,7 +163,7 @@ double cake_sgemm_2d(float* A, float* B, float* C, int M, int N, int K, int p,
 
 	sch = KMN;
 
-	init_block_dims_2d(M, N, K, p, x, cake_cntx, sch, argv);
+	init_block_dims_2d(M, N, K, p, x, cake_cntx, sch, argv, 4, mcu, kcu, ncu);
 	sch = x->sch;
 
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
