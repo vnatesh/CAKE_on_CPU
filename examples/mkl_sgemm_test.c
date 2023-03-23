@@ -93,7 +93,7 @@ int main(int argc, char* argv[])  {
     int ntrials = atoi(argv[5]);
     float ressss;
     float tttmp[18];
-    int flushsz=100000000;
+    int flushsz=10000000;
 
     for(int i = 0; i < ntrials; i++) {
 
