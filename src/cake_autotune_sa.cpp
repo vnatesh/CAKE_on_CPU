@@ -1,3 +1,5 @@
+
+
 #include <stdio.h>
 #include <tuple>
 #include <unordered_set>
@@ -14,26 +16,26 @@ using std::unordered_set;
 // hash function for tuple containing kernel params (mc,kc,nc,mr,nr,etc)
 namespace hash_tuple{
 
-	template <typename TT>
-	struct hash
-	{
-	    size_t
-	    operator()(TT const& tt) const
-	    {                                              
-	        return std::hash<TT>()(tt);                                 
-	    }                                              
-	};
+    template <typename TT>
+    struct hash
+    {
+        size_t
+        operator()(TT const& tt) const
+        {                                              
+            return std::hash<TT>()(tt);                                 
+        }                                              
+    };
 }
 
 namespace hash_tuple{
-	namespace
-	{
-	    template <class T>
-	    inline void hash_combine(std::size_t& seed, T const& v)
-	    {
-	        seed ^= hash_tuple::hash<T>()(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
-	    }
-	}
+    namespace
+    {
+        template <class T>
+        inline void hash_combine(std::size_t& seed, T const& v)
+        {
+            seed ^= hash_tuple::hash<T>()(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+        }
+    }
 }
 
 
@@ -90,31 +92,17 @@ unordered_set<tuple<int, int, int>, hash_tuple::hash<tuple<int, int, int>>> visi
 
 
 // intial cache dims with cake tiling params and K-first scheduling
-cache_dims_t* cake_init_sa(int M, int K, int N, int p, cake_cntx_t* cake_cntx) {
-
+blk_dims_t* cake_init_sa(int M, int K, int N, int p, cake_cntx_t* cake_cntx) {
     blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
     init_block_dims(M, N, K, p, x, cake_cntx, KMN, NULL);
-    cache_dims_t* best = (cache_dims_t*) malloc(sizeof(cache_dims_t));
-    best->m_c = x->m_c;
-    best->k_c = x->k_c;
-    best->n_c = x->n_c;
-    best->sch = KMN;
-    free(x);
-    return best;
+    return x;
 }
 
 
-cache_dims_t* cake_init_sa_2d(int M, int K, int N, int p, cake_cntx_t* cake_cntx) {
-
+blk_dims_t* cake_init_sa_2d(int M, int K, int N, int p, cake_cntx_t* cake_cntx) {
     blk_dims_t* x = (blk_dims_t*) malloc(sizeof(blk_dims_t));
     init_block_dims_2d(M, N, K, p, x, cake_cntx, KMN, NULL);
-    cache_dims_t* best = (cache_dims_t*) malloc(sizeof(cache_dims_t));
-    best->m_c = x->m_c;
-    best->k_c = x->k_c;
-    best->n_c = x->n_c;
-    best->sch = KMN;
-    free(x);
-    return best;
+    return x;
 }
 
 
@@ -134,7 +122,7 @@ double cake_reg_test(float* A, float* B, float* C,
 
     float ressss;
     float tttmp[18];
-    int flushsz=cake_cntx->L3 / sizeof(float);
+    int flushsz=2*cake_cntx->L3 / sizeof(float);
     diff_t = 0.0;
     
   //   for(int i = 0; i < ntrials; i++) {
@@ -142,9 +130,10 @@ double cake_reg_test(float* A, float* B, float* C,
         // diff_t += cake_sgemm_online(A, B, C, M, N, K, p, cake_cntx, NULL, 0, 0, 1, 0, KMN, 54, 512, 528);
   //   }
 
-    cache_dims_t* ss = cake_init_sa(M, K, N, p, cake_cntx);
-    // cache_dims_t* ss = cake_init_sa_2d(M, K, N, p, cake_cntx);
-    printf("mc = %d, kc = %d, nc = %d\n", ss->m_c, ss->k_c, ss->n_c);
+    blk_dims_t* ss = cake_init_sa(M, K, N, p, cake_cntx);
+    // blk_dims_t* ss = cake_init_sa_2d(M, K, N, p, cake_cntx);
+    printf("cake mc = %d, kc = %d, nc = %d\n", ss->m_c, ss->k_c, ss->n_c);
+    printf("new mc = %d, kc = %d, nc = %d\n", mc, kc, nc);
 
     for(int i = 0; i < ntrials; i++) {
 
@@ -160,16 +149,17 @@ double cake_reg_test(float* A, float* B, float* C,
         }
 
         // diff_t += cake_sgemm_online(A, B, C, M, N, K, p, cake_cntx, NULL, 0, 0, 1, 0, KMN);
-        diff_t += cake_sgemm_online(A, B, C, M, N, K, p, cake_cntx, NULL, 0, 0, 1, 0, KMN, mc, kc, nc);
+        // diff_t += cake_sgemm_online(A, B, C, M, N, K, p, cake_cntx, NULL, 0, 0, 1, 0, KMN, mc, kc, nc);
         // diff_t += cake_sgemm_2d(A, B, C, M, N, K, p, cake_cntx);
+        // diff_t += cake_sgemm_2d(A, B, C, M, N, K, p, cake_cntx, NULL, 0, 0, 1, 0, KMN, mc, kc, nc);
         // diff_t += cake_sgemm(A, B, C, M, N, K, p, cake_cntx, NULL, 0, 0, 1, 0, KMN, mc, kc, nc);
-        // diff_t += cake_sgemm(A, B, C, M, N, K, p, cake_cntx);
+        diff_t += cake_sgemm1(A, B, C, M, N, K, p, cake_cntx);
 
         free(dirty);
     }
 
     printf("cake_sgemm time: %f \n", diff_t / ntrials); 
-    // cake_sgemm_checker(A, B, C, N, M, K);
+    cake_sgemm_checker(A, B, C, N, M, K);
     free(cake_cntx);
     return diff_t / ntrials;
 }
@@ -181,7 +171,7 @@ double cake_run(float* A, float* B, float* C, int M, int N, int K, int p,
 
     float ressss;
     float tttmp[18];
-    int flushsz=cake_cntx->L3 / sizeof(float);
+    int flushsz=2*cake_cntx->L3 / sizeof(float);
     double diff_t = 0.0;
 
     for(int i = 0; i < ntrials; i++) {
@@ -200,7 +190,9 @@ double cake_run(float* A, float* B, float* C, int M, int N, int K, int p,
         // diff_t += cake_sgemm(A, B, C, M, N, K, p, cake_cntx, argv, 0, 0, 1, 0, KMN);
         // diff_t += cake_sgemm(A, B, C, M, N, K, p, cake_cntx, 
         //  NULL, 0, 0, 1, 0, KMN, m_c, k_c, n_c);
-        diff_t += cake_sgemm_online(A, B, C, M, N, K, p, cake_cntx, 
+        // diff_t += cake_sgemm_online(A, B, C, M, N, K, p, cake_cntx, 
+        //     NULL, 0, 0, 1, 0, KMN, m_c, k_c, n_c);
+        diff_t += cake_sgemm_2d(A, B, C, M, N, K, p, cake_cntx, 
             NULL, 0, 0, 1, 0, KMN, m_c, k_c, n_c);
 
         free(dirty);
@@ -235,16 +227,16 @@ int get_random_step(int step) {
 
 
 // candidate = curr + randn(len(bounds)) * step_size
-void get_candidate(int M, int K, int N, int p, cake_cntx_t* cake_cntx,
+void get_candidate(int M, int K, int N, int pm, int pn, cake_cntx_t* cake_cntx,
     cache_dims_t* cand, cache_dims_t* curr) {
 
     int mcu, kcu, ncu;
     int mr = cake_cntx->mr, nr = cake_cntx->nr;
 
-    int mc_max = (M/p) + (mr - ((M/p) % mr));
+    int mc_max = (M / pm) + (mr - ((M / pm) % mr));
     // int mc_max = M + (mr - (M % mr));
     int kc_max = K;
-    int nc_max = N + (nr - (N % nr));
+    int nc_max = (N / pn) + (nr - ((N / pn) % nr));
 
 
     int max_cand =  ((M % mc_step) ? (M / mc_step) + 1 : (M / mc_step)) * 
@@ -292,14 +284,18 @@ cache_dims_t* cake_autotune_sa(float* A, float* B, float* C,
     
     double diff, original_runtime, curr_eval, best_eval, candidate_eval, metropolis;
     float t, temp = 1.0;
-    cache_dims_t* best;
+    cache_dims_t* best = (cache_dims_t*) malloc(sizeof(cache_dims_t));
     cache_dims_t* cand = (cache_dims_t*) malloc(sizeof(cache_dims_t));
     cache_dims_t* curr = (cache_dims_t*) malloc(sizeof(cache_dims_t));
 
     cake_cntx_t* cake_cntx = cake_query_cntx();
     
     // initial starting point using cake tiling and K-first schedule
-    best = cake_init_sa(M, K, N, p, cake_cntx);
+    blk_dims_t* x = cake_init_sa_2d(M, K, N, p, cake_cntx);
+    best->m_c = x->m_c;
+    best->k_c = x->k_c;
+    best->n_c = x->n_c;
+    best->sch = x->sch;
     best_eval = cake_run(A, B, C, M, N, K, p, cake_cntx, ntrials,
                         best->m_c, best->k_c, best->n_c, KMN);
 
@@ -326,7 +322,7 @@ cache_dims_t* cake_autotune_sa(float* A, float* B, float* C,
             // a Gaussian distribution where the mean is our current solution and 
             // the standard deviation is defined by the step_size
             // candidate = curr + randn(len(bounds)) * step_size
-            get_candidate(M, K, N, p, cake_cntx, cand, curr);
+            get_candidate(M, K, N, x->pm, x->pn, cake_cntx, cand, curr);
             candidate_eval = cake_run(A, B, C, M, N, K, p, cake_cntx, ntrials, 
                                         cand->m_c, cand->k_c, cand->n_c, cand->sch);
 
@@ -350,6 +346,8 @@ cache_dims_t* cake_autotune_sa(float* A, float* B, float* C,
                 assign_cache_dims(curr, cand);
             }
         }
+
+        assign_cache_dims(curr, best);
     }
 
     free(curr);
@@ -377,54 +375,53 @@ cache_dims_t* cake_autotune_sa(float* A, float* B, float* C,
 
 
 
-// int main( int argc, char** argv ) {
-//      // run_tests();
+int main( int argc, char** argv ) {
+     run_tests();
 
-//     if(argc < 3) {
-//         printf("Enter M, K, and N\n");
-//         exit(1);
-//     }
+    if(argc < 3) {
+        printf("Enter M, K, and N\n");
+        exit(1);
+    }
 
-//     int M, K, N, p, ntrials, iters, restarts = 3;
-//     struct timespec start, end;
-//     double diff_t = 0.0;
+    int M, K, N, p, ntrials, iters, restarts = 3;
+    struct timespec start, end;
+    double diff_t = 0.0;
 
-//     M = atoi(argv[1]);
-//     K = atoi(argv[2]);
-//     N = atoi(argv[3]);
-//     p = atoi(argv[4]);
-//     ntrials = atoi(argv[5]);
-//     iters = atoi(argv[6]);
+    M = atoi(argv[1]);
+    K = atoi(argv[2]);
+    N = atoi(argv[3]);
+    p = atoi(argv[4]);
+    ntrials = atoi(argv[5]);
+    iters = atoi(argv[6]);
 
-//     printf("M = %d, K = %d, N = %d, cores = %d\n", M,K,N,p);
+    printf("M = %d, K = %d, N = %d, cores = %d\n", M,K,N,p);
 
-//     float* A = (float*) malloc(M * K * sizeof( float ));
-//     float* B = (float*) malloc(K * N * sizeof( float ));
-//     float* C = (float*) calloc(M * N , sizeof( float ));
+    float* A = (float*) malloc(M * K * sizeof( float ));
+    float* B = (float*) malloc(K * N * sizeof( float ));
+    float* C = (float*) calloc(M * N , sizeof( float ));
 
-//     // initialize A and B
-//     srand(time(NULL));
-//     rand_init(A, M, K);
-//     rand_init(B, K, N);
+    // initialize A and B
+    srand(time(NULL));
+    rand_init(A, M, K);
+    rand_init(B, K, N);
 
-//     clock_gettime(CLOCK_REALTIME, &start);
+    clock_gettime(CLOCK_REALTIME, &start);
 
-//     cake_autotune_sa(A, B, C, M, K, N, p, ntrials, iters, restarts, argv);    
-//     // cake_reg_test(A, B, C, M, K, N, 72,250,80, p, ntrials);    
+    // cake_autotune_sa(A, B, C, M, K, N, p, ntrials, iters, restarts, argv);    
+    cake_reg_test(A, B, C, M, K, N, 132,288,96, p, ntrials);    
 
-//     clock_gettime(CLOCK_REALTIME, &end);
-//     long seconds = end.tv_sec - start.tv_sec;
-//     long nanoseconds = end.tv_nsec - start.tv_nsec;
-//     diff_t = seconds + nanoseconds*1e-9;
-//     printf("autotune time: %f \n", diff_t ); 
+    clock_gettime(CLOCK_REALTIME, &end);
+    long seconds = end.tv_sec - start.tv_sec;
+    long nanoseconds = end.tv_nsec - start.tv_nsec;
+    diff_t = seconds + nanoseconds*1e-9;
+    printf("autotune time: %f \n", diff_t ); 
     
-//     free(A);
-//     free(B);
-//     free(C);
+    free(A);
+    free(B);
+    free(C);
     
-//     return 0;
-// }
-
+    return 0;
+}
 
 // int main(int argc, char* argv[]) {
 

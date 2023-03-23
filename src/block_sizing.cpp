@@ -474,6 +474,7 @@ void init_block_dims(int M, int N, int K, int p,
 	x->k_c = cache_dims->k_c;
     x->n_c = cache_dims->n_c;
     x->sch = cache_dims->sch;
+
     free(cache_dims);
 
 	switch(x->sch) {
@@ -506,6 +507,9 @@ void init_block_dims(int M, int N, int K, int p,
 
 			x->M_padded = (m_r*x->mr_rem + (M / (p*x->m_c))*p*x->m_c);
 			x->N_padded = (N - (N % x->n_c)) + x->n_c1;
+
+			x->pm = p;
+			x->pn = 1;
 
 			break;
 		}
@@ -540,6 +544,8 @@ void init_block_dims(int M, int N, int K, int p,
 			x->M_padded = (M / x->m_c)*x->m_c + x->m_c1;
 			x->N_padded = (N - (N % x->n_c)) + x->n_c1;
 
+			x->pm = p;
+			x->pn = 1;
 
 			break;
 		}
@@ -573,6 +579,9 @@ void init_block_dims(int M, int N, int K, int p,
 
 			x->M_padded = (M / (p*x->m_c))*(p*x->m_c) + x->m_c1;
 			x->N_padded = (N - (N % x->n_c)) + x->n_c1;
+
+			x->pm = 1;
+			x->pn = p;
 
 			break;
 		}
@@ -658,6 +667,7 @@ void init_block_dims_2d(int M, int N, int K, int p,
 		// printf("user-defined tiling\n");
 		m_c = mcu;
 		k_c = kcu;
+		k_c1 = K % k_c;
 		n_c = ncu;
 		cake_cntx->alpha_n = 1.0;
 	} else {

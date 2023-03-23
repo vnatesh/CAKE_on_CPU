@@ -3,6 +3,9 @@
 
 
 
+
+
+
 double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p, 
 	cake_cntx_t* cake_cntx, char* argv[], bool packedA, bool packedB, 
 	float alpha, float beta, enum sched sch, int mcu, int kcu, int ncu) {
@@ -23,11 +26,10 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	struct timespec start, end, start1, end1;
 	long seconds, nanoseconds;
 	double diff_t;
-	float *A_p, *B_p, *C_p;
+	float *A_p, *B_p;
 
 
 	clock_gettime(CLOCK_REALTIME, &start1);
-
 	// init_block_dims(M, N, K, p, x, cake_cntx, sch, argv);
 	init_block_dims(M, N, K, p, x, cake_cntx, sch, argv, 4, mcu, kcu, ncu);
 	sch = x->sch;
@@ -80,50 +82,81 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 	}
 
 
-	// C = alpha*A*B + beta*C. If beta is !=0, we must explicitly pack C, 
-	// otherwise just allocate an empty C_p buffer
-	if(beta != 0) {
+
+
+	if(sch == KMN) {
+
+		float *C_p[p];
+
+		for(int i = 0; i < p; i++) {
+			C_p[i] = (float*) calloc(x->m_c * x->n_c, sizeof(float));
+		}
 
 		clock_gettime(CLOCK_REALTIME, &start);
 
-	    C_sz = cake_sgemm_packed_C_size(M, N, p, x, cake_cntx, sch);
-		if(posix_memalign((void**) &C_p, 64, C_sz)) {
-			printf("posix memalign error\n");
-			exit(1);
-		}
-
-		pack_C(C, C_p, M, N, p, x, cake_cntx, sch);
+		schedule_KMN(A_p, B_p, C, C_p, M, N, K, p, cake_cntx, x); 
 
 	    clock_gettime(CLOCK_REALTIME, &end);
 	    seconds = end.tv_sec - start.tv_sec;
 	    nanoseconds = end.tv_nsec - start.tv_nsec;
 	    diff_t = seconds + nanoseconds*1e-9;
-		if(DEBUG) printf("C pack time: %f \n", diff_t ); 
+		if(DEBUG) printf("GEMM time: %f \n", diff_t); 	// exit(1);
+
+		for(int i = 0; i < p; i++) {
+			free(C_p[i]);
+		}
 
 	} else {
-	    C_sz = cake_sgemm_packed_C_size(M, N, p, x, cake_cntx, sch) / sizeof(float);
-	    C_p = (float*) calloc(C_sz, sizeof(float));
+
+		float *C_p;
+		// C = alpha*A*B + beta*C. If beta is !=0, we must explicitly pack C, 
+		// otherwise just allocate an empty C_p buffer
+		if(beta != 0) {
+
+			clock_gettime(CLOCK_REALTIME, &start);
+
+		    C_sz = cake_sgemm_packed_C_size(M, N, p, x, cake_cntx, sch);
+			if(posix_memalign((void**) &C_p, 64, C_sz)) {
+				printf("posix memalign error\n");
+				exit(1);
+			}
+
+			pack_C(C, C_p, M, N, p, x, cake_cntx, sch);
+
+		    clock_gettime(CLOCK_REALTIME, &end);
+		    seconds = end.tv_sec - start.tv_sec;
+		    nanoseconds = end.tv_nsec - start.tv_nsec;
+		    diff_t = seconds + nanoseconds*1e-9;
+			if(DEBUG) printf("C pack time: %f \n", diff_t ); 
+
+		} else {
+
+		    C_sz = cake_sgemm_packed_C_size(M, N, p, x, cake_cntx, sch) / sizeof(float);
+		    C_p = (float*) calloc(C_sz, sizeof(float));
+
+			clock_gettime(CLOCK_REALTIME, &start);
+
+			schedule(A_p, B_p, C_p, M, N, K, p, cake_cntx, x, sch, 0, 0);
+
+		    clock_gettime(CLOCK_REALTIME, &end);
+		    seconds = end.tv_sec - start.tv_sec;
+		    nanoseconds = end.tv_nsec - start.tv_nsec;
+		    diff_t = seconds + nanoseconds*1e-9;
+			if(DEBUG) printf("GEMM time: %f \n", diff_t); 	// exit(1);
+
+			clock_gettime(CLOCK_REALTIME, &start);
+
+			unpack_C(C, C_p, M, N, p, x, cake_cntx, sch); 
+
+		    clock_gettime(CLOCK_REALTIME, &end);
+		    seconds = end.tv_sec - start.tv_sec;
+		    nanoseconds = end.tv_nsec - start.tv_nsec;
+		    diff_t = seconds + nanoseconds*1e-9;
+			if(DEBUG) printf("unpacking time: %f \n", diff_t); 	// exit(1);
+
+			free(C_p);
+		}
 	}
-
-	clock_gettime(CLOCK_REALTIME, &start);
-
-	schedule(A_p, B_p, C_p, M, N, K, p, cake_cntx, x, sch, 0, 0);
-
-    clock_gettime(CLOCK_REALTIME, &end);
-    seconds = end.tv_sec - start.tv_sec;
-    nanoseconds = end.tv_nsec - start.tv_nsec;
-    diff_t = seconds + nanoseconds*1e-9;
-	if(DEBUG) printf("GEMM time: %f \n", diff_t); 	// exit(1);
-
-	clock_gettime(CLOCK_REALTIME, &start);
-
-	unpack_C(C, C_p, M, N, p, x, cake_cntx, sch); 
-
-    clock_gettime(CLOCK_REALTIME, &end);
-    seconds = end.tv_sec - start.tv_sec;
-    nanoseconds = end.tv_nsec - start.tv_nsec;
-    diff_t = seconds + nanoseconds*1e-9;
-	if(DEBUG) printf("unpacking time: %f \n", diff_t); 	// exit(1);
 
     clock_gettime(CLOCK_REALTIME, &end1);
     seconds = end1.tv_sec - start1.tv_sec;
@@ -133,11 +166,11 @@ double cake_sgemm(float* A, float* B, float* C, int M, int N, int K, int p,
 
 	if(!packedA) free(A_p);
 	if(!packedB) free(B_p);
-	free(C_p);
 	free(x);
 
 	return diff_t;
 }
+
 
 
 double cake_sgemm_2d(float* A, float* B, float* C, int M, int N, int K, int p, 
@@ -165,6 +198,8 @@ double cake_sgemm_2d(float* A, float* B, float* C, int M, int N, int K, int p,
 
 	init_block_dims_2d(M, N, K, p, x, cake_cntx, sch, argv, 4, mcu, kcu, ncu);
 	sch = x->sch;
+
+    // printf("pm = %d, pn = %d\n\n", x->pm, x->pn);
 
     if(DEBUG) printf("m_r = %d, n_r = %d\n\n", cake_cntx->mr, cake_cntx->nr);
     if(DEBUG) printf("mc = %d, kc = %d, nc = %d, alpha_n = %f\n", x->m_c, x->k_c, x->n_c, cake_cntx->alpha_n);
@@ -695,7 +730,7 @@ void schedule(float* A_p, float* B_p, float* C_p, int M, int N, int K, int p,
 			} else if(small) {
 				// schedule_KMN_small(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
 			} else {
-				schedule_KMN(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
+				// schedule_KMN(A_p, B_p, C_p, M, N, K, p, cake_cntx, x); 
 			}
 			break;
 		}
