@@ -113,6 +113,7 @@ CAKE_SRC := $(CAKE_HOME)/src
 UNAME_M := $(shell uname -m)
 SRC_FILES =  $(wildcard $(CAKE_HOME)/src/*.cpp)
 SRC_FILES := $(filter-out $(CAKE_HOME)/src/linear.cpp, $(SRC_FILES)) 
+SRC_FILES := $(filter-out $(CAKE_HOME)/src/autotune_sa.cpp, $(SRC_FILES)) 
 
 
 
