@@ -115,12 +115,12 @@ void cake_sgemm_haswell_%dx%d(float* A, float* B, float* C, int m, int n, int k)
 			if compressed:
 				return '''
 void rosko_sgemm_new_haswell_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
-									char* nnz_outer, int* k_inds, char* loc_m) {
+									unsigned char* nnz_outer, int* k_inds, unsigned char* loc_m) {
 			''' % (m,n)
 			else:
 				return '''
 void rosko_sgemm_haswell_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
-									char* nnz_outer, int* k_inds, char* loc_m) {
+									unsigned char* nnz_outer, int* k_inds, unsigned char* loc_m) {
 			''' % (m,n)
 
 
@@ -311,12 +311,12 @@ void cake_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k) {
 			if compressed:
 				return '''
 void rosko_sgemm_new_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
-									char* nnz_outer, int* k_inds, char* loc_m) {
+									unsigned char* nnz_outer, int* k_inds, unsigned char* loc_m) {
 				''' % (m,n)
 			else:
 				return '''
 void rosko_sgemm_armv8_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
-									char* nnz_outer, int* k_inds, char* loc_m) {
+									unsigned char* nnz_outer, int* k_inds, unsigned char* loc_m) {
 			''' % (m,n)
 
 
@@ -481,17 +481,17 @@ def gen_sparse_kernel_headers(arch, m_lim, n_lim, sm, sn, fact_m, fact_n):
 #define NR_MAX %d
 
 typedef void rosko_sgemm_%s(float* A, float* B, float* C, int m, int n, int k, 
-									char* nnz_outer, int* k_inds, char* loc_m);
+									unsigned char* nnz_outer, int* k_inds, unsigned char* loc_m);
 typedef void rosko_sgemm_new_%s(float* A, float* B, float* C, int m, int n, int k, 
-									char* nnz_outer, int* k_inds, char* loc_m);
+									unsigned char* nnz_outer, int* k_inds, unsigned char* loc_m);
 ''' % (fact_m, fact_n, sm, sn, m_lim, n_lim, arch, arch)
 	for i in mrs:
 		for j in nrs:
 			ret += '''
 void rosko_sgemm_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
-									char* nnz_outer, int* k_inds, char* loc_m);
+									unsigned char* nnz_outer, int* k_inds, unsigned char* loc_m);
 void rosko_sgemm_new_%s_%dx%d(float* A, float* B, float* C, int m, int n, int k, 
-									char* nnz_outer, int* k_inds, char* loc_m);
+									unsigned char* nnz_outer, int* k_inds, unsigned char* loc_m);
 									''' % (arch, i, j, arch, i, j)	
 	sparse_arr = []
 	sparse_arr_new = []
@@ -525,6 +525,7 @@ def gen_kernel_headers(arch, m_lim, n_lim, mode):
 		sn = 12
 	else:
 		fact_m = 2
+		# fact_n = 8
 		fact_n = 16
 		sm = 6
 		sn = 16
@@ -544,6 +545,7 @@ def gen_all_kernels(arch, m_lim, n_lim, mode):
 	else:
 		arch_class = Haswell
 		fact_m = 2
+		# fact_n = 8
 		fact_n = 16
 		sm = 6
 		sn = 16
