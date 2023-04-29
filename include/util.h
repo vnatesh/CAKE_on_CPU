@@ -22,3 +22,5 @@ float rand_gen();
 float normalRandom();
 
 bool mat_equals(float* C, float* C_check, int M, int N);
+
+void transpose_mat(float* A_old, float* At, int K, int N, int Kt, int Nt);

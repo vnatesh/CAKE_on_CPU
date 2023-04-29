@@ -442,9 +442,6 @@ def gen_dense_kernel_headers(arch, m_lim, n_lim, sm, sn, fact_m, fact_n):
 // transpose functions
 void transpose_mxn(float* A, float* B, int lda, int ldb, int m, int n);
 void transpose_8x8(float* A, float* B, int lda, int ldb);
-void transpose_mat(float* A_old, float* At, int K, int N, int Kt, int Nt);
-
-
 
 
 typedef void cake_sgemm_%s(float* A, float* B, float* C, int m, int n, int k);
