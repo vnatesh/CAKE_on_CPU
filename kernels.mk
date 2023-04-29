@@ -19,13 +19,13 @@ UNAME_M := $(shell uname -m)
 
 ifeq ($(UNAME_M),aarch64)
 	KERNELS = $(CAKE_SRC)/kernels/armv8/dense.cpp
-# 	KERNELS += $(CAKE_SRC)/kernels/armv8/transpose.cpp
+# 	KERNELS += $(CAKE_SRC)/kernels/armv8/transpose_armv8.cpp
 # 	KERNELS := $(filter-out $(CAKE_SRC)/kernels/armv8/blis_pack_armv8.cpp, $(KERNELS)) 
 	TARGETS = cake_armv8
 	CFLAGS_tmp += -O3 -mtune=cortex-a53
 else ifeq ($(UNAME_M),x86_64)
 	KERNELS = $(CAKE_SRC)/kernels/haswell/dense.cpp
-	KERNELS += $(CAKE_SRC)/kernels/haswell/transpose.cpp
+	KERNELS += $(CAKE_SRC)/kernels/haswell/transpose_haswell.cpp
 # 	KERNELS := $(filter-out $(CAKE_SRC)/kernels/haswell/blis_pack_haswell.cpp, $(KERNELS)) 
 	CFLAGS_tmp += -mavx -mfma -mtune=haswell
 	TARGETS = cake_haswell
