@@ -120,6 +120,7 @@ SRC_FILES := $(filter-out $(CAKE_HOME)/src/autotune_sa.cpp, $(SRC_FILES))
 ifeq ($(UNAME_M),aarch64)
 	TARGETS = cake_armv8
 	SRC_FILES += $(CAKE_SRC)/kernels/armv8/blis_pack_armv8.cpp
+	SRC_FILES := $(filter-out $(CAKE_HOME)/src/transpose.cpp, $(SRC_FILES))
 	CFLAGS_tmp += -O3 -mtune=cortex-a53
 	LIBS = -L$(CAKE_HOME) -lcake_kernels
 else ifeq ($(UNAME_M),x86_64)
